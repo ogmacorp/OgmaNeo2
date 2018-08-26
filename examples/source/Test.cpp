@@ -59,7 +59,7 @@ int main() {
         // Create buffer
         cs.getQueue().enqueueWriteBuffer(inputBuf, CL_TRUE, 0, 1 * sizeof(cl_int), inputs.data());
 
-        h.step(cs, { it > itersCutoff ? h.getPredictionCs(0) : inputBuf }, topFeedBack, it <= itersCutoff);
+        h.step(cs, { inputBuf }, topFeedBack, true);
 
         // Print prediction
         std::vector<cl_int> preds(1);
@@ -71,11 +71,6 @@ int main() {
         std::vector<cl_int> actBuf(lds[0]._hiddenSize.x * lds[0]._hiddenSize.y);
 
         cs.getQueue().enqueueReadBuffer(h.getSCLayer(0).getHiddenCs(), CL_TRUE, 0, actBuf.size() * sizeof(cl_int), actBuf.data());
-
-        for (int i = 0; i < actBuf.size(); i++)
-            std::cout << actBuf[i] << " ";
-
-        std::cout << std::endl;
 
         float nextValue = maxIndex / static_cast<float>(inputSize - 1) * 2.0f - 1.0f;
 
