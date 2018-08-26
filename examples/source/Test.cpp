@@ -17,6 +17,10 @@
 
 #include <iostream>
 
+//#define TEST_WAVY
+#define TEST_ACTOR
+
+#if defined(TEST_WAVY)
 int main() {
     std::mt19937 rng(time(nullptr));
 
@@ -82,3 +86,70 @@ int main() {
 
     return 0;
 }
+#elif defined(TEST_ACTOR)
+int main() {
+    std::mt19937 rng(time(nullptr));
+
+    ogmaneo::ComputeSystem cs;
+    cs.create(ogmaneo::ComputeSystem::_gpu);
+
+    ogmaneo::ComputeProgram prog;
+    prog.loadFromFile(cs, "../../resources/neoKernels.cl");
+
+    int inputSize = 32;
+
+    std::vector<ogmaneo::Hierarchy::LayerDesc> lds(4);
+
+    for (int l = 0; l < lds.size(); l++) {
+        lds[l]._hiddenSize = cl_int3{ 3, 3, 32 };
+    }
+
+    ogmaneo::Hierarchy h;
+
+    h.createRandom(cs, prog, { cl_int3{ 1, 1, inputSize } }, std::vector<ogmaneo::InputType>{ ogmaneo::_predict }, lds, rng);
+
+    cl::Buffer inputBuf = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, 1 * sizeof(cl_int));
+    cl::Buffer topFeedBack = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, lds.back()._hiddenSize.x * lds.back()._hiddenSize.y * sizeof(cl_int));
+
+    cs.getQueue().enqueueFillBuffer(topFeedBack, static_cast<cl_int>(0), 0, lds.back()._hiddenSize.x * lds.back()._hiddenSize.y * sizeof(cl_int));
+
+    std::vector<float> yvals;
+
+    int iters = 2000;
+
+    // Iterate
+    for (int it = 0; it < iters; it++) {
+        float value = std::sin(it * 0.1f);
+        
+        int index = static_cast<int>((value * 0.5f + 0.5f) * (inputSize - 1) + 0.5f);
+
+        std::vector<cl_int> inputs(1);
+        inputs[0] = index;
+
+        // Create buffer
+        cs.getQueue().enqueueWriteBuffer(inputBuf, CL_TRUE, 0, 1 * sizeof(cl_int), inputs.data());
+
+        h.step(cs, { inputBuf }, topFeedBack, true);
+
+        // Print prediction
+        std::vector<cl_int> preds(1);
+
+        cs.getQueue().enqueueReadBuffer(h.getPredictionCs(0), CL_TRUE, 0, 1 * sizeof(cl_int), preds.data());
+
+        int maxIndex = preds[0];
+
+        std::vector<cl_int> actBuf(lds[0]._hiddenSize.x * lds[0]._hiddenSize.y);
+
+        cs.getQueue().enqueueReadBuffer(h.getSCLayer(0).getHiddenCs(), CL_TRUE, 0, actBuf.size() * sizeof(cl_int), actBuf.data());
+
+        float nextValue = maxIndex / static_cast<float>(inputSize - 1) * 2.0f - 1.0f;
+
+        std::cout << value << " " << nextValue << std::endl;
+
+        if (it % 10 == 0)
+            std::cout << "Iter " << it << std::endl;
+    }
+
+    return 0;
+}
+#endif

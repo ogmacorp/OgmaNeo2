@@ -16,17 +16,17 @@
 
 namespace ogmaneo {
     /*!
+    \brief Enum describing the type of operation performed by an input layer
+    */
+    enum InputType {
+        _none, _predict, _act
+    };
+    
+    /*!
     \brief A hierarchy of sparse coders and predictors, using the exponential memory structure
     */
     class Hierarchy {
     public:
-        /*!
-        \brief Enum describing the type of operation performed by an input layer
-        */
-        enum class InputType {
-            _none, _predict, _act
-        };
-
         /*!
         \brief Parameters for a layer
         Used during construction of a hierarchy
