@@ -430,7 +430,7 @@ void kernel imInitWeights(global float* weights, uint2 seed) {
     weights[get_global_id(0)] = 1.0f - randFloat(&stateValue) * 0.01f;
 }
 
-void kernel imForward(global const int* visibleAs, global const float* visibleActivations,
+void kernel imForward(global const float* visibleAs, global const float* visibleActivations,
     global float* hiddenActivations,
     global const float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
@@ -547,6 +547,7 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
     int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
 
     int diam = radius * 2 + 1;
+    int diam2 = diam * diam;
 
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
@@ -560,7 +561,7 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
 
                     int4 wPos;
                     wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                    wPos.w = offset.x + offset.y * diam;
+                    wPos.w = offset.x + offset.y * diam + c * diam2;
 
                     int wi = address4(wPos, hiddenSize);
 
