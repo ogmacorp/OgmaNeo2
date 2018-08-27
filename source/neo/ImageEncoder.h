@@ -12,10 +12,10 @@
 
 namespace ogmaneo {
     /*!
-    \brief Sparse Coder
-    A 2D sparse coding layer, using Columnar Binary Sparse Coding
+    \brief Image encoder
+    A 2D sparse coding layer, using Columnar Binary Sparse Coding, but with dense inputs (as opposed to columnar as in SparseCoder)
     */
-    class SparseCoder {
+    class ImageEncoder {
     public:
         /*!
         \brief Visible layer descriptor
@@ -35,7 +35,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             VisibleLayerDesc()
-                : _visibleSize({ 8, 8, 16 }),
+                : _visibleSize({ 8, 8, 3 }),
                 _radius(2)
             {}
         };
@@ -106,8 +106,8 @@ namespace ogmaneo {
         /*!
         \brief Initialize defaults
         */
-        SparseCoder()
-        : _alpha(0.01f), _explainIters(4)
+        ImageEncoder()
+        : _alpha(0.001f), _explainIters(4)
         {}
 
         /*!
@@ -125,16 +125,16 @@ namespace ogmaneo {
         /*!
         \brief Activate the sparse coder (perform sparse coding)
         \param cs is the ComputeSystem
-        \param visibleCs the visible (input) layer states
+        \param visibleAs the visible (input) layer activations to encode
         */
-        void activate(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs);
+        void activate(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
 
         /*!
         \brief Learn the sparse code
         \param cs is the ComputeSystem.
-        \param visibleCs the visible (input) layer states
+        \param visibleAs the visible (input) layer activations previously encoded
         */
-        void learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs);
+        void learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
 
         /*!
         \brief Get the number of visible layers

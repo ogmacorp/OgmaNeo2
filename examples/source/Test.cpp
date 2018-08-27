@@ -10,9 +10,6 @@
 #include <ogmaneo/neo/SparseCoder.h>
 #include <ogmaneo/neo/Hierarchy.h>
 
-#include <SFML/Window.hpp>
-#include <SFML/Graphics.hpp>
-
 #include <CL/cl.h>
 
 #include <iostream>

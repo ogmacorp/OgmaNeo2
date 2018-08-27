@@ -31,6 +31,7 @@ set(SOURCES
     "${SOURCE_PATH}/neo/Predictor.cpp"
     "${SOURCE_PATH}/neo/Actor.cpp"
     "${SOURCE_PATH}/neo/Hierarchy.cpp"
+    "${SOURCE_PATH}/neo/ImageEncoder.cpp"
 )
 
 add_library(OgmaNeo SHARED ${SOURCES})
