@@ -137,14 +137,12 @@ void kernel scBackward(global const int* hiddenCs, global float* visibleActivati
 
                     int2 offset = visiblePosition.xy - fieldLowerBound;
 
-                    for (int c = 0; c < hiddenSize.z; c++) {
-                        int4 wPos;
-                        wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                        wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
+                    int4 wPos;
+                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+                    wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
 
-                        sum += weights[address4(wPos, hiddenSize)];
-                        count += 1.0f;
-                    }
+                    sum += weights[address4(wPos, hiddenSize)];
+                    count += 1.0f;
                 }
             }
         }
@@ -499,14 +497,12 @@ void kernel imBackward(global const int* hiddenCs, global float* visibleActivati
 
                     int2 offset = visiblePosition.xy - fieldLowerBound;
 
-                    for (int c = 0; c < hiddenSize.z; c++) {
-                        int4 wPos;
-                        wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                        wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
+                    int4 wPos;
+                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+                    wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
 
-                        sum += weights[address4(wPos, hiddenSize)];
-                        count += 1.0f;
-                    }
+                    sum += weights[address4(wPos, hiddenSize)];
+                    count += 1.0f;
                 }
             }
         }
