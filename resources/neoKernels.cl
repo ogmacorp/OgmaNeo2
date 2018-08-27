@@ -247,7 +247,7 @@ void kernel pForward(global const int* visibleCs, global float* hiddenActivation
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += weights[address4(wPos, visibleSize)];
+                sum += weights[address4(wPos, hiddenSize)];
             }
         }
 
@@ -304,9 +304,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                int wi = address4(wPos, visibleSize);
-
-                weights[wi] += delta;
+                weights[address4(wPos, hiddenSize)] += delta;
             }
         }
 }
@@ -347,7 +345,7 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += weights[address4(wPos, visibleSize)];
+                sum += weights[address4(wPos, hiddenSize)];
             }
         }
 
@@ -412,9 +410,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
                 wPos.xyz = (int3)(hiddenPosition, targetC);
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                int wi = address4(wPos, visibleSize);
-
-                weights[wi] += delta;
+                weights[address4(wPos, hiddenSize)] += delta;
             }
         }
 }
