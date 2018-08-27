@@ -12,10 +12,10 @@
 
 namespace ogmaneo {
     /*!
-    \brief Sparse Coder
-    A 2D sparse coding layer, using Columnar Binary Sparse Coding
+    \brief A 2D prediction layer
+    Predicts the targets one timestep ahead of time
     */
-    class SparseCoder {
+    class Actor {
     public:
         /*!
         \brief Visible layer descriptor
@@ -30,12 +30,11 @@ namespace ogmaneo {
             \brief Radius onto hidden layer
             */
             cl_int _radius;
-
             /*!
             \brief Initialize defaults
             */
             VisibleLayerDesc()
-                : _visibleSize({ 8, 8, 16 }),
+                : _visibleSize({ 4, 4, 16 }),
                 _radius(2)
             {}
         };
@@ -48,20 +47,17 @@ namespace ogmaneo {
             /*!
             \brief Visible layer values and buffers
             */
+            cl::Buffer _visibleCs;
+
             cl::Buffer _weights;
 
-            cl::Buffer _visibleActivations;
-
-            cl_float2 _visibleToHidden;
             cl_float2 _hiddenToVisible;
-
-            cl_int2 _reverseRadii;
             //!@}
         };
 
     private:
         /*!
-        \brief Size of the hidden layer
+        \brief Size of the hidden layer (output)
         */
         cl_int3 _hiddenSize;
 
@@ -71,7 +67,7 @@ namespace ogmaneo {
         */
         cl::Buffer _hiddenCs;
 
-        cl::Buffer _hiddenActivations;
+        DoubleBuffer _hiddenActivations;
         //!@}
 
         //!@{
@@ -87,35 +83,34 @@ namespace ogmaneo {
         \brief Kernels
         */
         cl::Kernel _forwardKernel;
-        cl::Kernel _backwardKernel;
         cl::Kernel _inhibitKernel;
         cl::Kernel _learnKernel;
         //!@}
 
     public:
         /*!
-        \brief Feed learning rate
+        \brief Learning rate
         */
         cl_float _alpha;
 
         /*!
-        \brief Explaining-away iterations
+        \brief Discount factor
         */
-        cl_int _explainIters;
+        cl_float _gamma;
 
         /*!
         \brief Initialize defaults
         */
-        SparseCoder()
-        : _alpha(0.01f), _explainIters(4)
+        Actor()
+        : _alpha(0.01f), _gamma(0.99f)
         {}
 
         /*!
-        \brief Create a sparse coding layer with random initialization
+        \brief Create an actor layer with random initialization
         \param cs is the ComputeSystem
-        \param prog is the ComputeProgram associated with the ComputeSystem and loaded with the sparse coder kernel code
-        \param hiddenSize size of the hidden layer
-        \param visibleLayerDescs the descriptors for the visible layers
+        \param prog is the ComputeProgram associated with the ComputeSystem and loaded with the actor kernel code
+        \param hiddenSize size of the predictions (output)
+        \param visibleLayerDescs are descriptors for visible layers
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
@@ -123,21 +118,17 @@ namespace ogmaneo {
             std::mt19937 &rng);
 
         /*!
-        \brief Activate the sparse coder (perform sparse coding)
+        \brief Activate the actor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
+        \param targetCs target hidden activations to predict (target hidden state/actions)
+        \param reward reinforcment signal
+        \param learn whether to learn
         */
-        void activate(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &targetCs, float reward, bool learn);
 
         /*!
-        \brief Learn the sparse code
-        \param cs is the ComputeSystem.
-        \param visibleCs the visible (input) layer states
-        */
-        void learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs);
-
-        /*!
-        \brief Get the number of visible layers
+        \brief Get number of visible layers
         */
         size_t getNumVisibleLayers() const {
             return _visibleLayers.size();
@@ -158,7 +149,7 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get the hidden activations (state)
+        \brief Get the hidden activations (predictions)
         */
         const cl::Buffer &getHiddenCs() const {
             return _hiddenCs;
@@ -172,9 +163,9 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get a visible layer's feed weights
+        \brief Get the weights for a visible layer
         */
-        const cl::Buffer &getWeights(int v) const {
+        const cl::Buffer &getWeights(int v) {
             return _visibleLayers[v]._weights;
         }
     };

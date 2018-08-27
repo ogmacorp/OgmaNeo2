@@ -14,7 +14,7 @@
 using namespace ogmaneo;
 
 void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    const std::vector<cl_int3> &inputSizes, const std::vector<bool> &predictInputs, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng)
+    const std::vector<cl_int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng)
 {
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
@@ -69,11 +69,24 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             
             pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
 
+            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(2);
+
+            aVisibleLayerDescs[0]._visibleSize = layerDescs[l]._hiddenSize;
+            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            
+            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
+
             for (int p = 0; p < _pLayers[l].size(); p++) {
-                if (predictInputs[p]) {
+                if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
 
                     _pLayers[l][p]->createRandom(cs, prog, inputSizes[p], pVisibleLayerDescs, rng);
+                }
+                else if (inputTypes[p] == InputType::_act) {
+                    // Add an actor
+                    _actors[p] = std::make_unique<Actor>();
+
+                    _actors[p]->createRandom(cs, prog, inputSizes[p], aVisibleLayerDescs, rng);
                 }
             }
         }
@@ -114,7 +127,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn, float reward) {
     assert(inputCs.size() == _inputSizes.size());
 
     _ticks[0] = 0;
@@ -206,6 +219,13 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
                     }
 
                     _pLayers[l][p]->activate(cs, feedBack);
+                }
+            }
+
+            if (l == 0) {
+                for (int p = 0; p < _actors.size(); p++) {
+                    if (_actors[p] != nullptr)
+                        _actors[p]->step(cs, feedBack, inputCs[p], reward, learn);
                 }
             }
         }

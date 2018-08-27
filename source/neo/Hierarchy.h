@@ -10,10 +10,18 @@
 
 #include "SparseCoder.h"
 #include "Predictor.h"
+#include "Actor.h"
 
 #include <memory>
 
 namespace ogmaneo {
+    /*!
+    \brief Enum describing the type of operation performed by an input layer
+    */
+    enum InputType {
+        _none, _predict, _act
+    };
+    
     /*!
     \brief A hierarchy of sparse coders and predictors, using the exponential memory structure
     */
@@ -31,7 +39,7 @@ namespace ogmaneo {
 
             //!@{
             /*!
-            \brief Radii of the sparse coder and predictor
+            \brief Radii of the sparse coder and predictor/actor
             */
             cl_int _scRadius;
             cl_int _pRadius;
@@ -59,6 +67,7 @@ namespace ogmaneo {
     private:
         std::vector<SparseCoder> _scLayers;
         std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+        std::vector<std::unique_ptr<Actor>> _actors;
 
         std::vector<std::vector<cl::Buffer>> _histories;
 
@@ -80,7 +89,7 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            const std::vector<cl_int3> &inputSizes, const std::vector<bool> &predictInputs, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
+            const std::vector<cl_int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
 
         /*!
         \brief Simulation step/tick
@@ -88,7 +97,7 @@ namespace ogmaneo {
         \param topFeedBack activations of top-level feed back state
         \param learn whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn = true);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn = true, float reward = 0.0f);
 
         /*!
         \brief Get the number of (hidden) layers
@@ -103,6 +112,14 @@ namespace ogmaneo {
         */
         const cl::Buffer &getPredictionCs(int i) const {
             return _pLayers.front()[i]->getHiddenCs();
+        }
+
+        /*!
+        \brief Get the actor output (action)
+        \param i the index of the action to retrieve
+        */
+        const cl::Buffer &getActionCs(int i) const {
+            return _actors[i]->getHiddenCs();
         }
 
         /*!
