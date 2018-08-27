@@ -280,7 +280,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 	
-    int target = (hiddenPosition.z == targetCs[address2(hiddenPosition.xy, hiddenSize.x)] ? 1.0f : 0.0f);
+    float target = (hiddenPosition.z == targetCs[address2(hiddenPosition.xy, hiddenSize.x)] ? 1.0f : 0.0f);
 
     float delta = alpha * (target - sigmoid(hiddenActivations[address3(hiddenPosition, hiddenSize.xy)]));
 
