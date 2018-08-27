@@ -21,6 +21,10 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
 find_package(OpenCL REQUIRED)
  
 include_directories(${OPENCL_INCLUDE_DIR})
+
+find_package(PythonLibs 2.7 REQUIRED)
+ 
+include_directories(${PYTHON_INCLUDE_DIRS})
  
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES

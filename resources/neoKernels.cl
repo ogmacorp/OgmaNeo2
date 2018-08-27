@@ -557,7 +557,7 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
                 int2 offset = visiblePosition - fieldLowerBound;
 
                 for (int c = 0; c < visibleSize.z; c++) {
-                    int visibleA = visibleAs[address2(visiblePosition, visibleSize.x)];
+                    float visibleA = visibleAs[address2(visiblePosition, visibleSize.x)];
 
                     int4 wPos;
                     wPos.xyz = (int3)(hiddenPosition, hiddenC);
