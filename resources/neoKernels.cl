@@ -282,7 +282,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 	
     float target = (hiddenPosition.z == targetCs[address2(hiddenPosition.xy, hiddenSize.x)] ? 1.0f : 0.0f);
 
-    float delta = alpha * (target - sigmoid(hiddenActivations[address3(hiddenPosition, hiddenSize.xy)]));
+    float delta = alpha * (target - tanh(hiddenActivations[address3(hiddenPosition, hiddenSize.xy)]));
 
     int2 visiblePositionCenter = project(hiddenPosition.xy, hiddenToVisible);
 

@@ -33,10 +33,10 @@ int main() {
 
     int inputSize = 64;
 
-    std::vector<ogmaneo::Hierarchy::LayerDesc> lds(6);
+    std::vector<ogmaneo::Hierarchy::LayerDesc> lds(4);
 
     for (int l = 0; l < lds.size(); l++) {
-        lds[l]._hiddenSize = cl_int3{ 5, 5, 32 };
+        lds[l]._hiddenSize = cl_int3{ 4, 4, 16 };
     }
 
     ogmaneo::Hierarchy h;
