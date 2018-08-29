@@ -171,3 +171,15 @@ void ImageEncoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visib
         cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 }
+
+void ogmaneo::whiten(ComputeSystem &cs, cl::Kernel &kernel, const cl::Buffer &input, cl::Buffer& result, const cl_int3 &size, cl_int radius, cl_float sigma) {
+    int argIndex = 0;
+
+    kernel.setArg(argIndex++, input);
+    kernel.setArg(argIndex++, result);
+    kernel.setArg(argIndex++, size);
+    kernel.setArg(argIndex++, radius);
+    kernel.setArg(argIndex++, sigma);
+
+    cs.getQueue().enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size.x, size.y, size.z));
+}

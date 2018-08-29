@@ -178,4 +178,7 @@ namespace ogmaneo {
             return _visibleLayers[v]._weights;
         }
     };
+
+    // Additional whitener (center surround mexican hat filter), for use with the ImageEncoder
+    void whiten(ComputeSystem &cs, cl::Kernel &kernel, const cl::Buffer &input, cl::Buffer& result, const cl_int3 &size, cl_int radius=5, cl_float sigma=1.0f);
 }

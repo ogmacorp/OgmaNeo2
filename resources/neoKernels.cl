@@ -572,8 +572,46 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
 
                     float delta = visibleA - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
 
-                    weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
+                    weights[wi] = fmax(0.0f, weights[wi] + alpha * fmin(0.0f, delta));
                 }
             }
         }
+}
+
+void kernel imWhiten(global const float* input, global float* result, int3 size, int radius, float sigma) {
+    int3 position = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    // Compute center
+    float center = 0.0f;
+    float count = 0.0f;
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 otherPos = position.xy + (int2)(dx, dy);
+
+            if (inBounds0(otherPos, size.xy)) {
+                center += input[address3((int3)(otherPos, position.z), size.xy)];         
+            
+                count += 1.0f;
+            }
+        }
+
+    center /= fmax(1.0f, count);
+
+    float r = 0.0f;
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 otherPos = position.xy + (int2)(dx, dy);
+
+            if (inBounds0(otherPos, size.xy)) {
+                float dist = sqrt((float)(dx * dx + dy * dy));
+
+                float filter = exp(-dist * dist / (2.0f * sigma * sigma));
+
+                r += filter * (input[address3((int3)(otherPos, position.z), size.xy)] - center);         
+            }
+        }
+
+    result[address3(position, size.xy)] = tanh(r);
 }
