@@ -572,7 +572,7 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
 
                     float delta = visibleA - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
 
-                    weights[wi] = fmax(0.0f, weights[wi] + alpha * fmin(0.0f, delta));
+                    weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
                 }
             }
         }
