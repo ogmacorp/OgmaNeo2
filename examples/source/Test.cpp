@@ -8,7 +8,10 @@
 
 #include <ogmaneo/system/ComputeSystem.h>
 #include <ogmaneo/neo/SparseCoder.h>
+#include <ogmaneo/neo/ImageEncoder.h>
 #include <ogmaneo/neo/Hierarchy.h>
+#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
 
 #include "matplotlibcpp.h"
 
@@ -18,10 +21,142 @@
 
 namespace plt = matplotlibcpp;
 
-#define TEST_WAVY
+int address4(cl_int4 pos, cl_int3 dims) {
+    int dxy = dims.x * dims.y;
+    int dxyz = dxy * dims.z;
+
+    return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
+}
+
+float sigmoid(float x) {
+    return 1.0f / (1.0f + std::exp(-x));
+}
+
+#define TEST_SC
+//#define TEST_WAVY
 //#define TEST_ACTOR
 
-#if defined(TEST_WAVY)
+#if defined(TEST_SC)
+int main() {
+    std::mt19937 rng(time(nullptr));
+
+    ogmaneo::ComputeSystem cs;
+    cs.create(ogmaneo::ComputeSystem::_gpu);
+
+    ogmaneo::ComputeProgram prog;
+    prog.loadFromFile(cs, "../../resources/neoKernels.cl");
+
+    int patchWidth = 16;
+    int patchHeight = 16;
+
+    int hiddenWidth = 8;
+    int hiddenHeight = 8;
+    int hiddenColumnSize = 32;
+
+    ogmaneo::ImageEncoder sc;
+    sc._explainIters = 4;
+    sc._alpha = 0.05f;
+
+    std::vector<ogmaneo::ImageEncoder::VisibleLayerDesc> vlds(1);
+    vlds[0]._visibleSize = cl_int3{ patchWidth, patchHeight, 3 };
+    vlds[0]._radius = 6;
+
+    sc.createRandom(cs, prog, cl_int3{ hiddenWidth, hiddenHeight, hiddenColumnSize }, vlds, rng);
+
+    // Load image
+    sf::Image img;
+    img.loadFromFile("cat.png");
+
+    std::uniform_int_distribution<int> startDistX(0, img.getSize().x - patchWidth - 1);
+    std::uniform_int_distribution<int> startDistY(0, img.getSize().y - patchHeight - 1);
+
+    cl::Buffer patchBuf = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, patchWidth * patchHeight * 3 * sizeof(float));
+
+    // Iterate
+    for (int it = 0; it < 10000; it++) {
+        // Select random portion of image
+        int startX = startDistX(rng);
+        int startY = startDistY(rng);
+
+        std::vector<float> data(patchWidth * patchHeight * 3);
+
+        for (int px = 0; px < patchWidth; px++)
+            for (int py = 0; py < patchHeight; py++) {
+                sf::Color c = img.getPixel(startX + px, startY + py);
+
+                data[px + py * patchWidth + 0 * patchWidth * patchHeight] = c.r / 255.0f;
+                data[px + py * patchWidth + 1 * patchWidth * patchHeight] = c.g / 255.0f;
+                data[px + py * patchWidth + 2 * patchWidth * patchHeight] = c.b / 255.0f;
+            }
+
+        // Create buffer
+        cs.getQueue().enqueueWriteBuffer(patchBuf, CL_TRUE, 0, data.size() * sizeof(float), data.data());
+
+        sc.activate(cs, { patchBuf });
+
+        // std::vector<float> actBuf(hiddenWidth * hiddenHeight);
+
+        // cs.getQueue().enqueueReadBuffer(sc.getHiddenActs(), CL_TRUE, 0, actBuf.size() * sizeof(float), actBuf.data());
+
+        // for (int i = 0; i < actBuf.size(); i++)
+        //     std::cout << actBuf[i] << " ";
+
+        // std::cout << std::endl;
+        // std::cout << std::endl;
+
+        sc.learn(cs, { patchBuf });
+
+        if (it % 10 == 0)
+            std::cout << "Iter " << it << std::endl;
+    }
+
+    std::cout << "Saving some weights..." << std::endl;
+
+    int diam = sc.getVisibleLayerDesc(0)._radius * 2 + 1;
+    int diam2 = diam * diam;
+    int weightsPerUnit = diam2 * sc.getVisibleLayerDesc(0)._visibleSize.z;
+    int totalNumWeights = weightsPerUnit * hiddenWidth * hiddenHeight * hiddenColumnSize;
+
+    std::vector<cl_float> weights(totalNumWeights);
+
+    std::cout << "Has " << totalNumWeights << " weights." << std::endl;
+
+    cs.getQueue().enqueueReadBuffer(sc.getWeights(0), CL_TRUE, 0, totalNumWeights * sizeof(cl_float), weights.data());
+
+    for (int colSlice = 0; colSlice < hiddenColumnSize; colSlice++) {
+        sf::Image wImg;
+        wImg.create(hiddenWidth * diam, hiddenHeight * diam, sf::Color::Black);
+
+        for (int x = 0; x < hiddenWidth; x++)
+            for (int y = 0; y < hiddenHeight; y++) {
+                for (int dx = 0; dx < diam; dx++)
+                    for (int dy = 0; dy < diam; dy++) {
+                        int tx = x * diam + dx;
+                        int ty = y * diam + dy;
+
+                        int iR = dx + dy * diam + 0 * diam2;
+                        int iG = dx + dy * diam + 1 * diam2;
+                        int iB = dx + dy * diam + 2 * diam2;
+
+                        float wR = weights[address4(cl_int4{ x, y, colSlice, iR }, sc.getHiddenSize())];
+                        float wG = weights[address4(cl_int4{ x, y, colSlice, iG }, sc.getHiddenSize())];
+                        float wB = weights[address4(cl_int4{ x, y, colSlice, iB }, sc.getHiddenSize())];
+
+                        sf::Color c;
+                        c.r = 255 * std::min(1.0f, std::max(0.0f, wR));
+                        c.g = 255 * std::min(1.0f, std::max(0.0f, wG));
+                        c.b = 255 * std::min(1.0f, std::max(0.0f, wB));
+
+                        wImg.setPixel(tx, ty, c);
+                    }
+            }
+
+        wImg.saveToFile("wImg" + std::to_string(colSlice) + ".png");
+    }
+
+    return 0;
+}
+#elif defined(TEST_WAVY)
 int main() {
     std::mt19937 rng(time(nullptr));
 
