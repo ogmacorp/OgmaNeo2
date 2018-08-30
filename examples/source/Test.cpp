@@ -46,26 +46,66 @@ int main() {
     ogmaneo::ComputeProgram prog;
     prog.loadFromFile(cs, "../../resources/neoKernels.cl");
 
-    int patchWidth = 16;
-    int patchHeight = 16;
+    int patchWidth = 9;
+    int patchHeight = 9;
 
     int hiddenWidth = 8;
     int hiddenHeight = 8;
-    int hiddenColumnSize = 32;
+    int hiddenColumnSize = 8;
 
     ogmaneo::ImageEncoder sc;
     sc._explainIters = 4;
-    sc._alpha = 0.05f;
+    sc._alpha = 0.01f;
 
     std::vector<ogmaneo::ImageEncoder::VisibleLayerDesc> vlds(1);
     vlds[0]._visibleSize = cl_int3{ patchWidth, patchHeight, 3 };
-    vlds[0]._radius = 6;
+    vlds[0]._radius = 4;
 
     sc.createRandom(cs, prog, cl_int3{ hiddenWidth, hiddenHeight, hiddenColumnSize }, vlds, rng);
 
+    // Filter kernel
+    cl::Kernel filter = cl::Kernel(prog.getProgram(), "imFilterEdge");
+
     // Load image
     sf::Image img;
-    img.loadFromFile("cat.png");
+    img.loadFromFile("test.jpg");
+
+    // Filter it
+    std::vector<float> imgData(img.getSize().x * img.getSize().y * 3);
+    cl::Buffer imgBuf = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, imgData.size() * sizeof(float));
+    cl::Buffer filtBuf = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, imgData.size() * sizeof(float));
+
+    for (int x = 0; x < img.getSize().x; x++)
+        for (int y = 0; y < img.getSize().y; y++) {
+            sf::Color c = img.getPixel(x, y);
+
+            imgData[x + y * img.getSize().x + 0 * img.getSize().x * img.getSize().y] = c.r / 255.0f;
+            imgData[x + y * img.getSize().x + 1 * img.getSize().x * img.getSize().y] = c.g / 255.0f;
+            imgData[x + y * img.getSize().x + 2 * img.getSize().x * img.getSize().y] = c.b / 255.0f;
+        }
+
+    cs.getQueue().enqueueWriteBuffer(imgBuf, CL_TRUE, 0, imgData.size() * sizeof(float), imgData.data());
+
+    ogmaneo::filterEdge(cs, filter, imgBuf, filtBuf, cl_int3{ img.getSize().x, img.getSize().y, 3 }, 1, 10.0f);
+
+    cs.getQueue().enqueueReadBuffer(filtBuf, CL_TRUE, 0, imgData.size() * sizeof(float), imgData.data());
+
+    // Read back as image
+    sf::Image filtImg;
+    filtImg.create(img.getSize().x, img.getSize().y);
+
+    for (int x = 0; x < img.getSize().x; x++)
+        for (int y = 0; y < img.getSize().y; y++) {
+            sf::Color c;
+
+            c.r = imgData[x + y * img.getSize().x + 0 * img.getSize().x * img.getSize().y] * 255.0f;
+            c.g = imgData[x + y * img.getSize().x + 1 * img.getSize().x * img.getSize().y] * 255.0f;
+            c.b = imgData[x + y * img.getSize().x + 2 * img.getSize().x * img.getSize().y] * 255.0f;
+
+            filtImg.setPixel(x, y, c);
+        }
+
+    filtImg.saveToFile("filtImg.png");
 
     std::uniform_int_distribution<int> startDistX(0, img.getSize().x - patchWidth - 1);
     std::uniform_int_distribution<int> startDistY(0, img.getSize().y - patchHeight - 1);
@@ -79,7 +119,7 @@ int main() {
         int startY = startDistY(rng);
 
         std::vector<float> data(patchWidth * patchHeight * 3);
-
+    
         for (int px = 0; px < patchWidth; px++)
             for (int py = 0; py < patchHeight; py++) {
                 sf::Color c = img.getPixel(startX + px, startY + py);
@@ -88,6 +128,16 @@ int main() {
                 data[px + py * patchWidth + 1 * patchWidth * patchHeight] = c.g / 255.0f;
                 data[px + py * patchWidth + 2 * patchWidth * patchHeight] = c.b / 255.0f;
             }
+
+        // float center = 0.0f;
+
+        // for (int i = 0; i < data.size(); i++)
+        //     center += data[i];
+
+        // center /= data.size();
+
+        // for (int i = 0; i < data.size(); i++)
+        //     data[i] -= center;
 
         // Create buffer
         cs.getQueue().enqueueWriteBuffer(patchBuf, CL_TRUE, 0, data.size() * sizeof(float), data.data());
@@ -143,9 +193,9 @@ int main() {
                         float wB = weights[address4(cl_int4{ x, y, colSlice, iB }, sc.getHiddenSize())];
 
                         sf::Color c;
-                        c.r = 255 * std::min(1.0f, std::max(0.0f, wR));
-                        c.g = 255 * std::min(1.0f, std::max(0.0f, wG));
-                        c.b = 255 * std::min(1.0f, std::max(0.0f, wB));
+                        c.r = 255 * sigmoid(wR * 8.0f);
+                        c.g = 255 * sigmoid(wG * 8.0f);
+                        c.b = 255 * sigmoid(wB * 8.0f);
 
                         wImg.setPixel(tx, ty, c);
                     }
