@@ -293,7 +293,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
     for (int c = 0; c < hiddenSize.z; c++)
         softSum += exp(hiddenActivations[address3((int3)(hiddenPosition.xy, c), hiddenSize.xy)] - maxi);
 
-    float act = exp(hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenPosition.z), hiddenSize.xy)] - maxi) / fmax(0.0001f, softSum);
+    float act = exp(hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] - maxi) / fmax(0.0001f, softSum);
 
     float delta = alpha * (target - act);
 
