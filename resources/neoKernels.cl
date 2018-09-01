@@ -99,7 +99,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += weights[address4(wPos, hiddenSize)] * (1.0f - sigmoid(visibleActivations[address3((int3)(visiblePosition, visibleC), visibleSize.xy)]));
+                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] * (1.0f - sigmoid(visibleActivations[address3((int3)(visiblePosition, visibleC), visibleSize.xy)])));
             }
         }
 
@@ -451,6 +451,27 @@ void kernel imForward(global const float* visibleAs, global const float* visible
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    float center = 0.0f;
+    float count = 0.0f;
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(visiblePosition, visibleSize.xy)) {
+                int2 offset = visiblePosition - fieldLowerBound;
+
+                for (int c = 0; c < visibleSize.z; c++) {
+                    float visibleA = visibleAs[address3((int3)(visiblePosition, c), visibleSize.xy)];
+
+                    center += visibleA;
+                    count += 1.0f;
+                }
+            }
+        }
+
+    center /= fmax(1.0f, count);
+
     float sum = 0.0f;
 
     for (int dx = -radius; dx <= radius; dx++)
@@ -467,7 +488,7 @@ void kernel imForward(global const float* visibleAs, global const float* visible
                     wPos.xyz = hiddenPosition;
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
-                    sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] * (visibleA - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)]));
+                    sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] * (visibleA - center - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)]));
                 }
             }
         }
@@ -554,6 +575,27 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    float center = 0.0f;
+    float count = 0.0f;
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(visiblePosition, visibleSize.xy)) {
+                int2 offset = visiblePosition - fieldLowerBound;
+
+                for (int c = 0; c < visibleSize.z; c++) {
+                    float visibleA = visibleAs[address3((int3)(visiblePosition, c), visibleSize.xy)];
+
+                    center += visibleA;
+                    count += 1.0f;
+                }
+            }
+        }
+
+    center /= fmax(1.0f, count);
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -570,7 +612,7 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
 
                     int wi = address4(wPos, hiddenSize);
 
-                    float delta = visibleA - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
+                    float delta = visibleA - center - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
 
                     weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
                 }
