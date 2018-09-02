@@ -103,8 +103,6 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            float searchScalar = std::pow(0.5f, it);
-
             int argIndex = 0;
 
             _forwardKernel.setArg(argIndex++, visibleAs[vli]);
@@ -115,7 +113,6 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
             _forwardKernel.setArg(argIndex++, _hiddenSize);
             _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
             _forwardKernel.setArg(argIndex++, vld._radius);
-            _forwardKernel.setArg(argIndex++, searchScalar);
 
             cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
         }
