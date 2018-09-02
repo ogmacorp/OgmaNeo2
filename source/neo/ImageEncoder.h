@@ -178,6 +178,4 @@ namespace ogmaneo {
             return _visibleLayers[v]._weights;
         }
     };
-
-    void filterEdge(ComputeSystem &cs, cl::Kernel &kernel, const cl::Buffer &input, cl::Buffer& result, const cl_int3 &size, cl_int radius=1, cl_float sigma=2.0f);
 }

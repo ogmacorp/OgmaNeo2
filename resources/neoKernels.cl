@@ -205,7 +205,7 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
  
-                    weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
+                    weights[wi] += alpha * delta;
                 }
             }
         }
@@ -293,7 +293,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
     for (int c = 0; c < hiddenSize.z; c++)
         softSum += exp(hiddenActivations[address3((int3)(hiddenPosition.xy, c), hiddenSize.xy)] - maxi);
 
-    float act = exp(hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenPosition.z), hiddenSize.xy)] - maxi) / fmax(0.0001f, softSum);
+    float act = exp(hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] - maxi) / fmax(0.0001f, softSum);
 
     float delta = alpha * (target - act);
 
@@ -649,29 +649,4 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAc
                 }
             }
         }
-
-}
-
-void kernel imFilterEdge(global const float* input, global float* result, int3 size, int radius, float sigma) {
-    int3 position = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
-
-    int diam = radius * 2 + 1;
-    float midComponent = diam * diam - 1;
-
-    float r = 0.0f;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 otherPos = position.xy + (int2)(dx, dy);
-
-            if (inBounds0(otherPos, size.xy)) {
-                float dist = sqrt((float)(dx * dx + dy * dy));
-
-                float filter = (dx == 0 && dy == 0 ? midComponent : -1.0f);
-
-                r += filter * input[address3((int3)(otherPos, position.z), size.xy)];
-            }
-        }
-
-    result[address3(position, size.xy)] = sigmoid(sigma * r / midComponent);
 }
