@@ -113,6 +113,7 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vis
             _forwardKernel.setArg(argIndex++, _hiddenSize);
             _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
             _forwardKernel.setArg(argIndex++, vld._radius);
+            _forwardKernel.setArg(argIndex++, std::pow(0.5f, it)); // Search scalar
 
             cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
         }

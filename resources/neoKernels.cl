@@ -73,7 +73,7 @@ void kernel scInitWeights(global float* weights, uint2 seed) {
 void kernel scForward(global const int* visibleCs, global const float* visibleActivations,
     global float* hiddenActivations,
     global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
+    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float searchScalar)
 {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
@@ -103,7 +103,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
             }
         }
 
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum * searchScalar;
 }
 
 void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
@@ -440,7 +440,7 @@ void kernel imInitWeights(global float* weights, uint2 seed) {
 void kernel imForward(global const float* visibleAs, global const float* visibleActivations,
     global float* hiddenActivations,
     global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
+    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float searchScalar)
 {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
@@ -493,7 +493,7 @@ void kernel imForward(global const float* visibleAs, global const float* visible
             }
         }
 
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum * searchScalar;
 }
 
 void kernel imBackward(global const int* hiddenCs, global float* visibleActivations,
