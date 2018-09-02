@@ -36,7 +36,7 @@ int main() {
     std::vector<ogmaneo::Hierarchy::LayerDesc> lds(4);
 
     for (int l = 0; l < lds.size(); l++) {
-        lds[l]._hiddenSize = cl_int3{ 4, 4, 16 };
+        lds[l]._hiddenSize = cl_int3{ 5, 5, 16 };
     }
 
     ogmaneo::Hierarchy h;
@@ -48,7 +48,7 @@ int main() {
 
     cs.getQueue().enqueueFillBuffer(topFeedBack, static_cast<cl_int>(0), 0, lds.back()._hiddenSize.x * lds.back()._hiddenSize.y * sizeof(cl_int));
 
-    int iters = 9000;
+    int iters = 5000;
 
     // Iterate
     for (int it = 0; it < iters; it++) {
