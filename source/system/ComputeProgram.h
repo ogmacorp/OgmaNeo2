@@ -27,7 +27,7 @@ namespace ogmaneo {
         /*!
         \brief Load kernel code from a string
         */
-        bool loadFromString(ComputeSystem &cs, const std::string& kernel);
+        bool loadFromString(ComputeSystem &cs, const std::string& prog);
 
     public:
         /*!

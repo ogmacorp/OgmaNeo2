@@ -37,8 +37,8 @@ bool ComputeProgram::loadFromFile(ComputeSystem &cs, const std::string &name) {
     return loadFromString(cs, kernel);
 }
 
-bool ComputeProgram::loadFromString(ComputeSystem &cs, const std::string& kernel) {
-    _program = cl::Program(cs.getContext(), kernel);
+bool ComputeProgram::loadFromString(ComputeSystem &cs, const std::string& prog) {
+    _program = cl::Program(cs.getContext(), prog);
 
     if (_program.build(std::vector<cl::Device>(1, cs.getDevice())) != CL_SUCCESS) {
 #ifdef SYS_DEBUG

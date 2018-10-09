@@ -48,7 +48,7 @@ int main() {
 
     cs.getQueue().enqueueFillBuffer(topFeedBack, static_cast<cl_int>(0), 0, lds.back()._hiddenSize.x * lds.back()._hiddenSize.y * sizeof(cl_int));
 
-    int iters = 5000;
+    int iters = 3500;
 
     // Iterate
     for (int it = 0; it < iters; it++) {
