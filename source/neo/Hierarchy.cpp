@@ -44,7 +44,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
                 for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                     int index = t + layerDescs[l]._temporalHorizon * i;
 
-                    scVisibleLayerDescs[index]._visibleSize = inputSizes[i];
+                    scVisibleLayerDescs[index]._size = inputSizes[i];
                     scVisibleLayerDescs[index]._radius = layerDescs[l]._scRadius;
                 }
             }
@@ -64,14 +64,14 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
 
-            pVisibleLayerDescs[0]._visibleSize = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
             
             pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
 
             std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(2);
 
-            aVisibleLayerDescs[0]._visibleSize = layerDescs[l]._hiddenSize;
+            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
             
             aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
@@ -94,7 +94,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             scVisibleLayerDescs.resize(layerDescs[l]._temporalHorizon);
 
             for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
-                scVisibleLayerDescs[t]._visibleSize = layerDescs[l - 1]._hiddenSize;
+                scVisibleLayerDescs[t]._size = layerDescs[l - 1]._hiddenSize;
                 scVisibleLayerDescs[t]._radius = layerDescs[l]._scRadius;
             }
 			
@@ -111,7 +111,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
 
-            pVisibleLayerDescs[0]._visibleSize = layerDescs[l]._hiddenSize;
+            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
             
             pVisibleLayerDescs[1] = pVisibleLayerDescs[0];

@@ -30,15 +30,15 @@ void ImageEncoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        int numVisibleColumns = vld._visibleSize.x * vld._visibleSize.y;
-        int numVisible = numVisibleColumns * vld._visibleSize.z;
+        int numVisibleColumns = vld._size.x * vld._size.y;
+        int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._visibleToHidden = cl_float2{ static_cast<float>(_hiddenSize.x) / static_cast<float>(vld._visibleSize.x),
-            static_cast<float>(_hiddenSize.y) / static_cast<float>(vld._visibleSize.y)
+        vl._visibleToHidden = cl_float2{ static_cast<float>(_hiddenSize.x) / static_cast<float>(vld._size.x),
+            static_cast<float>(_hiddenSize.y) / static_cast<float>(vld._size.y)
         };
 
-        vl._hiddenToVisible = cl_float2{ static_cast<float>(vld._visibleSize.x) / static_cast<float>(_hiddenSize.x),
-            static_cast<float>(vld._visibleSize.y) / static_cast<float>(_hiddenSize.y)
+        vl._hiddenToVisible = cl_float2{ static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
+            static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y)
         };
 
         vl._reverseRadii = cl_int2{ static_cast<cl_int>(std::ceil(vl._visibleToHidden.x * vld._radius) + 1),
@@ -47,7 +47,7 @@ void ImageEncoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
         cl_int diam = vld._radius * 2 + 1;
 
-        cl_int numWeightsPerHidden = diam * diam * vld._visibleSize.z;
+        cl_int numWeightsPerHidden = diam * diam * vld._size.z;
 
         cl_int weightsSize = numHidden * numWeightsPerHidden;
 
@@ -94,7 +94,7 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        cs.getQueue().enqueueFillBuffer(vl._visibleActivations, static_cast<cl_float>(0.0f), 0, vld._visibleSize.x * vld._visibleSize.y * vld._visibleSize.z * sizeof(cl_float)); 
+        cs.getQueue().enqueueFillBuffer(vl._visibleActivations, static_cast<cl_float>(0.0f), 0, vld._size.x * vld._size.y * vld._size.z * sizeof(cl_float)); 
     }
 
     for (int it = 0; it < _explainIters; it++) {
@@ -109,7 +109,7 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
             _forwardKernel.setArg(argIndex++, vl._visibleActivations);
             _forwardKernel.setArg(argIndex++, _hiddenActivations);
             _forwardKernel.setArg(argIndex++, vl._weights);
-            _forwardKernel.setArg(argIndex++, vld._visibleSize);
+            _forwardKernel.setArg(argIndex++, vld._size);
             _forwardKernel.setArg(argIndex++, _hiddenSize);
             _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
             _forwardKernel.setArg(argIndex++, vld._radius);
@@ -138,14 +138,14 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
             _backwardKernel.setArg(argIndex++, _hiddenCs);
             _backwardKernel.setArg(argIndex++, vl._visibleActivations);
             _backwardKernel.setArg(argIndex++, vl._weights);
-            _backwardKernel.setArg(argIndex++, vld._visibleSize);
+            _backwardKernel.setArg(argIndex++, vld._size);
             _backwardKernel.setArg(argIndex++, _hiddenSize);
             _backwardKernel.setArg(argIndex++, vl._visibleToHidden);
             _backwardKernel.setArg(argIndex++, vl._hiddenToVisible);
             _backwardKernel.setArg(argIndex++, vld._radius);
             _backwardKernel.setArg(argIndex++, vl._reverseRadii);
 
-            cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._visibleSize.x, vld._visibleSize.y, vld._visibleSize.z));
+            cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
         }
     }
 }
@@ -162,7 +162,7 @@ void ImageEncoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visib
         _learnKernel.setArg(argIndex++, vl._visibleActivations);
         _learnKernel.setArg(argIndex++, _hiddenCs);
         _learnKernel.setArg(argIndex++, vl._weights);
-        _learnKernel.setArg(argIndex++, vld._visibleSize);
+        _learnKernel.setArg(argIndex++, vld._size);
         _learnKernel.setArg(argIndex++, _hiddenSize);
         _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
         _learnKernel.setArg(argIndex++, vld._radius);

@@ -30,15 +30,15 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        int numVisibleColumns = vld._visibleSize.x * vld._visibleSize.y;
+        int numVisibleColumns = vld._size.x * vld._size.y;
 
-        vl._hiddenToVisible = cl_float2{ static_cast<float>(vld._visibleSize.x) / static_cast<float>(_hiddenSize.x),
-            static_cast<float>(vld._visibleSize.y) / static_cast<float>(_hiddenSize.y)
+        vl._hiddenToVisible = cl_float2{ static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
+            static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y)
         };
 
         cl_int diam = vld._radius * 2 + 1;
 
-        cl_int numWeightsPerHidden = diam * diam * vld._visibleSize.z;
+        cl_int numWeightsPerHidden = diam * diam * vld._size.z;
 
         cl_int weightsSize = numHidden * numWeightsPerHidden;
 
@@ -96,7 +96,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
         _forwardKernel.setArg(argIndex++, visibleCs[vli]);
         _forwardKernel.setArg(argIndex++, _hiddenActivations[_front]);
         _forwardKernel.setArg(argIndex++, vl._weights);
-        _forwardKernel.setArg(argIndex++, vld._visibleSize);
+        _forwardKernel.setArg(argIndex++, vld._size);
         _forwardKernel.setArg(argIndex++, _hiddenSize);
         _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
         _forwardKernel.setArg(argIndex++, vld._radius);
@@ -129,7 +129,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
             _learnKernel.setArg(argIndex++, targetCs);
             _learnKernel.setArg(argIndex++, _hiddenCs);
             _learnKernel.setArg(argIndex++, vl._weights);
-            _learnKernel.setArg(argIndex++, vld._visibleSize);
+            _learnKernel.setArg(argIndex++, vld._size);
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
             _learnKernel.setArg(argIndex++, vld._radius);
@@ -142,6 +142,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
 
         // Copy visible activation
         cs.getQueue().enqueueCopyBuffer(visibleCs[vli], vl._visibleCs,
-            0, 0, vld._visibleSize.x * vld._visibleSize.y * sizeof(cl_int));
+            0, 0, vld._size.x * vld._size.y * sizeof(cl_int));
     }
 }

@@ -24,7 +24,7 @@ namespace ogmaneo {
             /*!
             \brief Visible layer size
             */
-            cl_int3 _visibleSize;
+            cl_int3 _size;
 
             /*!
             \brief Radius onto hidden layer
@@ -34,7 +34,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             VisibleLayerDesc()
-                : _visibleSize({ 4, 4, 16 }),
+                : _size({ 4, 4, 16 }),
                 _radius(2)
             {}
         };
