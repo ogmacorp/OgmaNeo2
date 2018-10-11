@@ -13,18 +13,26 @@ project(Test)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lOpenCL -lOgmaNeo -lsfml-system -lsfml-window -lsfml-graphics")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # This is only required for the script to work in the version control
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake")
  
 find_package(OpenCL REQUIRED)
  
-include_directories(${OPENCL_INCLUDE_DIR})
+include_directories(${OpenCL_INCLUDE_DIR})
 
 find_package(PythonLibs 2.7 REQUIRED)
  
 include_directories(${PYTHON_INCLUDE_DIRS})
+
+find_package(SFML 2 REQUIRED network audio graphics window system)
+ 
+include_directories(${SFML_INCLUDE_DIR})
+
+find_package(OgmaNeo REQUIRED)
+ 
+include_directories(${OGMANEO_INCLUDE_DIR})
  
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
@@ -34,5 +42,6 @@ set(SOURCES
 add_executable(Test ${SOURCES})
 
 target_link_libraries(Test ${SFML_LIBRARIES})
-target_link_libraries(Test ${OPENCL_LIBRARIES})
+target_link_libraries(Test ${OpenCL_LIBRARIES})
 target_link_libraries(Test ${PYTHON_LIBRARIES})
+target_link_libraries(Test ${OGMANEO_LIBRARIES})
