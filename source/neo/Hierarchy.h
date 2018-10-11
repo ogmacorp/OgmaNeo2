@@ -146,21 +146,21 @@ namespace ogmaneo {
         /*!
         \brief Retrieve a sparse coding layer
         */
-        const SparseCoder &getSCLayer(int l) const {
+        SparseCoder &getSCLayer(int l) {
             return _scLayers[l];
         }
 
         /*!
         \brief Retrieve predictor layer(s)
         */
-        const std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) const {
+        std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
             return _pLayers[l];
         }
 
         /*!
         \brief Retrieve actor layer(s)
         */
-        const std::vector<std::unique_ptr<Actor>> &getActors() const {
+        std::vector<std::unique_ptr<Actor>> &getActors() {
             return _actors;
         }
     };
