@@ -126,8 +126,8 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
             _learnKernel.setArg(argIndex++, vl._visibleCs);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _learnKernel.setArg(argIndex++, targetCs);
             _learnKernel.setArg(argIndex++, _hiddenCs);
+            _learnKernel.setArg(argIndex++, targetCs);
             _learnKernel.setArg(argIndex++, vl._weights);
             _learnKernel.setArg(argIndex++, vld._size);
             _learnKernel.setArg(argIndex++, _hiddenSize);
