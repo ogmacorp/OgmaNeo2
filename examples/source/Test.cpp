@@ -10,6 +10,7 @@
 #include <ogmaneo/neo/SparseCoder.h>
 #include <ogmaneo/neo/Hierarchy.h>
 
+#define WITHOUT_NUMPY
 #include "matplotlibcpp.h"
 
 #include <CL/cl.h>
@@ -33,7 +34,7 @@ int main() {
 
     int inputSize = 64;
 
-    std::vector<ogmaneo::Hierarchy::LayerDesc> lds(4);
+    std::vector<ogmaneo::Hierarchy::LayerDesc> lds(5);
 
     for (int l = 0; l < lds.size(); l++) {
         lds[l]._hiddenSize = cl_int3{ 5, 5, 16 };
@@ -48,7 +49,7 @@ int main() {
 
     cs.getQueue().enqueueFillBuffer(topFeedBack, static_cast<cl_int>(0), 0, lds.back()._hiddenSize.x * lds.back()._hiddenSize.y * sizeof(cl_int));
 
-    int iters = 3500;
+    int iters = 4000;
 
     // Iterate
     for (int it = 0; it < iters; it++) {

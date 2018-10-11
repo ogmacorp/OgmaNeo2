@@ -20,7 +20,9 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
 find_package(OpenCL REQUIRED)
  
-include_directories(${OPENCL_INCLUDE_DIR})
+include_directories(${OpenCL_INCLUDE_DIRS})
+
+link_directories(${OpenCL_LIBRARY})
  
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
@@ -34,9 +36,9 @@ set(SOURCES
     "${SOURCE_PATH}/neo/ImageEncoder.cpp"
 )
 
-add_library(OgmaNeo SHARED ${SOURCES})
+add_library(OgmaNeo ${SOURCES})
 
-target_link_libraries(OgmaNeo ${OPENCL_LIBRARIES})
+target_link_libraries(OgmaNeo ${OpenCL_LIBRARIES})
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin

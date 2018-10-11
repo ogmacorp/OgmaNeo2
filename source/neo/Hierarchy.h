@@ -156,5 +156,12 @@ namespace ogmaneo {
         const std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) const {
             return _pLayers[l];
         }
+
+        /*!
+        \brief Retrieve actor layer(s)
+        */
+        const std::vector<std::unique_ptr<Actor>> &getActors() const {
+            return _actors;
+        }
     };
 }
