@@ -19,6 +19,8 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
 
+    _actors.resize(inputSizes.size());
+
     _ticks.assign(layerDescs.size(), 0);
 
     _histories.resize(layerDescs.size());
