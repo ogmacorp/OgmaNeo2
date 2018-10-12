@@ -50,6 +50,7 @@ namespace ogmaneo {
             cl::Buffer _visibleCs;
 
             cl::Buffer _weights;
+            cl::Buffer _traces;
 
             cl_float2 _hiddenToVisible;
             //!@}
