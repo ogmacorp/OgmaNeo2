@@ -374,7 +374,7 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 
 void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
     global const int* hiddenCs, global const int* targetCs,
-    global float* weights,
+    global float* weights, global float* traces,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
     float alpha, float gamma, float reward)
 {
@@ -406,11 +406,17 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = (int3)(hiddenPosition, targetC);
-                wPos.w = offset.x + offset.y * diam + visibleC * diam2;
+                for (int hc = 0; hc < hiddenSize.z; hc++)
+                    for (int vc = 0; vc < visibleSize.z; vc++) {
+                        int4 wPos;
+                        wPos.xyz = (int3)(hiddenPosition, hc);
+                        wPos.w = offset.x + offset.y * diam + vc * diam2;
 
-                weights[address4(wPos, hiddenSize)] += delta;
+                        int wi = address4(wPos, hiddenSize);
+
+                        traces[wi] = (vc == visibleC && hc == targetC ? 1.0f : gamma * traces[wi]);
+                        weights[wi] += delta * traces[wi];
+                    }
             }
         }
 }

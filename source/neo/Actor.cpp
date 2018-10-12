@@ -43,6 +43,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
         cl_int weightsSize = numHidden * numWeightsPerHidden;
 
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
+        vl._traces = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
 
         {
             std::uniform_int_distribution<int> seedDist(0, 99999);
@@ -54,6 +55,8 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
             cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
         }
+
+        cs.getQueue().enqueueFillBuffer(vl._traces, static_cast<cl_float>(0), 0, weightsSize * sizeof(cl_float));
 
         vl._visibleCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
 
@@ -126,9 +129,10 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
             _learnKernel.setArg(argIndex++, vl._visibleCs);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _learnKernel.setArg(argIndex++, targetCs);
             _learnKernel.setArg(argIndex++, _hiddenCs);
+            _learnKernel.setArg(argIndex++, targetCs);
             _learnKernel.setArg(argIndex++, vl._weights);
+            _learnKernel.setArg(argIndex++, vl._traces);
             _learnKernel.setArg(argIndex++, vld._size);
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
