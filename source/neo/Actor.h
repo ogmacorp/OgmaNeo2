@@ -100,10 +100,15 @@ namespace ogmaneo {
         cl_float _gamma;
 
         /*!
+        \brief Trace decay (lambda)
+        */
+        cl_float _traceDecay;
+
+        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.99f)
+        : _alpha(0.01f), _gamma(0.99f), _traceDecay(0.98f)
         {}
 
         /*!

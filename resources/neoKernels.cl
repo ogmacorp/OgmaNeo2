@@ -376,7 +376,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     global const int* hiddenCs, global const int* targetCs,
     global float* weights, global float* traces,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float gamma, float reward)
+    float alpha, float gamma, float traceDecay, float reward)
 {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -414,7 +414,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                         int wi = address4(wPos, hiddenSize);
 
-                        traces[wi] = (vc == visibleC && hc == targetC ? 1.0f : gamma * traces[wi]);
+                        traces[wi] = (vc == visibleC && hc == targetC ? 1.0f : traceDecay * traces[wi]);
                         weights[wi] += delta * traces[wi];
                     }
             }
