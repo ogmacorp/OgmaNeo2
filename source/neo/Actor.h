@@ -105,10 +105,15 @@ namespace ogmaneo {
         cl_float _traceDecay;
 
         /*!
+        \brief TD error clipping
+        */
+        cl_float _tdErrorClip;
+
+        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.99f), _traceDecay(0.98f)
+        : _alpha(0.01f), _gamma(0.99f), _traceDecay(0.98f), _tdErrorClip(1.0f)
         {}
 
         /*!

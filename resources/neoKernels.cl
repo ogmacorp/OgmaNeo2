@@ -315,7 +315,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel aInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.01f;
+    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.0001f;
 }
 
 void kernel aForward(global const int* visibleCs, global float* hiddenActivations, global const float* weights,
@@ -376,7 +376,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     global const int* hiddenCs, global const int* targetCs,
     global float* weights, global float* traces,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float gamma, float traceDecay, float reward)
+    float alpha, float gamma, float traceDecay, float tdErrorClip, float reward)
 {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -388,7 +388,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, targetC), hiddenSize.xy)];
 
-    float delta = alpha * (reward + gamma * qNext - qPrev);
+    float delta = alpha * fmin(tdErrorClip, fmax(-tdErrorClip, reward + gamma * qNext - qPrev));
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 

@@ -140,6 +140,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
             _learnKernel.setArg(argIndex++, _alpha);
             _learnKernel.setArg(argIndex++, _gamma);
             _learnKernel.setArg(argIndex++, _traceDecay);
+            _learnKernel.setArg(argIndex++, _tdErrorClip);
             _learnKernel.setArg(argIndex++, reward);
 
             cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
