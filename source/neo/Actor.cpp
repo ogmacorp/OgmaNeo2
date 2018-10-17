@@ -192,6 +192,10 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
         cs.getQueue().enqueueReadBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
         os.write(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
 
+        std::vector<cl_float> traces(weightsSize);
+        cs.getQueue().enqueueReadBuffer(vl._traces, CL_TRUE, 0, weightsSize * sizeof(cl_float), traces.data());
+        os.write(reinterpret_cast<char*>(traces.data()), weightsSize * sizeof(cl_float));
+
         std::vector<cl_int> visibleCs(numVisibleColumns);
         cs.getQueue().enqueueReadBuffer(vl._visibleCs, CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
         os.write(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
