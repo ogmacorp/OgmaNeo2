@@ -167,6 +167,10 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
     os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
+    std::vector<cl_float> hiddenActivations(numHidden);
+    cs.getQueue().enqueueReadBuffer(_hiddenActivations[_front], CL_TRUE, 0, numHidden * sizeof(cl_float), hiddenActivations.data());
+    os.write(reinterpret_cast<char*>(hiddenActivations.data()), numHidden * sizeof(cl_float));
+    
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -218,10 +222,10 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
     cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
 
-    std::vector<cl_int> hiddenActivations(numHidden);
-    is.read(reinterpret_cast<char*>(hiddenActivations.data()), numHidden * sizeof(cl_int));
+    std::vector<cl_float> hiddenActivations(numHidden);
+    is.read(reinterpret_cast<char*>(hiddenActivations.data()), numHidden * sizeof(cl_float));
     _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
-    cs.getQueue().enqueueWriteBuffer(_hiddenActivations[_front], CL_TRUE, 0, numHidden * sizeof(cl_int), hiddenActivations.data());
+    cs.getQueue().enqueueWriteBuffer(_hiddenActivations[_front], CL_TRUE, 0, numHidden * sizeof(cl_float), hiddenActivations.data());
 
     int numVisibleLayers;
     
