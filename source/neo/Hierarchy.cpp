@@ -293,7 +293,6 @@ void Hierarchy::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
 void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
     int numLayers;
-
     is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
 
     int numInputs;
@@ -348,6 +347,8 @@ void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::ist
                 _pLayers[l][v] = std::make_unique<Predictor>();
                 _pLayers[l][v]->readFromStream(cs, prog, is);
             }
+            else
+                _pLayers[l][v] = nullptr;
         }
     }
 
@@ -360,5 +361,7 @@ void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::ist
             _actors[v] = std::make_unique<Actor>();
             _actors[v]->readFromStream(cs, prog, is);
         }
+        else
+            _actors[v] = nullptr;
     }
 }

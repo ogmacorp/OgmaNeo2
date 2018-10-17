@@ -248,6 +248,11 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
         cs.getQueue().enqueueWriteBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
 
+        std::vector<cl_float> traces(weightsSize);
+        is.read(reinterpret_cast<char*>(traces.data()), weightsSize * sizeof(cl_float));
+        vl._traces = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
+        cs.getQueue().enqueueWriteBuffer(vl._traces, CL_TRUE, 0, weightsSize * sizeof(cl_float), traces.data());
+
         std::vector<cl_int> visibleCs(numVisibleColumns);
         is.read(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
         vl._visibleCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
