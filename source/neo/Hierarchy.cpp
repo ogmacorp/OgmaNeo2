@@ -38,6 +38,8 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     for (int l = 0; l < layerDescs.size(); l++) {
         _histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l]._temporalHorizon : layerDescs[l]._temporalHorizon);
 
+        _historySizes[l].resize(_histories[l].size());
+			
         std::vector<SparseCoder::VisibleLayerDesc> scVisibleLayerDescs;
 
         if (l == 0) {
@@ -51,9 +53,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
                     scVisibleLayerDescs[index]._radius = layerDescs[l]._scRadius;
                 }
             }
-
-            _historySizes[l].resize(_histories[l].size());
-			
+            
 			for (int v = 0; v < _histories[l].size(); v++) {
 				int i = v / layerDescs[l]._temporalHorizon;
 
@@ -107,12 +107,12 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
-            _historySizes[l] = { inSize };
-			
 			for (int v = 0; v < _histories[l].size(); v++) {
 				_histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
 
                 cs.getQueue().enqueueFillBuffer(_histories[l][v], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
+
+                _historySizes[l][v] = inSize;
             }
 
             // Predictors
