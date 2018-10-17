@@ -24,6 +24,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     _ticks.assign(layerDescs.size(), 0);
 
     _histories.resize(layerDescs.size());
+    _historySizes.resize(layerDescs.size());
     
     _ticksPerUpdate.resize(layerDescs.size());
 
@@ -50,6 +51,8 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
                     scVisibleLayerDescs[index]._radius = layerDescs[l]._scRadius;
                 }
             }
+
+            _historySizes[l].resize(_histories[l].size());
 			
 			for (int v = 0; v < _histories[l].size(); v++) {
 				int i = v / layerDescs[l]._temporalHorizon;
@@ -59,6 +62,8 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 				_histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
 
                 cs.getQueue().enqueueFillBuffer(_histories[l][v], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
+
+                _historySizes[l][v] = inSize;
 			}
 
             // Predictors
@@ -99,9 +104,11 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
                 scVisibleLayerDescs[t]._size = layerDescs[l - 1]._hiddenSize;
                 scVisibleLayerDescs[t]._radius = layerDescs[l]._scRadius;
             }
-			
+
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
+            _historySizes[l] = { inSize };
+			
 			for (int v = 0; v < _histories[l].size(); v++) {
 				_histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
 
@@ -230,6 +237,128 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
                         _actors[p]->step(cs, feedBack, inputCs[p], reward, learn);
                 }
             }
+        }
+    }
+}
+
+void Hierarchy::writeToStream(ComputeSystem &cs, std::ostream &os) {
+    int numLayers = _scLayers.size();
+
+    os.write(reinterpret_cast<char*>(&numLayers), sizeof(int));
+
+    int numInputs = _inputSizes.size();
+
+    os.write(reinterpret_cast<char*>(&numInputs), sizeof(int));
+
+    os.write(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
+
+    os.write(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
+    os.write(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
+    os.write(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
+
+    for (int l = 0; l < numLayers; l++) {
+        int numHistorySizes = _historySizes[l].size();
+
+        os.write(reinterpret_cast<char*>(&numHistorySizes), sizeof(int));
+
+        os.write(reinterpret_cast<char*>(_historySizes[l].data()), numHistorySizes * sizeof(int));
+
+        for (int i = 0; i < _historySizes[l].size(); i++) {
+            std::vector<cl_int> historyCs(_historySizes[l][i]);
+            cs.getQueue().enqueueReadBuffer(_histories[l][i], CL_TRUE, 0, _historySizes[l][i] * sizeof(cl_int), historyCs.data());
+            os.write(reinterpret_cast<char*>(historyCs.data()), _historySizes[l][i] * sizeof(cl_int));
+        }
+
+        _scLayers[l].writeToStream(cs, os);
+
+        for (int v = 0; v < _pLayers[l].size(); v++) {
+            char exists = _pLayers[l][v] != nullptr;
+
+            os.write(reinterpret_cast<char*>(&exists), sizeof(char));
+
+            if (exists)
+                _pLayers[l][v]->writeToStream(cs, os);
+        }
+    }
+
+    for (int v = 0; v < _actors.size(); v++) {
+        char exists = _actors[v] != nullptr;
+
+        os.write(reinterpret_cast<char*>(&exists), sizeof(char));
+
+        if (exists)
+            _actors[v]->writeToStream(cs, os);
+    }
+}
+
+void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
+    int numLayers;
+
+    is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
+
+    int numInputs;
+    is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
+    _inputSizes.resize(numInputs);
+    is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
+
+    _scLayers.resize(numLayers);
+    _pLayers.resize(numLayers);
+
+    _ticks.resize(numLayers);
+
+    _histories.resize(numLayers);
+    _historySizes.resize(numLayers);
+    
+    _ticksPerUpdate.resize(numLayers);
+
+    _updates.resize(numLayers);
+
+    _actors.resize(_inputSizes.size());
+
+    is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
+    is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
+    is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
+
+    for (int l = 0; l < numLayers; l++) {
+        int numHistorySizes;
+        
+        is.read(reinterpret_cast<char*>(&numHistorySizes), sizeof(int));
+        _historySizes[l].resize(numHistorySizes);
+        is.read(reinterpret_cast<char*>(_historySizes[l].data()), numHistorySizes * sizeof(int));
+
+        _histories[l].resize(numHistorySizes);
+
+        for (int i = 0; i < _historySizes[l].size(); i++) {
+            std::vector<cl_int> historyCs(_historySizes[l][i]);
+            is.read(reinterpret_cast<char*>(historyCs.data()), _historySizes[l][i] * sizeof(cl_int));
+            _histories[l][i] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, _historySizes[l][i] * sizeof(cl_int));
+            cs.getQueue().enqueueWriteBuffer(_histories[l][i], CL_TRUE, 0, _historySizes[l][i] * sizeof(cl_int), historyCs.data());   
+        }
+
+        _scLayers[l].readFromStream(cs, prog, is);
+
+        _pLayers[l].resize(l == 0 ? _inputSizes.size() : _ticksPerUpdate[l]);
+
+        for (int v = 0; v < _pLayers[l].size(); v++) {
+            char exists;
+
+            is.read(reinterpret_cast<char*>(&exists), sizeof(char));
+
+            if (exists) {
+                _pLayers[l][v] = std::make_unique<Predictor>();
+                _pLayers[l][v]->readFromStream(cs, prog, is);
+            }
+        }
+    }
+
+    for (int v = 0; v < _actors.size(); v++) {
+        char exists;
+
+        is.read(reinterpret_cast<char*>(&exists), sizeof(char));
+
+        if (exists) {
+            _actors[v] = std::make_unique<Actor>();
+            _actors[v]->readFromStream(cs, prog, is);
         }
     }
 }

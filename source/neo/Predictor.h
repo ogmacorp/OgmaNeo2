@@ -127,6 +127,16 @@ namespace ogmaneo {
         void learn(ComputeSystem &cs, const cl::Buffer &targetCs);
 
         /*!
+        \brief Write to stream.
+        */
+        void writeToStream(ComputeSystem &cs, std::ostream &os);
+
+        /*!
+        \brief Read from stream (create).
+        */
+        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is);
+
+        /*!
         \brief Get number of visible layers
         */
         size_t getNumVisibleLayers() const {
