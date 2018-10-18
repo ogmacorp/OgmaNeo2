@@ -13,6 +13,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(OgmaNeo)
 
+if(NOT CMAKE_BUILD_TYPE)
+    message("CMAKE_BUILD_TYPE not set, setting it to Release")
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 include_directories("${PROJECT_SOURCE_DIR}/source")
 
 # This is only required for the script to work in the version control
@@ -20,10 +27,8 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
 find_package(OpenCL REQUIRED)
  
-include_directories(${OpenCL_INCLUDE_DIRS})
+include_directories(${OpenCL_INCLUDE_DIR})
 
-link_directories(${OpenCL_LIBRARY})
- 
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
     "${SOURCE_PATH}/system/ComputeSystem.cpp"
