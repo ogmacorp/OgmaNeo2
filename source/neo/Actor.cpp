@@ -56,7 +56,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
         }
 
-        cs.getQueue().enqueueFillBuffer(vl._traces, static_cast<cl_float>(0), 0, weightsSize * sizeof(cl_float));
+        cs.getQueue().enqueueFillBuffer(vl._traces, static_cast<cl_float>(0.0f), 0, weightsSize * sizeof(cl_float));
 
         vl._visibleCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
 

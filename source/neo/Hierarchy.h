@@ -155,6 +155,13 @@ namespace ogmaneo {
         }
 
         /*!
+        \brief Get input sizes.
+        */
+        const std::vector<cl_int3> &getInputSizes() const {
+            return _inputSizes;
+        }
+
+        /*!
         \brief Retrieve a sparse coding layer
         */
         SparseCoder &getSCLayer(int l) {
