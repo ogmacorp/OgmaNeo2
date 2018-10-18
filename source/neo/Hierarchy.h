@@ -70,8 +70,9 @@ namespace ogmaneo {
         std::vector<std::unique_ptr<Actor>> _actors;
 
         std::vector<std::vector<cl::Buffer>> _histories;
+        std::vector<std::vector<int>> _historySizes;
 
-        std::vector<bool> _updates;
+        std::vector<char> _updates;
 
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
@@ -98,6 +99,16 @@ namespace ogmaneo {
         \param learn whether learning should be enabled, defaults to true
         */
         void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn = true, float reward = 0.0f);
+
+        /*!
+        \brief Write to stream.
+        */
+        void writeToStream(ComputeSystem &cs, std::ostream &os);
+
+        /*!
+        \brief Read from stream (create).
+        */
+        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is);
 
         /*!
         \brief Get the number of (hidden) layers
@@ -141,6 +152,13 @@ namespace ogmaneo {
         */
         int getTicksPerUpdate(int l) const {
             return _ticksPerUpdate[l];
+        }
+
+        /*!
+        \brief Get input sizes.
+        */
+        const std::vector<cl_int3> &getInputSizes() const {
+            return _inputSizes;
         }
 
         /*!

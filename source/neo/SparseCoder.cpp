@@ -171,3 +171,102 @@ void SparseCoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibl
         cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 }
+
+void SparseCoder::writeToStream(ComputeSystem &cs, std::ostream &os) {
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(cl_int3));
+
+    os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
+    os.write(reinterpret_cast<char*>(&_explainIters), sizeof(cl_int));
+
+    std::vector<cl_int> hiddenCs(numHiddenColumns);
+    cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+    os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
+
+    int numVisibleLayers = _visibleLayers.size();
+
+    os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+    
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+        int numVisible = numVisibleColumns * vld._size.z;
+
+        os.write(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
+
+        os.write(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(cl_float2));
+        os.write(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(cl_float2));
+        os.write(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(cl_int2));
+
+        cl_int diam = vld._radius * 2 + 1;
+
+        cl_int numWeightsPerHidden = diam * diam * vld._size.z;
+
+        cl_int weightsSize = numHidden * numWeightsPerHidden;
+
+        std::vector<cl_float> weights(weightsSize);
+        cs.getQueue().enqueueReadBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
+        os.write(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
+    }
+}
+
+void SparseCoder::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
+    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(cl_int3));
+
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_explainIters), sizeof(cl_int));
+
+    std::vector<cl_int> hiddenCs(numHiddenColumns);
+    is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
+    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+    cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+
+    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+
+    int numVisibleLayers;
+    
+    is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+
+    _visibleLayers.resize(numVisibleLayers);
+    _visibleLayerDescs.resize(numVisibleLayers);
+    
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+        int numVisible = numVisibleColumns * vld._size.z;
+
+        is.read(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(cl_float2));
+        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(cl_float2));
+        is.read(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(cl_int2));
+
+        cl_int diam = vld._radius * 2 + 1;
+
+        cl_int numWeightsPerHidden = diam * diam * vld._size.z;
+
+        cl_int weightsSize = numHidden * numWeightsPerHidden;
+
+        std::vector<cl_float> weights(weightsSize);
+        is.read(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
+        vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
+        cs.getQueue().enqueueWriteBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
+
+        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
+    }
+
+    // Create kernels
+    _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
+    _backwardKernel = cl::Kernel(prog.getProgram(), "scBackward");
+    _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
+    _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
+}

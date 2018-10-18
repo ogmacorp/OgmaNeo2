@@ -139,6 +139,16 @@ namespace ogmaneo {
         void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &targetCs, float reward, bool learn);
 
         /*!
+        \brief Write to stream.
+        */
+        void writeToStream(ComputeSystem &cs, std::ostream &os);
+
+        /*!
+        \brief Read from stream (create).
+        */
+        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is); 
+
+        /*!
         \brief Get number of visible layers
         */
         size_t getNumVisibleLayers() const {
