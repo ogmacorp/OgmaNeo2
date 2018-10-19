@@ -27,7 +27,7 @@ int main() {
     std::mt19937 rng(time(nullptr));
 
     ogmaneo::ComputeSystem cs;
-    cs.create(ogmaneo::ComputeSystem::_gpu);
+    cs.create(ogmaneo::ComputeSystem::_cpu);
 
     ogmaneo::ComputeProgram prog;
     prog.loadFromFile(cs, "../../resources/neoKernels.cl");
@@ -49,11 +49,11 @@ int main() {
 
     cs.getQueue().enqueueFillBuffer(topFeedBack, static_cast<cl_int>(0), 0, lds.back()._hiddenSize.x * lds.back()._hiddenSize.y * sizeof(cl_int));
 
-    int iters = 4000;
+    int iters = 1000;
 
     // Iterate
     for (int it = 0; it < iters; it++) {
-        float value = std::sin(it * 0.02f * 2.0f * 3.14159f) * 0.25f + std::sin(it * 0.05f * 2.0f * 3.14159f) * 0.15f + (std::fmod(it * 0.01f, 1.25f) * 2.0f - 1.0f) * 0.2f;
+        float value = std::sin(it * 0.02f * 2.0f * 3.14159f);// * 0.25f + std::sin(it * 0.05f * 2.0f * 3.14159f) * 0.15f + (std::fmod(it * 0.01f, 1.25f) * 2.0f - 1.0f) * 0.2f;
         
         int index = static_cast<int>((value * 0.5f + 0.5f) * (inputSize - 1) + 0.5f);
 
@@ -90,7 +90,7 @@ int main() {
     for (int it2 = 0; it2 < 500; it2++) {
         int it = iters + it2;
 
-        float value = std::sin(it * 0.02f * 2.0f * 3.14159f) * 0.25f + std::sin(it * 0.05f * 2.0f * 3.14159f) * 0.15f + (std::fmod(it * 0.01f, 1.25f) * 2.0f - 1.0f) * 0.2f;
+        float value = std::sin(it * 0.02f * 2.0f * 3.14159f);// * 0.25f + std::sin(it * 0.05f * 2.0f * 3.14159f) * 0.15f + (std::fmod(it * 0.01f, 1.25f) * 2.0f - 1.0f) * 0.2f;
 
         h.step(cs, { h.getPredictionCs(0) }, topFeedBack, true);
 
