@@ -33,15 +33,15 @@ void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._visibleToHidden = cl_float2{ static_cast<float>(_hiddenSize.x) / static_cast<float>(vld._size.x),
+        vl._visibleToHidden = Float2{ static_cast<float>(_hiddenSize.x) / static_cast<float>(vld._size.x),
             static_cast<float>(_hiddenSize.y) / static_cast<float>(vld._size.y)
         };
 
-        vl._hiddenToVisible = cl_float2{ static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
+        vl._hiddenToVisible = Float2{ static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
             static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y)
         };
 
-        vl._reverseRadii = cl_int2{ static_cast<cl_int>(std::ceil(vl._visibleToHidden.x * vld._radius) + 1),
+        vl._reverseRadii = Int2{ static_cast<cl_int>(std::ceil(vl._visibleToHidden.x * vld._radius) + 1),
             static_cast<cl_int>(std::ceil(vl._visibleToHidden.y * vld._radius) + 1)
         };
 
@@ -198,9 +198,9 @@ void SparseCoder::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
         os.write(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        os.write(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(cl_float2));
-        os.write(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(cl_float2));
-        os.write(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(cl_int2));
+        os.write(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(Float2));
+        os.write(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
+        os.write(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(Int2));
 
         cl_int diam = vld._radius * 2 + 1;
 
@@ -246,9 +246,9 @@ void SparseCoder::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::i
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        is.read(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(cl_float2));
-        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(cl_float2));
-        is.read(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(cl_int2));
+        is.read(reinterpret_cast<char*>(&vl._visibleToHidden), sizeof(Float2));
+        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
+        is.read(reinterpret_cast<char*>(&vl._reverseRadii), sizeof(Int2));
 
         cl_int diam = vld._radius * 2 + 1;
 

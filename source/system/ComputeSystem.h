@@ -14,9 +14,9 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 
 #ifdef __APPLE__
-#include <OpenCL/cl2.hpp>
+#include <OpenCL/cl.hpp>
 #else
-#include <CL/cl2.hpp>
+#include <CL/cl.hpp>
 #endif
 
 #define SYS_DEBUG

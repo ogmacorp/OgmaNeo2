@@ -43,7 +43,7 @@ set(SOURCES
 
 add_library(OgmaNeo ${SOURCES})
 
-target_link_libraries(OgmaNeo "/usr/lib/libOpenCL.so")
+target_link_libraries(OgmaNeo ${OpenCL_LIBRARIES})
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin
