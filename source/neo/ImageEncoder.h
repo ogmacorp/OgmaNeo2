@@ -55,7 +55,7 @@ namespace ogmaneo {
             Float2 _visibleToHidden;
             Float2 _hiddenToVisible;
 
-            cl_int2 _reverseRadii;
+            Int2 _reverseRadii;
             //!@}
         };
 

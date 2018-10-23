@@ -11,7 +11,7 @@
 using namespace ogmaneo;
 
 void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    cl_int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+    Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
     std::mt19937 &rng)
 {
     _visibleLayerDescs = visibleLayerDescs;
@@ -176,7 +176,7 @@ void SparseCoder::writeToStream(ComputeSystem &cs, std::ostream &os) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(cl_int3));
+    os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<char*>(&_explainIters), sizeof(cl_int));
@@ -215,7 +215,7 @@ void SparseCoder::writeToStream(ComputeSystem &cs, std::ostream &os) {
 }
 
 void SparseCoder::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
-    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(cl_int3));
+    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
