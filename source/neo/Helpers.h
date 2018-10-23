@@ -16,6 +16,9 @@
 #include <assert.h>
 
 namespace ogmaneo {
+    /*!
+    \brief 2D vector type.
+    */
     template <typename T> 
     struct Vec2 {
         T x, y;
@@ -28,6 +31,9 @@ namespace ogmaneo {
         {}
     };
 
+    /*!
+    \brief 3D vector type.
+    */
     template <typename T> 
     struct Vec3 {
         T x, y, z;
@@ -40,6 +46,9 @@ namespace ogmaneo {
         {}
     };
 
+    /*!
+    \brief 4D vector type.
+    */
     template <typename T> 
     struct Vec4 {
         T x, y, z, w;
@@ -52,12 +61,17 @@ namespace ogmaneo {
         {}
     };
 
+    //!@{
+    /*!
+    \brief Common type definitions.
+    */
     typedef Vec2<cl_int> Int2;
     typedef Vec3<cl_int> Int3;
     typedef Vec4<cl_int> Int4;
     typedef Vec2<cl_float> Float2;
     typedef Vec3<cl_float> Float3;
     typedef Vec4<cl_float> Float4;
+    //!@}
 
     /*!
     \brief Buffer types (can be used as indices)
@@ -66,17 +80,13 @@ namespace ogmaneo {
         _front = 0, _back = 1
     };
 
-    //!@{
     /*!
     \brief Double buffer types
     */
     typedef std::array<cl::Buffer, 2> DoubleBuffer;
-    //!@}
 
-    //!@{
     /*!
     \brief Double buffer creation helpers
     */
     DoubleBuffer createDoubleBuffer(ComputeSystem &cs, cl_int size);
-    //!@}
 }
