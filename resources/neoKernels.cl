@@ -414,7 +414,11 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                         int wi = address4(wPos, hiddenSize);
 
-                        traces[wi] = (vc == visibleC && hc == targetC ? 1.0f : traceDecay * traces[wi]);
+                        if (vc == visibleC)
+                            traces[wi] = (hc == targetC ? 1.0f : 0.0f);
+                        else
+                            traces[wi] *= traceDecay;
+
                         weights[wi] += delta * traces[wi];
                     }
             }
