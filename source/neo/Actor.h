@@ -113,7 +113,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.99f), _traceDecay(0.98f), _tdErrorClip(1.0f)
+        : _alpha(0.01f), _gamma(0.99f), _traceDecay(0.98f), _tdErrorClip(10.0f)
         {}
 
         /*!
