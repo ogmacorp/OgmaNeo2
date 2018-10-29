@@ -93,7 +93,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
                     // Add an actor
                     _actors[p] = std::make_unique<Actor>();
 
-                    _actors[p]->createRandom(cs, prog, inputSizes[p], aVisibleLayerDescs, rng);
+                    _actors[p]->createRandom(cs, prog, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs, rng);
                 }
             }
         }

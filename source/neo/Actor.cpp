@@ -363,7 +363,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         _historySamples[i]._targetCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
         cs.getQueue().enqueueWriteBuffer(_historySamples[i]._targetCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), targetCs.data());
 
-        is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
+        is.read(reinterpret_cast<char*>(&_historySamples[i]._reward), sizeof(float));
     }
 
     // Create kernels

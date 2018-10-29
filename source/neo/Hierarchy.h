@@ -56,12 +56,18 @@ namespace ogmaneo {
             int _temporalHorizon;
 
             /*!
+            \brief Number of history samples
+            */
+            int _historyCapacity;
+
+            /*!
             \brief Initialize defaults
             */
             LayerDesc()
                 : _hiddenSize({ 4, 4, 16 }),
                 _scRadius(2), _pRadius(2),
-                _ticksPerUpdate(2), _temporalHorizon(2)
+                _ticksPerUpdate(2), _temporalHorizon(2),
+                _historyCapacity(32)
             {}
         };
     private:
