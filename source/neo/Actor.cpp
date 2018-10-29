@@ -62,11 +62,8 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
  
     // Stimulus
-    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
-
-    cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
- 
-    _hiddenActivationsTemp = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
+    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+    _hiddenActivationsTemp = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
 
     // History samples
     _historySize = 0;
@@ -96,11 +93,8 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    // Buffer swap
-    std::swap(_hiddenActivations[_front], _hiddenActivations[_back]);
-
     // Initialize stimulus to 0
-    cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
     // Compute feed stimulus
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -110,7 +104,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
         int argIndex = 0;
 
         _forwardKernel.setArg(argIndex++, visibleCs[vli]);
-        _forwardKernel.setArg(argIndex++, _hiddenActivations[_front]);
+        _forwardKernel.setArg(argIndex++, _hiddenActivations);
         _forwardKernel.setArg(argIndex++, vl._weights);
         _forwardKernel.setArg(argIndex++, vld._size);
         _forwardKernel.setArg(argIndex++, _hiddenSize);
@@ -124,7 +118,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
     {
         int argIndex = 0;
 
-        _inhibitKernel.setArg(argIndex++, _hiddenActivations[_front]);
+        _inhibitKernel.setArg(argIndex++, _hiddenActivations);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
 
@@ -160,20 +154,18 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
         }
 
         cs.getQueue().enqueueCopyBuffer(targetCs, s._targetCs, 0, 0, numHiddenColumns * sizeof(cl_int));
-
-        s._reward = reward;
     }
 
     // Learn
     if (learn && _historySize > 2) {
-        cs.getQueue().enqueueCopyBuffer(_hiddenActivations[_front], _hiddenActivationsTemp[_front], 0, 0, numHidden * sizeof(cl_float));
+        float rate = _alpha;
 
         for (int i = _historySize - 1; i >= 1; i--) {
             const HistorySample &s = _historySamples[i];
             const HistorySample &sPrev = _historySamples[i - 1];
 
              // Initialize stimulus to 0
-            cs.getQueue().enqueueFillBuffer(_hiddenActivationsTemp[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+            cs.getQueue().enqueueFillBuffer(_hiddenActivationsTemp, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
             // Compute feed stimulus
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -183,7 +175,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
                 int argIndex = 0;
 
                 _forwardKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
-                _forwardKernel.setArg(argIndex++, _hiddenActivationsTemp[_back]);
+                _forwardKernel.setArg(argIndex++, _hiddenActivationsTemp);
                 _forwardKernel.setArg(argIndex++, vl._weights);
                 _forwardKernel.setArg(argIndex++, vld._size);
                 _forwardKernel.setArg(argIndex++, _hiddenSize);
@@ -200,22 +192,22 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
                 int argIndex = 0;
 
                 _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
-                _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_front]);
-                _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_back]);
+                _learnKernel.setArg(argIndex++, _hiddenActivations);
+                _learnKernel.setArg(argIndex++, _hiddenActivationsTemp);
                 _learnKernel.setArg(argIndex++, s._targetCs);
                 _learnKernel.setArg(argIndex++, vl._weights);
                 _learnKernel.setArg(argIndex++, vld._size);
                 _learnKernel.setArg(argIndex++, _hiddenSize);
                 _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
                 _learnKernel.setArg(argIndex++, vld._radius);
-                _learnKernel.setArg(argIndex++, _alpha);
+                _learnKernel.setArg(argIndex++, rate);
                 _learnKernel.setArg(argIndex++, _gamma);
-                _learnKernel.setArg(argIndex++, s._reward);
+                _learnKernel.setArg(argIndex++, reward);
 
                 cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
             }
 
-            std::swap(_hiddenActivationsTemp[_front], _hiddenActivationsTemp[_back]);
+            rate *= _gamma;
         }
     }
 }
@@ -233,10 +225,6 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
     os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
-    std::vector<cl_float> hiddenActivations(numHidden);
-    cs.getQueue().enqueueReadBuffer(_hiddenActivations[_front], CL_TRUE, 0, numHidden * sizeof(cl_float), hiddenActivations.data());
-    os.write(reinterpret_cast<char*>(hiddenActivations.data()), numHidden * sizeof(cl_float));
-    
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -286,8 +274,6 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
         std::vector<cl_int> targetCs(numHiddenColumns);
         cs.getQueue().enqueueReadBuffer(s._targetCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), targetCs.data());
         os.write(reinterpret_cast<char*>(targetCs.data()), numHiddenColumns * sizeof(cl_int));
-
-        os.write(reinterpret_cast<char*>(&s._reward), sizeof(float));
     }
 }
 
@@ -305,12 +291,8 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
     cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
 
-    std::vector<cl_float> hiddenActivations(numHidden);
-    is.read(reinterpret_cast<char*>(hiddenActivations.data()), numHidden * sizeof(cl_float));
-    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
-    cs.getQueue().enqueueWriteBuffer(_hiddenActivations[_front], CL_TRUE, 0, numHidden * sizeof(cl_float), hiddenActivations.data());
-
-    _hiddenActivationsTemp = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
+    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+    _hiddenActivationsTemp = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
 
     int numVisibleLayers;
     
@@ -367,8 +349,6 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         is.read(reinterpret_cast<char*>(targetCs.data()), numHiddenColumns * sizeof(cl_int));
         _historySamples[i]._targetCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
         cs.getQueue().enqueueWriteBuffer(_historySamples[i]._targetCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), targetCs.data());
-
-        is.read(reinterpret_cast<char*>(&_historySamples[i]._reward), sizeof(float));
     }
 
     // Create kernels
