@@ -47,13 +47,19 @@ namespace ogmaneo {
             /*!
             \brief Visible layer values and buffers
             */
-            cl::Buffer _visibleCs;
-
             cl::Buffer _weights;
-            cl::Buffer _traces;
 
             Float2 _hiddenToVisible;
             //!@}
+        };
+
+        /*!
+        \brief History sample
+        */
+        struct HistorySample {
+            std::vector<cl::Buffer> _visibleCs;
+            cl::Buffer _targetCs;
+            float _reward;
         };
 
     private:
@@ -62,6 +68,11 @@ namespace ogmaneo {
         */
         Int3 _hiddenSize;
 
+        /*!
+        \brief Current history size
+        */
+        int _historySize;
+
         //!@{
         /*!
         \brief Buffers
@@ -69,6 +80,10 @@ namespace ogmaneo {
         cl::Buffer _hiddenCs;
 
         DoubleBuffer _hiddenActivations;
+
+        DoubleBuffer _hiddenActivationsTemp;
+
+        std::vector<HistorySample> _historySamples;
         //!@}
 
         //!@{
@@ -100,20 +115,10 @@ namespace ogmaneo {
         cl_float _gamma;
 
         /*!
-        \brief Trace decay (lambda)
-        */
-        cl_float _traceDecay;
-
-        /*!
-        \brief TD error clipping
-        */
-        cl_float _tdErrorClip;
-
-        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.99f), _traceDecay(0.98f), _tdErrorClip(10.0f)
+        : _alpha(0.01f), _gamma(0.99f)
         {}
 
         /*!
@@ -121,11 +126,12 @@ namespace ogmaneo {
         \param cs is the ComputeSystem
         \param prog is the ComputeProgram associated with the ComputeSystem and loaded with the actor kernel code
         \param hiddenSize size of the predictions (output)
+        \param historyCapacity maximum number of history samples
         \param visibleLayerDescs are descriptors for visible layers
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+            Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
             std::mt19937 &rng);
 
         /*!

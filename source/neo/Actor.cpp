@@ -11,7 +11,7 @@
 using namespace ogmaneo;
 
 void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+    Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
     std::mt19937 &rng)
 {
     _visibleLayerDescs = visibleLayerDescs;
@@ -43,7 +43,6 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
         cl_int weightsSize = numHidden * numWeightsPerHidden;
 
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
-        vl._traces = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
 
         {
             std::uniform_int_distribution<int> seedDist(0, 99999);
@@ -55,12 +54,6 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
             cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
         }
-
-        cs.getQueue().enqueueFillBuffer(vl._traces, static_cast<cl_float>(0.0f), 0, weightsSize * sizeof(cl_float));
-
-        vl._visibleCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
-
-        cs.getQueue().enqueueFillBuffer(vl._visibleCs, static_cast<cl_int>(0), 0, numVisibleColumns * sizeof(cl_int));
     }
 
     // Hidden Cs
@@ -73,6 +66,26 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
     cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
  
+    _hiddenActivationsTemp = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
+
+    // History samples
+    _historySize = 0;
+    _historySamples.resize(historyCapacity);
+
+    for (int i = 0; i < _historySamples.size(); i++) {
+        _historySamples[i]._visibleCs.resize(_visibleLayers.size());
+
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            int numVisibleColumns = vld._size.x * vld._size.y;
+
+            _historySamples[i]._visibleCs[vli] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
+        }
+
+        _historySamples[i]._targetCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+    }
+
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "aForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
@@ -80,8 +93,8 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 }
 
 void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &targetCs, float reward, bool learn) {
-    int numColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numColumns * _hiddenSize.z;
+    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
+    int numHidden = numHiddenColumns * _hiddenSize.z;
 
     // Buffer swap
     std::swap(_hiddenActivations[_front], _hiddenActivations[_back]);
@@ -118,37 +131,89 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 
-    // Learn
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    // Add sample
+    if (_historySize == _historySamples.size()) {
+        // Circular buffer swap
+        HistorySample temp = _historySamples.front();
 
-        if (learn) {
-            int argIndex = 0;
-
-            _learnKernel.setArg(argIndex++, vl._visibleCs);
-            _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
-            _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _learnKernel.setArg(argIndex++, _hiddenCs);
-            _learnKernel.setArg(argIndex++, targetCs);
-            _learnKernel.setArg(argIndex++, vl._weights);
-            _learnKernel.setArg(argIndex++, vl._traces);
-            _learnKernel.setArg(argIndex++, vld._size);
-            _learnKernel.setArg(argIndex++, _hiddenSize);
-            _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
-            _learnKernel.setArg(argIndex++, vld._radius);
-            _learnKernel.setArg(argIndex++, _alpha);
-            _learnKernel.setArg(argIndex++, _gamma);
-            _learnKernel.setArg(argIndex++, _traceDecay);
-            _learnKernel.setArg(argIndex++, _tdErrorClip);
-            _learnKernel.setArg(argIndex++, reward);
-
-            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+        for (int i = 0; i < _historySamples.size() - 1; i++) {
+            _historySamples[i] = _historySamples[i + 1];
         }
 
-        // Copy visible activation
-        cs.getQueue().enqueueCopyBuffer(visibleCs[vli], vl._visibleCs,
-            0, 0, vld._size.x * vld._size.y * sizeof(cl_int));
+        _historySamples.back() = temp;
+    }
+    
+    HistorySample &s = _historySamples[_historySize];
+
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
+
+        // Copy visible Cs
+        cs.getQueue().enqueueCopyBuffer(visibleCs[vli], s._visibleCs[vli],
+            0, 0, numVisibleColumns * sizeof(cl_int));
+    }
+
+    cs.getQueue().enqueueCopyBuffer(targetCs, s._targetCs, 0, 0, numHiddenColumns * sizeof(cl_int));
+
+    s._reward = reward;
+
+    if (_historySize < _historySamples.size())
+        _historySize++;
+
+    // Learn
+    if (learn && _historySize > 1) {
+        cs.getQueue().enqueueCopyBuffer(_hiddenActivations[_front], _hiddenActivationsTemp[_front], 0, 0, numHidden * sizeof(cl_float));
+
+        for (int i = _historySize - 1; i >= 0; i--) {
+            const HistorySample &s = _historySamples[i];
+
+             // Initialize stimulus to 0
+            cs.getQueue().enqueueFillBuffer(_hiddenActivationsTemp[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+
+            // Compute feed stimulus
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                int argIndex = 0;
+
+                _forwardKernel.setArg(argIndex++, s._visibleCs[vli]);
+                _forwardKernel.setArg(argIndex++, _hiddenActivationsTemp[_back]);
+                _forwardKernel.setArg(argIndex++, vl._weights);
+                _forwardKernel.setArg(argIndex++, vld._size);
+                _forwardKernel.setArg(argIndex++, _hiddenSize);
+                _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
+                _forwardKernel.setArg(argIndex++, vld._radius);
+
+                cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+            }
+
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                int argIndex = 0;
+
+                _learnKernel.setArg(argIndex++, s._visibleCs[vli]);
+                _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_front]);
+                _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_back]);
+                _learnKernel.setArg(argIndex++, s._targetCs);
+                _learnKernel.setArg(argIndex++, vl._weights);
+                _learnKernel.setArg(argIndex++, vld._size);
+                _learnKernel.setArg(argIndex++, _hiddenSize);
+                _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
+                _learnKernel.setArg(argIndex++, vld._radius);
+                _learnKernel.setArg(argIndex++, _alpha);
+                _learnKernel.setArg(argIndex++, _gamma);
+                _learnKernel.setArg(argIndex++, reward);
+
+                cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            }
+
+            std::swap(_hiddenActivationsTemp[_front], _hiddenActivationsTemp[_back]);
+        }
     }
 }
 
@@ -160,8 +225,6 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
     os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
-    os.write(reinterpret_cast<char*>(&_traceDecay), sizeof(cl_float));
-    os.write(reinterpret_cast<char*>(&_tdErrorClip), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
@@ -195,14 +258,33 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
         std::vector<cl_float> weights(weightsSize);
         cs.getQueue().enqueueReadBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
         os.write(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
+    }
 
-        std::vector<cl_float> traces(weightsSize);
-        cs.getQueue().enqueueReadBuffer(vl._traces, CL_TRUE, 0, weightsSize * sizeof(cl_float), traces.data());
-        os.write(reinterpret_cast<char*>(traces.data()), weightsSize * sizeof(cl_float));
+    int historyCapacity = _historySamples.size();
 
-        std::vector<cl_int> visibleCs(numVisibleColumns);
-        cs.getQueue().enqueueReadBuffer(vl._visibleCs, CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
-        os.write(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
+    os.write(reinterpret_cast<char*>(&historyCapacity), sizeof(int));
+    os.write(reinterpret_cast<char*>(&_historySize), sizeof(int));
+
+    for (int i = 0; i < _historySize; i++) {
+        HistorySample &s = _historySamples[i];
+
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            int numVisibleColumns = vld._size.x * vld._size.y;
+            int numVisible = numVisibleColumns * vld._size.z;
+
+            std::vector<cl_int> visibleCs(numVisibleColumns);
+            cs.getQueue().enqueueReadBuffer(s._visibleCs[vli], CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
+            os.write(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
+        }
+
+        std::vector<cl_int> targetCs(numHiddenColumns);
+        cs.getQueue().enqueueReadBuffer(s._targetCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), targetCs.data());
+        os.write(reinterpret_cast<char*>(targetCs.data()), numHiddenColumns * sizeof(cl_int));
+
+        os.write(reinterpret_cast<char*>(&s._reward), sizeof(float));
     }
 }
 
@@ -214,8 +296,6 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
-    is.read(reinterpret_cast<char*>(&_traceDecay), sizeof(cl_float));
-    is.read(reinterpret_cast<char*>(&_tdErrorClip), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
@@ -255,16 +335,35 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         is.read(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
         cs.getQueue().enqueueWriteBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
+    }
 
-        std::vector<cl_float> traces(weightsSize);
-        is.read(reinterpret_cast<char*>(traces.data()), weightsSize * sizeof(cl_float));
-        vl._traces = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
-        cs.getQueue().enqueueWriteBuffer(vl._traces, CL_TRUE, 0, weightsSize * sizeof(cl_float), traces.data());
+    int historyCapacity, historySize;
 
-        std::vector<cl_int> visibleCs(numVisibleColumns);
-        is.read(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
-        vl._visibleCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
-        cs.getQueue().enqueueWriteBuffer(vl._visibleCs, CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
+    is.read(reinterpret_cast<char*>(&historyCapacity), sizeof(int));
+    is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
+
+    _historySamples.resize(historyCapacity);
+
+    for (int i = 0; i < _historySamples.size(); i++) {
+        _historySamples[i]._visibleCs.resize(_visibleLayers.size());
+
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            int numVisibleColumns = vld._size.x * vld._size.y;
+
+            std::vector<cl_int> visibleCs(numVisibleColumns);
+            is.read(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
+            _historySamples[i]._visibleCs[vli] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
+            cs.getQueue().enqueueWriteBuffer(_historySamples[i]._visibleCs[vli], CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
+        }
+
+        std::vector<cl_int> targetCs(numHiddenColumns);
+        is.read(reinterpret_cast<char*>(targetCs.data()), numHiddenColumns * sizeof(cl_int));
+        _historySamples[i]._targetCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueWriteBuffer(_historySamples[i]._targetCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), targetCs.data());
+
+        is.read(reinterpret_cast<char*>(&s._reward), sizeof(float));
     }
 
     // Create kernels

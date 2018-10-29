@@ -373,7 +373,7 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 }
 
 void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
-    global const int* hiddenCs, global const int* targetCs,
+    global const int* targetCs,
     global float* weights, global float* traces,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
     float alpha, float gamma, float traceDecay, float tdErrorClip, float reward)
@@ -383,9 +383,12 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     int hiddenColumnIndex = address2(hiddenPosition, hiddenSize.x);
 
     int targetC = targetCs[hiddenColumnIndex];
-    int hiddenC = hiddenCs[hiddenColumnIndex];
 
-    float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
+    float qMax = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+
+    for (int c = 1; c < hiddenSize.z; c++)
+        qMax = fmax(qMax, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, targetC), hiddenSize.xy)];
 
     float delta = alpha * fmin(tdErrorClip, fmax(-tdErrorClip, reward + gamma * qNext - qPrev));
@@ -406,21 +409,11 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                for (int hc = 0; hc < hiddenSize.z; hc++)
-                    for (int vc = 0; vc < visibleSize.z; vc++) {
-                        int4 wPos;
-                        wPos.xyz = (int3)(hiddenPosition, hc);
-                        wPos.w = offset.x + offset.y * diam + vc * diam2;
+                int4 wPos;
+                wPos.xyz = (int3)(hiddenPosition, targetC);
+                wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                        int wi = address4(wPos, hiddenSize);
-
-                        if (vc == visibleC && hc == targetC)
-                            traces[wi] = 1.0f;
-                        else
-                            traces[wi] *= traceDecay;
-
-                        weights[wi] += delta * traces[wi];
-                    }
+                weights[address4(wPos, hiddenSize)] += delta;
             }
         }
 }
