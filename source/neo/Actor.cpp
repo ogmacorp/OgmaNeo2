@@ -8,6 +8,7 @@
 
 #include "Actor.h"
 
+#include <iostream>
 using namespace ogmaneo;
 
 void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
@@ -194,6 +195,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
                 _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
                 _learnKernel.setArg(argIndex++, _hiddenActivations);
                 _learnKernel.setArg(argIndex++, _hiddenActivationsTemp);
+                _learnKernel.setArg(argIndex++, _hiddenCs);
                 _learnKernel.setArg(argIndex++, s._targetCs);
                 _learnKernel.setArg(argIndex++, vl._weights);
                 _learnKernel.setArg(argIndex++, vld._size);

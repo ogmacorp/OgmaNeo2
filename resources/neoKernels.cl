@@ -315,7 +315,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel aInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.0001f;
+    weights[get_global_id(0)] = 1.0 - randFloat(&stateValue) * 0.01f;
 }
 
 void kernel aForward(global const int* visibleCs, global float* hiddenActivations, global const float* weights,
@@ -373,7 +373,7 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 }
 
 void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
-    global const int* targetCs,
+    global const int* hiddenCs, global const int* targetCs,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
     float alpha, float gamma, float reward)
@@ -382,16 +382,14 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 	
     int hiddenColumnIndex = address2(hiddenPosition, hiddenSize.x);
 
+    int hiddenC = hiddenCs[hiddenColumnIndex];
     int targetC = targetCs[hiddenColumnIndex];
 
-    float qMax = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
-
-    for (int c = 1; c < hiddenSize.z; c++)
-        qMax = fmax(qMax, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+    float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
 
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, targetC), hiddenSize.xy)];
 
-    float delta = alpha * (reward + gamma * qMax - qPrev);
+    float delta = alpha * ((1.0f - gamma) * reward + gamma * qNext - qPrev);
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
