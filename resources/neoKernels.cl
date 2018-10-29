@@ -414,8 +414,8 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
                         int wi = address4(wPos, hiddenSize);
 
-                        if (vc == visibleC)
-                            traces[wi] = (hc == targetC ? 1.0f : 0.0f);
+                        if (vc == visibleC && hc == targetC)
+                            traces[wi] = 1.0f;
                         else
                             traces[wi] *= traceDecay;
 
