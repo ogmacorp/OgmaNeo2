@@ -142,8 +142,11 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
 
         _historySamples.back() = temp;
     }
+
+    if (_historySize < _historySamples.size())
+        _historySize++;
     
-    HistorySample &s = _historySamples[_historySize];
+    HistorySample &s = _historySamples[_historySize - 1];
 
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
@@ -158,9 +161,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
     cs.getQueue().enqueueCopyBuffer(targetCs, s._targetCs, 0, 0, numHiddenColumns * sizeof(cl_int));
 
     s._reward = reward;
-
-    if (_historySize < _historySamples.size())
-        _historySize++;
 
     // Learn
     if (learn && _historySize > 1) {

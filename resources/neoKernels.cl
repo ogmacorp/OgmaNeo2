@@ -391,7 +391,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, targetC), hiddenSize.xy)];
 
-    float delta = alpha * fmin(tdErrorClip, fmax(-tdErrorClip, reward + gamma * qNext - qPrev));
+    float delta = alpha * fmin(tdErrorClip, fmax(-tdErrorClip, reward + gamma * qMax - qPrev));
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
