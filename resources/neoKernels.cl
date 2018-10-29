@@ -374,9 +374,9 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 
 void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
     global const int* targetCs,
-    global float* weights, global float* traces,
+    global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float gamma, float traceDecay, float tdErrorClip, float reward)
+    float alpha, float gamma, float reward)
 {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -391,7 +391,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
     float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, targetC), hiddenSize.xy)];
 
-    float delta = alpha * fmin(tdErrorClip, fmax(-tdErrorClip, reward + gamma * qMax - qPrev));
+    float delta = alpha * (reward + gamma * qMax - qPrev);
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
