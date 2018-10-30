@@ -136,7 +136,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn, float reward) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, std::mt19937 &rng, bool learn, float reward) {
     assert(inputCs.size() == _inputSizes.size());
 
     _ticks[0] = 0;
@@ -234,7 +234,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
             if (l == 0) {
                 for (int p = 0; p < _actors.size(); p++) {
                     if (_actors[p] != nullptr)
-                        _actors[p]->step(cs, feedBack, inputCs[p], reward, learn);
+                        _actors[p]->step(cs, feedBack, rng, reward, learn);
                 }
             }
         }

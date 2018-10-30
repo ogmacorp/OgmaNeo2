@@ -90,7 +90,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, const cl::Buffer &targetCs, float reward, bool learn) {
+void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learn) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -117,11 +117,14 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
 
     // Activate
     {
+        std::uniform_int_distribution<int> seedDist(0, 99999);
+
         int argIndex = 0;
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
+        _inhibitKernel.setArg(argIndex++, cl_uint2{ static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng)) });
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -154,7 +157,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
                 0, 0, numVisibleColumns * sizeof(cl_int));
         }
 
-        cs.getQueue().enqueueCopyBuffer(targetCs, s._targetCs, 0, 0, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueCopyBuffer(_hiddenCs, s._targetCs, 0, 0, numHiddenColumns * sizeof(cl_int));
 
         s._reward = reward;
     }
@@ -197,7 +200,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, co
                 _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
                 _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_front]);
                 _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_back]);
-                _learnKernel.setArg(argIndex++, s._targetCs);
+                _learnKernel.setArg(argIndex++, sPrev._targetCs);
                 _learnKernel.setArg(argIndex++, vl._weights);
                 _learnKernel.setArg(argIndex++, vld._size);
                 _learnKernel.setArg(argIndex++, _hiddenSize);
