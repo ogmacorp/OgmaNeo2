@@ -107,7 +107,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         ImageEncoder()
-        : _alpha(0.0001f), _explainIters(2)
+        : _alpha(0.001f), _explainIters(4)
         {}
 
         /*!

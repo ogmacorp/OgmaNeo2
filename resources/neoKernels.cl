@@ -203,7 +203,7 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float target = (c == visibleC ? 1.0f : 0.0f);
 
-                    float delta = target - weights[wi];
+                    float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
  
                     weights[wi] += alpha * delta;
                 }
@@ -352,24 +352,39 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
 }
 
-void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
+void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize, uint2 seed) {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    int maxIndex = 0;
+    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
+
+    int selectIndex = 0;
     float maxValue = -99999.0f;
     
     // Find max
-    for (int c = 0; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
+    for (int c = 0; c < hiddenSize.z; c++)
+        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
 
-        if (value > maxValue) {
-            maxValue = value;
-            maxIndex = c;
+    float total = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++)
+        total += exp(hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)] - maxValue);
+
+    float cusp = randFloat(&stateValue) * total;
+
+    float sumSoFar = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        sumSoFar += exp(hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)] - maxValue);
+
+        if (sumSoFar >= cusp) {
+            selectIndex = c;
+
+            break;
         }
     }
 
     // Set states
-    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
+    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = selectIndex;
 }
 
 void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
