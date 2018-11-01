@@ -79,10 +79,7 @@ namespace ogmaneo {
         \brief Buffers
         */
         cl::Buffer _hiddenCs;
-
-        cl::Buffer _hiddenActivations;
-
-        DoubleBuffer _hiddenActivationsTemp;
+        DoubleBuffer _hiddenActivations;
 
         std::vector<HistorySample> _historySamples;
         //!@}
