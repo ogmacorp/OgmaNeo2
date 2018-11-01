@@ -315,7 +315,7 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel aInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = 1.0 - randFloat(&stateValue) * 0.01f;
+    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.01f;
 }
 
 void kernel aForward(global const int* visibleCs, global float* hiddenActivations, global const float* weights,
