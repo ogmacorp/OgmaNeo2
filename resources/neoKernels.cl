@@ -387,7 +387,7 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
     hiddenCs[address2(hiddenPosition, hiddenSize.x)] = selectIndex;
 }
 
-void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
+void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global float* hiddenActivationsPrev,
     global const int* hiddenCs, global const int* hiddenCsPrev,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
@@ -400,10 +400,16 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     int hiddenC = hiddenCs[hiddenColumnIndex];
     int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
-    float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
-    float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy)];
+    int hiddenIndexPrev = address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy);
 
-    float delta = alpha * (reward + gamma * qNext - qPrev);
+    float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
+    float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
+
+    float qTarget = reward + gamma * qNext;
+
+    float delta = alpha * (qTarget - qPrev);
+
+    hiddenActivationsPrev[hiddenIndexPrev] = qTarget;
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 

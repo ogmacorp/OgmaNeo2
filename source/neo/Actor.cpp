@@ -167,7 +167,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             const HistorySample &s = _historySamples[i];
             const HistorySample &sPrev = _historySamples[i - 1];
 
-             // Initialize stimulus to 0
+            // Initialize stimulus to 0
             cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
 
             // Compute feed stimulus
