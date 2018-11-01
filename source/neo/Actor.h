@@ -58,7 +58,7 @@ namespace ogmaneo {
         */
         struct HistorySample {
             std::vector<cl::Buffer> _visibleCs;
-            cl::Buffer _targetCs;
+            cl::Buffer _hiddenCs;
         
             float _reward;
         };
@@ -119,7 +119,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.02f), _gamma(0.98f)
+        : _alpha(0.01f), _gamma(0.99f)
         {}
 
         /*!

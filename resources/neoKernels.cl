@@ -388,7 +388,7 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 }
 
 void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
-    global const int* targetCs,
+    global const int* hiddenCs, global const int* hiddenCsPrev,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
     float alpha, float gamma, float reward)
@@ -397,14 +397,11 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 	
     int hiddenColumnIndex = address2(hiddenPosition, hiddenSize.x);
 
-    int targetC = targetCs[hiddenColumnIndex];
+    int hiddenC = hiddenCs[hiddenColumnIndex];
+    int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
-    float qNext = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
-
-    for (int c = 1; c < hiddenSize.z; c++)
-        qNext = fmax(qNext, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
-
-    float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, targetC), hiddenSize.xy)];
+    float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
+    float qPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy)];
 
     float delta = alpha * (reward + gamma * qNext - qPrev);
 
@@ -425,7 +422,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
                 int2 offset = visiblePosition - fieldLowerBound;
 
                 int4 wPos;
-                wPos.xyz = (int3)(hiddenPosition, targetC);
+                wPos.xyz = (int3)(hiddenPosition, hiddenCPrev);
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 weights[address4(wPos, hiddenSize)] += delta;

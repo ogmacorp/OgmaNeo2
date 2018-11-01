@@ -81,7 +81,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             _historySamples[i]._visibleCs[vli] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
         }
 
-        _historySamples[i]._targetCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+        _historySamples[i]._hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
     }
 
     // Create kernels
@@ -157,7 +157,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
                 0, 0, numVisibleColumns * sizeof(cl_int));
         }
 
-        cs.getQueue().enqueueCopyBuffer(_hiddenCs, s._targetCs, 0, 0, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueCopyBuffer(_hiddenCs, s._hiddenCs, 0, 0, numHiddenColumns * sizeof(cl_int));
 
         s._reward = reward;
     }
@@ -200,7 +200,8 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
                 _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
                 _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_front]);
                 _learnKernel.setArg(argIndex++, _hiddenActivationsTemp[_back]);
-                _learnKernel.setArg(argIndex++, sPrev._targetCs);
+                _learnKernel.setArg(argIndex++, s._hiddenCs);
+                _learnKernel.setArg(argIndex++, sPrev._hiddenCs);
                 _learnKernel.setArg(argIndex++, vl._weights);
                 _learnKernel.setArg(argIndex++, vld._size);
                 _learnKernel.setArg(argIndex++, _hiddenSize);
@@ -277,9 +278,9 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
             os.write(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
         }
 
-        std::vector<cl_int> targetCs(numHiddenColumns);
-        cs.getQueue().enqueueReadBuffer(s._targetCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), targetCs.data());
-        os.write(reinterpret_cast<char*>(targetCs.data()), numHiddenColumns * sizeof(cl_int));
+        std::vector<cl_int> hiddenCs(numHiddenColumns);
+        cs.getQueue().enqueueReadBuffer(s._hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+        os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
         os.write(reinterpret_cast<char*>(&s._reward), sizeof(cl_float));
     }
@@ -353,10 +354,10 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
             cs.getQueue().enqueueWriteBuffer(_historySamples[i]._visibleCs[vli], CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
         }
 
-        std::vector<cl_int> targetCs(numHiddenColumns);
-        is.read(reinterpret_cast<char*>(targetCs.data()), numHiddenColumns * sizeof(cl_int));
-        _historySamples[i]._targetCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-        cs.getQueue().enqueueWriteBuffer(_historySamples[i]._targetCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), targetCs.data());
+        std::vector<cl_int> hiddenCs(numHiddenColumns);
+        is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
+        _historySamples[i]._hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+        cs.getQueue().enqueueWriteBuffer(_historySamples[i]._hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
 
         is.read(reinterpret_cast<char*>(&_historySamples[i]._reward), sizeof(cl_float));
     }
