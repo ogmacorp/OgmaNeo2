@@ -207,6 +207,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
                 _learnKernel.setArg(argIndex++, vld._radius);
                 _learnKernel.setArg(argIndex++, _alpha);
                 _learnKernel.setArg(argIndex++, _gamma);
+                _learnKernel.setArg(argIndex++, _timeScale);
                 _learnKernel.setArg(argIndex++, s._reward);
 
                 cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
@@ -226,6 +227,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
     os.write(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
+    os.write(reinterpret_cast<char*>(&_timeScale), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
@@ -294,6 +296,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_timeScale), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));

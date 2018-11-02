@@ -379,11 +379,11 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
     hiddenCs[address2(hiddenPosition, hiddenSize.x)] = selectIndex;
 }
 
-void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global float* hiddenActivationsPrev,
+void kernel aLearn(global const int* visibleCs, global const float* hiddenActivations, global const float* hiddenActivationsPrev,
     global const int* hiddenCs, global const int* hiddenCsPrev,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float gamma, float reward)
+    float alpha, float gamma, float timeScale, float reward)
 {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -394,14 +394,23 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 
     int hiddenIndexPrev = address3((int3)(hiddenPosition, hiddenCPrev), hiddenSize.xy);
 
-    float qNext = hiddenActivations[address3((int3)(hiddenPosition, hiddenC), hiddenSize.xy)];
+    float qMax = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+    float qMaxPrev = hiddenActivationsPrev[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+
+    for (int c = 1; c < hiddenSize.z; c++) {
+        qMax = fmax(qMax, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+        qMaxPrev = fmax(qMaxPrev, hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+    }
+
     float qPrev = hiddenActivationsPrev[hiddenIndexPrev];
 
-    float qTarget = reward + gamma * qNext;
+    float qDelta = reward + gamma * qMax - qPrev;
 
-    float delta = alpha * (qTarget - qPrev);
+    float alDelta = qDelta - timeScale * (qMaxPrev - qPrev);
+    
+    float palDelta = fmax(alDelta, qDelta - timeScale * (qMax - hiddenActivations[hiddenIndexPrev]))
 
-    hiddenActivationsPrev[hiddenIndexPrev] = qTarget;
+    float delta = alpha * palDelta;
 
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 

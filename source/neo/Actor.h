@@ -118,10 +118,15 @@ namespace ogmaneo {
         cl_float _epsilon;
 
         /*!
+        \brief Timescale
+        */
+        cl_float _timeScale;
+
+        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _gamma(0.98f), _epsilon(0.01f)
+        : _alpha(0.01f), _gamma(0.98f), _epsilon(0.01f), _timeScale(0.5f)
         {}
 
         /*!
