@@ -129,15 +129,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 
-        std::vector<float> d(_hiddenSize.x * _hiddenSize.y * _hiddenSize.z);
-    cs.getQueue().enqueueReadBuffer(_hiddenActivations[_front], CL_TRUE, 0, d.size() * sizeof(cl_float), d.data());
-    float v = 0.0f;
-    for (int i = 0; i < d.size(); i++)
-        if (std::abs(d[i]) > std::abs(v))
-            v = d[i];
-
-    std::cout << v << std::endl;
-
     // Add sample
     if (_historySize == _historySamples.size()) {
         // Circular buffer swap
