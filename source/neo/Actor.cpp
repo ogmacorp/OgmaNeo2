@@ -114,6 +114,10 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
         cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
     }
 
+    std::vector<float> d(_hiddenSize.x * _hiddenSize.y * _hiddenSize.z);
+    cs.getQueue().enqueueReadBuffer(_hiddenActivations[_front], CL_TRUE, 0, d.size() * sizeof(cl_float), d.data());
+
+    std::cout << d[0] << std::endl;
     // Activate
     {
         std::uniform_int_distribution<int> seedDist(0, 99999);
@@ -164,7 +168,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
 
     // Learn
     if (learn && _historySize > 2) {
-        const HistorySample &s = _historySamples[1];
         const HistorySample &sPrev = _historySamples[0];
 
         float q = 0.0f;
