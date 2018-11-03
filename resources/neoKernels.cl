@@ -233,7 +233,8 @@ void kernel pForward(global const int* visibleCs, global float* hiddenActivation
     int diam2 = diam * diam;
 
     float sum = 0.0f;
-
+    float count = 0.0f;
+    
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -248,10 +249,11 @@ void kernel pForward(global const int* visibleCs, global float* hiddenActivation
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 sum += weights[address4(wPos, hiddenSize)];
+                count += 1.0f;
             }
         }
 
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum / fmax(1.0f, count);
 }
 
 void kernel pInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
@@ -331,6 +333,7 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
     int diam2 = diam * diam;
 
     float sum = 0.0f;
+    float count = 0.0f;
 
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
@@ -346,10 +349,11 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 sum += weights[address4(wPos, hiddenSize)];
+                count += 1.0f;
             }
         }
 
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum / fmax(1.0f, count);
 }
 
 void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize, float epsilon, uint2 seed) {
