@@ -129,6 +129,15 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 
+        std::vector<float> d(_hiddenSize.x * _hiddenSize.y * _hiddenSize.z);
+    cs.getQueue().enqueueReadBuffer(_hiddenActivations[_front], CL_TRUE, 0, d.size() * sizeof(cl_float), d.data());
+    float v = 0.0f;
+    for (int i = 0; i < d.size(); i++)
+        if (std::abs(d[i]) > std::abs(v))
+            v = d[i];
+
+    std::cout << v << std::endl;
+
     // Add sample
     if (_historySize == _historySamples.size()) {
         // Circular buffer swap
@@ -166,7 +175,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
     if (learn && _historySize > 2) {
         const HistorySample &sPrev = _historySamples[0];
 
-        float q = 0.0f;
+        cl_float q = 0.0f;
 
         for (int t = _historySize - 1; t >= 1; t--)
             q += _historySamples[t]._reward * std::pow(_gamma, t - 1);
@@ -192,6 +201,8 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
         }
 
+        float g = std::pow(_gamma, _historySize - 1);
+
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
@@ -209,7 +220,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
             _learnKernel.setArg(argIndex++, vld._radius);
             _learnKernel.setArg(argIndex++, _alpha);
-            _learnKernel.setArg(argIndex++, std::pow(_gamma, _historySize - 1));
+            _learnKernel.setArg(argIndex++, g);
             _learnKernel.setArg(argIndex++, q);
 
             cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
