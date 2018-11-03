@@ -128,7 +128,7 @@ namespace ogmaneo {
         \brief Get the actor output
         \param i the index of the input to retrieve
         */
-        const cl::Buffer &getActionnCs(int i) const {
+        const cl::Buffer &getActionCs(int i) const {
             return _aLayers.front()[i]->getHiddenCs();
         }
 
