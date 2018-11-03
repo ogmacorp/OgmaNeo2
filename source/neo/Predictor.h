@@ -24,7 +24,7 @@ namespace ogmaneo {
             /*!
             \brief Visible layer size
             */
-            Int3 _size;
+            cl_int3 _size;
 
             /*!
             \brief Radius onto hidden layer
@@ -51,7 +51,7 @@ namespace ogmaneo {
 
             cl::Buffer _weights;
 
-            Float2 _hiddenToVisible;
+            cl_float2 _hiddenToVisible;
             //!@}
         };
 
@@ -59,7 +59,7 @@ namespace ogmaneo {
         /*!
         \brief Size of the hidden layer (output)
         */
-        Int3 _hiddenSize;
+        cl_int3 _hiddenSize;
 
         //!@{
         /*!
@@ -109,7 +109,7 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+            cl_int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
             std::mt19937 &rng);
 
         /*!
@@ -167,7 +167,7 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden size
         */
-        Int3 getHiddenSize() const {
+        cl_int3 getHiddenSize() const {
             return _hiddenSize;
         }
 

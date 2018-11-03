@@ -14,7 +14,7 @@
 using namespace ogmaneo;
 
 void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng)
+    const std::vector<cl_int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng)
 {
     _scLayers.resize(layerDescs.size());
     _aLayers.resize(layerDescs.size());
@@ -249,7 +249,7 @@ void Hierarchy::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
     os.write(reinterpret_cast<char*>(&numInputs), sizeof(int));
 
-    os.write(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(Int3));
+    os.write(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
 
     os.write(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
     os.write(reinterpret_cast<char*>(_rewards.data()), _rewards.size() * sizeof(float));
@@ -290,7 +290,7 @@ void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::ist
     int numInputs;
     is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
     _inputSizes.resize(numInputs);
-    is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(Int3));
+    is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
 
     _scLayers.resize(numLayers);
     _aLayers.resize(numLayers);
