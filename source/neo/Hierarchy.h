@@ -35,7 +35,7 @@ namespace ogmaneo {
             /*!
             \brief Dimensions of the hidden layer
             */
-            cl_int3 _hiddenSize;
+            Int3 _hiddenSize;
 
             //!@{
             /*!
@@ -64,7 +64,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             LayerDesc()
-                : _hiddenSize({ 4, 4, 16 }),
+                : _hiddenSize(4, 4, 16),
                 _scRadius(2), _aRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2),
                 _historyCapacity(16)
@@ -85,7 +85,7 @@ namespace ogmaneo {
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
 
-        std::vector<cl_int3> _inputSizes;
+        std::vector<Int3> _inputSizes;
 
     public:
         /*!
@@ -98,7 +98,7 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            const std::vector<cl_int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
+            const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
 
         /*!
         \brief Simulation step/tick
@@ -156,7 +156,7 @@ namespace ogmaneo {
         /*!
         \brief Get input sizes.
         */
-        const std::vector<cl_int3> &getInputSizes() const {
+        const std::vector<Int3> &getInputSizes() const {
             return _inputSizes;
         }
 
