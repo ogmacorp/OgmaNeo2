@@ -192,7 +192,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
         }
 
-        float g = std::pow(_gamma, _historySize - 1);
+        cl_float g = std::pow(_gamma, _historySize - 1);
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
