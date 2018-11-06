@@ -103,9 +103,14 @@ namespace ogmaneo {
 
     public:
         /*!
-        \brief Learning rate
+        \brief Value learning rate
         */
         cl_float _alpha;
+
+        /*!
+        \brief Action learning rate
+        */
+        cl_float _beta;
 
         /*!
         \brief Discount factor
@@ -121,7 +126,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.1f), _gamma(0.9f), _epsilon(0.01f)
+        : _alpha(0.01f), _beta(0.1f), _gamma(0.97f), _epsilon(0.01f)
         {}
 
         /*!

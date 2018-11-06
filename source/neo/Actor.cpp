@@ -23,6 +23,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
+    int numHidden1 = numHiddenColumns * (_hiddenSize.z + 1);
 
     cl::Kernel initWeightsKernel = cl::Kernel(prog.getProgram(), "aInitWeights");
 
@@ -40,7 +41,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
         cl_int numWeightsPerHidden = diam * diam * vld._size.z;
 
-        cl_int weightsSize = numHidden * numWeightsPerHidden;
+        cl_int weightsSize = numHidden1 * numWeightsPerHidden;
 
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
 
@@ -62,7 +63,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
  
     // Stimulus
-    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
+    _hiddenActivations = createDoubleBuffer(cs, numHidden1 * sizeof(cl_float));
 
     // History samples
     _historySize = 0;
@@ -91,9 +92,10 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learn) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
+    int numHidden1 = numHiddenColumns * (_hiddenSize.z + 1);
 
     // Initialize stimulus to 0
-    cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations[_front], static_cast<cl_float>(0.0f), 0, numHidden1 * sizeof(cl_float));
 
     // Compute feed stimulus
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -110,7 +112,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
         _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
         _forwardKernel.setArg(argIndex++, vld._radius);
 
-        cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+        cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1));
     }
 
     // Activate
@@ -171,7 +173,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             q += _historySamples[t]._reward * std::pow(_gamma, t - 1);
 
         // Initialize stimulus to 0
-        cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+        cs.getQueue().enqueueFillBuffer(_hiddenActivations[_back], static_cast<cl_float>(0.0f), 0, numHidden1 * sizeof(cl_float));
 
         // Compute feed stimulus
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -188,7 +190,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
             _forwardKernel.setArg(argIndex++, vld._radius);
 
-            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1));
         }
 
         cl_float g = std::pow(_gamma, _historySize - 1);
@@ -202,7 +204,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             _learnKernel.setArg(argIndex++, sPrev._visibleCs[vli]);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_front]);
             _learnKernel.setArg(argIndex++, _hiddenActivations[_back]);
-            _learnKernel.setArg(argIndex++, _hiddenCs);
             _learnKernel.setArg(argIndex++, sPrev._hiddenCs);
             _learnKernel.setArg(argIndex++, vl._weights);
             _learnKernel.setArg(argIndex++, vld._size);
@@ -210,6 +211,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
             _learnKernel.setArg(argIndex++, vld._radius);
             _learnKernel.setArg(argIndex++, _alpha);
+            _learnKernel.setArg(argIndex++, _beta);
             _learnKernel.setArg(argIndex++, g);
             _learnKernel.setArg(argIndex++, q);
 
@@ -221,6 +223,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
 void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
+    int numHidden1 = numHiddenColumns * (_hiddenSize.z + 1);
 
     os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
@@ -251,7 +254,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
         cl_int numWeightsPerHidden = diam * diam * vld._size.z;
 
-        cl_int weightsSize = numHidden * numWeightsPerHidden;
+        cl_int weightsSize = numHidden1 * numWeightsPerHidden;
 
         std::vector<cl_float> weights(weightsSize);
         cs.getQueue().enqueueReadBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
@@ -291,6 +294,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
+    int numHidden1 = numHiddenColumns * (_hiddenSize.z + 1);
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
@@ -301,7 +305,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
     cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
 
-    _hiddenActivations = createDoubleBuffer(cs, numHidden * sizeof(cl_float));
+    _hiddenActivations = createDoubleBuffer(cs, numHidden1 * sizeof(cl_float));
 
     int numVisibleLayers;
     
@@ -325,7 +329,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
         cl_int numWeightsPerHidden = diam * diam * vld._size.z;
 
-        cl_int weightsSize = numHidden * numWeightsPerHidden;
+        cl_int weightsSize = numHidden1 * numWeightsPerHidden;
 
         std::vector<cl_float> weights(weightsSize);
         is.read(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
