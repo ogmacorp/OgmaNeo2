@@ -122,10 +122,17 @@ namespace ogmaneo {
 
         /*!
         \brief Learn the sparse code
-        \param cs is the ComputeSystem.
+        \param cs is the ComputeSystem
         \param visibleAs the visible (input) layer activations previously encoded
         */
         void learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
+
+        /*!
+        \brief End an activation and (optionally) learn step
+        \param cs is the ComputeSystem.
+        \param visibleAs the visible (input) layer activations previously encoded
+        */
+        void stepEnd(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
 
         /*!
         \brief Write to stream.

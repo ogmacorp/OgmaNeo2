@@ -98,9 +98,6 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
         _forwardKernel.setArg(argIndex++, vld._radius);
 
         cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
-
-        // Copy
-        cs.getQueue().enqueueCopyBuffer(visibleAs[vli], vl._visibleAs, 0, 0, vld._size.x * vld._size.y * vld._size.z * sizeof(cl_float));
     }
 
     // Inhibit
@@ -134,6 +131,16 @@ void ImageEncoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visib
         _learnKernel.setArg(argIndex++, _alpha);
 
         cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+    }
+}
+
+void ImageEncoder::stepEnd(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs) {
+    // Copy
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        cs.getQueue().enqueueCopyBuffer(visibleAs[vli], vl._visibleAs, 0, 0, vld._size.x * vld._size.y * vld._size.z * sizeof(cl_float));
     }
 }
 

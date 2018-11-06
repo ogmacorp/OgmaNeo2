@@ -162,7 +162,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
     }
 
     // Learn
-    if (learn && _historySize > 2) {
+    if (learn && _historySize > 1) {
         const HistorySample &sPrev = _historySamples[0];
 
         cl_float q = 0.0f;
