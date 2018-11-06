@@ -203,7 +203,7 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float target = (c == visibleC ? 1.0f : 0.0f);
 
-                    float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
+                    float delta = target - weights[wi];
  
                     weights[wi] += alpha * delta;
                 }
