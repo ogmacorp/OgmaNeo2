@@ -50,12 +50,7 @@ namespace ogmaneo {
             */
             cl::Buffer _weights;
 
-            cl::Buffer _visibleActivations;
-
-            Float2 _visibleToHidden;
             Float2 _hiddenToVisible;
-
-            Int2 _reverseRadii;
             //!@}
         };
 
@@ -87,7 +82,6 @@ namespace ogmaneo {
         \brief Kernels
         */
         cl::Kernel _forwardKernel;
-        cl::Kernel _backwardKernel;
         cl::Kernel _inhibitKernel;
         cl::Kernel _learnKernel;
         //!@}
@@ -99,15 +93,10 @@ namespace ogmaneo {
         cl_float _alpha;
 
         /*!
-        \brief Explaining-away iterations
-        */
-        cl_int _explainIters;
-
-        /*!
         \brief Initialize defaults
         */
         ImageEncoder()
-        : _alpha(0.0001f), _explainIters(2)
+        : _alpha(0.01f)
         {}
 
         /*!
