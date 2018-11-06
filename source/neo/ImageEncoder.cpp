@@ -54,6 +54,10 @@ void ImageEncoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
             cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
         }
+
+        vl._visibleAs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
+
+        cs.getQueue().enqueueFillBuffer(vl._visibleAs, static_cast<cl_float>(0.0f), 0, numVisible * sizeof(cl_float));
     }
 
     // Hidden Cs
@@ -85,6 +89,7 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
         int argIndex = 0;
 
         _forwardKernel.setArg(argIndex++, visibleAs[vli]);
+        _forwardKernel.setArg(argIndex++, vl._visibleAs);
         _forwardKernel.setArg(argIndex++, _hiddenActivations);
         _forwardKernel.setArg(argIndex++, vl._weights);
         _forwardKernel.setArg(argIndex++, vld._size);
@@ -93,6 +98,9 @@ void ImageEncoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vi
         _forwardKernel.setArg(argIndex++, vld._radius);
 
         cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+
+        // Copy
+        cs.getQueue().enqueueCopyBuffer(visibleAs[vli], vl._visibleAs, 0, 0, vld._size.x * vld._size.y * vld._size.z * sizeof(cl_float));
     }
 
     // Inhibit
@@ -116,6 +124,7 @@ void ImageEncoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visib
         int argIndex = 0;
 
         _learnKernel.setArg(argIndex++, visibleAs[vli]);
+        _learnKernel.setArg(argIndex++, vl._visibleAs);
         _learnKernel.setArg(argIndex++, _hiddenCs);
         _learnKernel.setArg(argIndex++, vl._weights);
         _learnKernel.setArg(argIndex++, vld._size);
@@ -164,6 +173,10 @@ void ImageEncoder::writeToStream(ComputeSystem &cs, std::ostream &os) {
         std::vector<cl_float> weights(weightsSize);
         cs.getQueue().enqueueReadBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
         os.write(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
+
+        std::vector<cl_float> visibleAs(numVisible);
+        cs.getQueue().enqueueReadBuffer(vl._visibleAs, CL_TRUE, 0, numVisible * sizeof(cl_float), visibleAs.data());
+        os.write(reinterpret_cast<char*>(visibleAs.data()), numVisible * sizeof(cl_float));
     }
 }
 
@@ -210,6 +223,11 @@ void ImageEncoder::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::
         is.read(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
         cs.getQueue().enqueueWriteBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
+
+        std::vector<cl_float> visibleAs(numVisible);
+        is.read(reinterpret_cast<char*>(visibleAs.data()), numVisible * sizeof(cl_float));
+        vl._visibleAs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
+        cs.getQueue().enqueueWriteBuffer(vl._visibleAs, CL_TRUE, 0, numVisible * sizeof(cl_float), visibleAs.data());
     }
 
     // Create kernels

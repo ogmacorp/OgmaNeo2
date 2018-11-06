@@ -434,10 +434,10 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel imInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = randFloat(&stateValue);
+    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.01f;
 }
 
-void kernel imForward(global const float* visibleAs,
+void kernel imForward(global const float* visibleAs, global const float* visibleActivations,
     global float* hiddenActivations,
     global const float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
@@ -450,6 +450,27 @@ void kernel imForward(global const float* visibleAs,
 
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
+
+    float center = 0.0f;
+    float count = 0.0f;
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(visiblePosition, visibleSize.xy)) {
+                int2 offset = visiblePosition - fieldLowerBound;
+
+                for (int c = 0; c < visibleSize.z; c++) {
+                    float visibleA = visibleAs[address3((int3)(visiblePosition, c), visibleSize.xy)];
+
+                    center += visibleA;
+                    count += 1.0f;
+                }
+            }
+        }
+
+    center /= fmax(1.0f, count);
 
     float sum = 0.0f;
 
@@ -467,13 +488,58 @@ void kernel imForward(global const float* visibleAs,
                     wPos.xyz = hiddenPosition;
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
-                    float d = visibleA - weights[address4(wPos, hiddenSize)];
+                    float d = visibleA - center - weights[address4(wPos, hiddenSize)];
+
                     sum += -d * d;
                 }
             }
         }
 
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+}
+
+void kernel imBackward(global const int* hiddenCs, global float* visibleActivations,
+    global const float* weights,
+    int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
+{
+    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int2 hiddenPositionCenter = project(visiblePosition.xy, visibleToHidden);
+
+    int diam = radius * 2 + 1;
+    int diam2 = diam * diam;
+
+    float sum = 0.0f;
+    float count = 0.0f;
+
+    for (int dx = -reverseRadii.x; dx <= reverseRadii.x; dx++)
+        for (int dy = -reverseRadii.y; dy <= reverseRadii.y; dy++) {
+            int2 hiddenPosition = hiddenPositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(hiddenPosition, hiddenSize.xy)) {
+                // Next layer node's receptive field
+                int2 visibleFieldCenter = project(hiddenPosition, hiddenToVisible);
+
+                int2 fieldLowerBound = visibleFieldCenter - (int2)(radius);
+                int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
+
+                // Check for containment
+                if (inBounds(visiblePosition.xy, fieldLowerBound, fieldUpperBound)) {
+                    int hiddenC = hiddenCs[address2(hiddenPosition.xy, hiddenSize.x)];
+
+                    int2 offset = visiblePosition.xy - fieldLowerBound;
+
+                    int4 wPos;
+                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+                    wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
+
+                    sum += weights[address4(wPos, hiddenSize)];
+                    count += 1.0f;
+                }
+            }
+        }
+
+    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
 }
 
 void kernel imInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
@@ -496,7 +562,7 @@ void kernel imInhibit(global const float* hiddenActivations, global int* hiddenC
     hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
 }
 
-void kernel imLearn(global const float* visibleAs, global const int* hiddenCs,
+void kernel imLearn(global const float* visibleAs, global const float* visibleActivations, global const int* hiddenCs,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float alpha)
 {
@@ -511,6 +577,9 @@ void kernel imLearn(global const float* visibleAs, global const int* hiddenCs,
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    float center = 0.0f;
+    float count = 0.0f;
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -518,22 +587,67 @@ void kernel imLearn(global const float* visibleAs, global const int* hiddenCs,
             if (inBounds0(visiblePosition, visibleSize.xy)) {
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                for (int hc = 0; hc < hiddenSize.z; hc++) {
-                    float strength = abs(hiddenC - hc);
-                    strength = 1.0f - strength / hiddenSize.z;
+                for (int c = 0; c < visibleSize.z; c++) {
+                    float visibleA = visibleAs[address3((int3)(visiblePosition, c), visibleSize.xy)];
+
+                    center += visibleA;
+                    count += 1.0f;
+                }
+            }
+        }
+
+    center /= fmax(1.0f, count);
+
+    float weightSum = 0.0f;
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(visiblePosition, visibleSize.xy)) {
+                int2 offset = visiblePosition - fieldLowerBound;
+
+                for (int c = 0; c < visibleSize.z; c++) {
+                    float visibleA = visibleAs[address3((int3)(visiblePosition, c), visibleSize.xy)];
 
                     int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hc);
+                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+                    wPos.w = offset.x + offset.y * diam + c * diam2;
 
-                    for (int vc = 0; vc < visibleSize.z; vc++) {
-                        float visibleA = visibleAs[address3((int3)(visiblePosition, vc), visibleSize.xy)];
+                    int wi = address4(wPos, hiddenSize);
 
-                        wPos.w = offset.x + offset.y * diam + vc * diam2;
+                    float delta = visibleA - center - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
 
-                        int wi = address4(wPos, hiddenSize);
+                    float w = weights[wi] + alpha * delta;
 
-                        weights[wi] += alpha * strength * (visibleA - weights[wi]);
-                    }
+                    weightSum += w * w;
+                }
+            }
+        }
+
+    float scale = 1.0f / fmax(0.0001f, sqrt(weightSum));
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(visiblePosition, visibleSize.xy)) {
+                int2 offset = visiblePosition - fieldLowerBound;
+
+                for (int c = 0; c < visibleSize.z; c++) {
+                    float visibleA = visibleAs[address3((int3)(visiblePosition, c), visibleSize.xy)];
+
+                    int4 wPos;
+                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+                    wPos.w = offset.x + offset.y * diam + c * diam2;
+
+                    int wi = address4(wPos, hiddenSize);
+
+                    float delta = visibleA - center - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
+
+                    float w = weights[wi] + alpha * delta;
+
+                    weights[wi] = w * scale;
                 }
             }
         }

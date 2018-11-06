@@ -50,6 +50,8 @@ namespace ogmaneo {
             */
             cl::Buffer _weights;
 
+            cl::Buffer _visibleAs;
+
             Float2 _hiddenToVisible;
             //!@}
         };
