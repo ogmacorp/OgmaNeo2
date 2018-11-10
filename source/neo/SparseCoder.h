@@ -87,6 +87,7 @@ namespace ogmaneo {
         \brief Kernels
         */
         cl::Kernel _forwardKernel;
+        cl::Kernel _backwardPartialKernel;
         cl::Kernel _backwardKernel;
         cl::Kernel _inhibitKernel;
         cl::Kernel _learnKernel;

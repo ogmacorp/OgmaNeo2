@@ -61,7 +61,7 @@ void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
         }
 
-        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_float));
+        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
     }
 
     // Hidden Cs
@@ -74,6 +74,7 @@ void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
+    _backwardPartialKernel = cl::Kernel(prog.getProgram(), "scBackwardPartial");
     _backwardKernel = cl::Kernel(prog.getProgram(), "scBackward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
@@ -125,30 +126,52 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vis
             cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
 
-        // Backward
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        // Backward partially
+        if (it < _explainIters - 1) {
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            int argIndex = 0;
+                int argIndex = 0;
 
-            _backwardKernel.setArg(argIndex++, visibleCs[vli]);
-            _backwardKernel.setArg(argIndex++, _hiddenCs);
-            _backwardKernel.setArg(argIndex++, vl._visibleActivations);
-            _backwardKernel.setArg(argIndex++, vl._weights);
-            _backwardKernel.setArg(argIndex++, vld._size);
-            _backwardKernel.setArg(argIndex++, _hiddenSize);
-            _backwardKernel.setArg(argIndex++, vl._visibleToHidden);
-            _backwardKernel.setArg(argIndex++, vl._hiddenToVisible);
-            _backwardKernel.setArg(argIndex++, vld._radius);
-            _backwardKernel.setArg(argIndex++, vl._reverseRadii);
+                _backwardPartialKernel.setArg(argIndex++, visibleCs[vli]);
+                _backwardPartialKernel.setArg(argIndex++, _hiddenCs);
+                _backwardPartialKernel.setArg(argIndex++, vl._visibleActivations);
+                _backwardPartialKernel.setArg(argIndex++, vl._weights);
+                _backwardPartialKernel.setArg(argIndex++, vld._size);
+                _backwardPartialKernel.setArg(argIndex++, _hiddenSize);
+                _backwardPartialKernel.setArg(argIndex++, vl._visibleToHidden);
+                _backwardPartialKernel.setArg(argIndex++, vl._hiddenToVisible);
+                _backwardPartialKernel.setArg(argIndex++, vld._radius);
+                _backwardPartialKernel.setArg(argIndex++, vl._reverseRadii);
 
-            cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y));
+                cs.getQueue().enqueueNDRangeKernel(_backwardPartialKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y));
+            }
         }
     }
 }
 
 void SparseCoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs) {
+    // Full backward for learning
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int argIndex = 0;
+
+        _backwardKernel.setArg(argIndex++, _hiddenCs);
+        _backwardKernel.setArg(argIndex++, vl._visibleActivations);
+        _backwardKernel.setArg(argIndex++, vl._weights);
+        _backwardKernel.setArg(argIndex++, vld._size);
+        _backwardKernel.setArg(argIndex++, _hiddenSize);
+        _backwardKernel.setArg(argIndex++, vl._visibleToHidden);
+        _backwardKernel.setArg(argIndex++, vl._hiddenToVisible);
+        _backwardKernel.setArg(argIndex++, vld._radius);
+        _backwardKernel.setArg(argIndex++, vl._reverseRadii);
+
+        cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
+    }
+    
     // Learn
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -259,7 +282,7 @@ void SparseCoder::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::i
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
         cs.getQueue().enqueueWriteBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
 
-        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_float));
+        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
     }
 
     // Create kernels

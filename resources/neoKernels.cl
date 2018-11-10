@@ -91,7 +91,9 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
 
             if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
+                int visibleIndex = address2(visiblePosition, visibleSize.x);
+
+                int visibleC = visibleCs[visibleIndex];
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
@@ -99,14 +101,14 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[address3((int3)(visiblePosition, visibleC), visibleSize.xy)]);
+                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
             }
         }
 
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
 }
 
-void kernel scBackward(global const int* visibleCs, global const int* hiddenCs, global float* visibleActivations,
+void kernel scBackwardPartial(global const int* visibleCs, global const int* hiddenCs, global float* visibleActivations,
     global const float* weights,
     int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
 {
@@ -116,7 +118,7 @@ void kernel scBackward(global const int* visibleCs, global const int* hiddenCs, 
 
     int visibleC = visibleCs[visibleIndex];
 
-    int2 hiddenPositionCenter = project(visiblePosition.xy, visibleToHidden);
+    int2 hiddenPositionCenter = project(visiblePosition, visibleToHidden);
 
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
@@ -152,6 +154,50 @@ void kernel scBackward(global const int* visibleCs, global const int* hiddenCs, 
         }
 
     visibleActivations[visibleIndex] = sum / fmax(1.0f, count);
+}
+
+void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
+    global const float* weights,
+    int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
+{
+    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int2 hiddenPositionCenter = project(visiblePosition.xy, visibleToHidden);
+
+    int diam = radius * 2 + 1;
+    int diam2 = diam * diam;
+
+    float sum = 0.0f;
+    float count = 0.0f;
+
+    for (int dx = -reverseRadii.x; dx <= reverseRadii.x; dx++)
+        for (int dy = -reverseRadii.y; dy <= reverseRadii.y; dy++) {
+            int2 hiddenPosition = hiddenPositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(hiddenPosition, hiddenSize.xy)) {
+                // Next layer node's receptive field
+                int2 visibleFieldCenter = project(hiddenPosition, hiddenToVisible);
+
+                int2 fieldLowerBound = visibleFieldCenter - (int2)(radius);
+                int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
+
+                // Check for containment
+                if (inBounds(visiblePosition.xy, fieldLowerBound, fieldUpperBound)) {
+                    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
+
+                    int2 offset = visiblePosition.xy - fieldLowerBound;
+
+                    int4 wPos;
+                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+                    wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
+
+                    sum += weights[address4(wPos, hiddenSize)];
+                    count += 1.0f;
+                }
+            }
+        }
+
+    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
