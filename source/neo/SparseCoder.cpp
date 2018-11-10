@@ -61,7 +61,7 @@ void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
         }
 
-        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
+        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_float));
     }
 
     // Hidden Cs
@@ -132,6 +132,7 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vis
 
             int argIndex = 0;
 
+            _backwardKernel.setArg(argIndex++, visibleCs[vli]);
             _backwardKernel.setArg(argIndex++, _hiddenCs);
             _backwardKernel.setArg(argIndex++, vl._visibleActivations);
             _backwardKernel.setArg(argIndex++, vl._weights);
@@ -142,7 +143,7 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vis
             _backwardKernel.setArg(argIndex++, vld._radius);
             _backwardKernel.setArg(argIndex++, vl._reverseRadii);
 
-            cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
+            cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y));
         }
     }
 }
@@ -258,7 +259,7 @@ void SparseCoder::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::i
         vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
         cs.getQueue().enqueueWriteBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
 
-        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
+        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_float));
     }
 
     // Create kernels

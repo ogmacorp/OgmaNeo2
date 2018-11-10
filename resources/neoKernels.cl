@@ -106,11 +106,15 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
 }
 
-void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
+void kernel scBackward(global const int* visibleCs, global const int* hiddenCs, global float* visibleActivations,
     global const float* weights,
     int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
 {
-    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+    int2 visiblePosition = (int2)(get_global_id(0), get_global_id(1));
+
+    int visibleIndex = address2(visiblePosition, visibleSize.x);
+
+    int visibleC = visibleCs[visibleIndex];
 
     int2 hiddenPositionCenter = project(visiblePosition.xy, visibleToHidden);
 
@@ -132,14 +136,14 @@ void kernel scBackward(global const int* hiddenCs, global float* visibleActivati
                 int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
 
                 // Check for containment
-                if (inBounds(visiblePosition.xy, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = hiddenCs[address2(hiddenPosition.xy, hiddenSize.x)];
+                if (inBounds(visiblePosition, fieldLowerBound, fieldUpperBound)) {
+                    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
 
-                    int2 offset = visiblePosition.xy - fieldLowerBound;
+                    int2 offset = visiblePosition - fieldLowerBound;
 
                     int4 wPos;
                     wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                    wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
+                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                     sum += weights[address4(wPos, hiddenSize)];
                     count += 1.0f;
@@ -147,7 +151,7 @@ void kernel scBackward(global const int* hiddenCs, global float* visibleActivati
             }
         }
 
-    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
+    visibleActivations[visibleIndex] = sum / fmax(1.0f, count);
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
