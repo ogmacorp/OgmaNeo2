@@ -451,8 +451,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     float delta = qTarget + gamma * qNext - qPrev;
 
     float deltaValue = alpha * delta;
-    float deltaAction = beta * delta;
-
+    
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
     int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
@@ -460,22 +459,28 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+    for (int c = 0; c < hiddenSize.z; c++) {
+        float s = sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
 
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
+        float deltaAction = beta * delta * ((c == hiddenCPrev ? 1.0f : 0.0f) - s) * s * (1.0f - s);
 
-                int2 offset = visiblePosition - fieldLowerBound;
+        for (int dx = -radius; dx <= radius; dx++)
+            for (int dy = -radius; dy <= radius; dy++) {
+                int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
 
-                int4 wPos;
-                wPos.xyz = (int3)(hiddenPosition, hiddenCPrev);
-                wPos.w = offset.x + offset.y * diam + visibleC * diam2;
+                if (inBounds0(visiblePosition, visibleSize.xy)) {
+                    int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
 
-                weights[address4(wPos, (int3)(hiddenSize.xy, hiddenSize.z + 1))] += deltaAction;
+                    int2 offset = visiblePosition - fieldLowerBound;
+
+                    int4 wPos;
+                    wPos.xyz = (int3)(hiddenPosition, c);
+                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
+
+                    weights[address4(wPos, (int3)(hiddenSize.xy, hiddenSize.z + 1))] += deltaAction;
+                }
             }
-        }
+    }
 
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
