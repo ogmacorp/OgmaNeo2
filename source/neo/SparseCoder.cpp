@@ -152,44 +152,42 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &vis
 }
 
 void SparseCoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs) {
-    // Full backward for learning
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        int argIndex = 0;
-
-        _backwardKernel.setArg(argIndex++, _hiddenCs);
-        _backwardKernel.setArg(argIndex++, vl._visibleActivations);
-        _backwardKernel.setArg(argIndex++, vl._weights);
-        _backwardKernel.setArg(argIndex++, vld._size);
-        _backwardKernel.setArg(argIndex++, _hiddenSize);
-        _backwardKernel.setArg(argIndex++, vl._visibleToHidden);
-        _backwardKernel.setArg(argIndex++, vl._hiddenToVisible);
-        _backwardKernel.setArg(argIndex++, vld._radius);
-        _backwardKernel.setArg(argIndex++, vl._reverseRadii);
-
-        cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
-    }
-    
     // Learn
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        int argIndex = 0;
+        {
+            int argIndex = 0;
 
-        _learnKernel.setArg(argIndex++, visibleCs[vli]);
-        _learnKernel.setArg(argIndex++, vl._visibleActivations);
-        _learnKernel.setArg(argIndex++, _hiddenCs);
-        _learnKernel.setArg(argIndex++, vl._weights);
-        _learnKernel.setArg(argIndex++, vld._size);
-        _learnKernel.setArg(argIndex++, _hiddenSize);
-        _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
-        _learnKernel.setArg(argIndex++, vld._radius);
-        _learnKernel.setArg(argIndex++, _alpha);
+            _backwardKernel.setArg(argIndex++, _hiddenCs);
+            _backwardKernel.setArg(argIndex++, vl._visibleActivations);
+            _backwardKernel.setArg(argIndex++, vl._weights);
+            _backwardKernel.setArg(argIndex++, vld._size);
+            _backwardKernel.setArg(argIndex++, _hiddenSize);
+            _backwardKernel.setArg(argIndex++, vl._visibleToHidden);
+            _backwardKernel.setArg(argIndex++, vl._hiddenToVisible);
+            _backwardKernel.setArg(argIndex++, vld._radius);
+            _backwardKernel.setArg(argIndex++, vl._reverseRadii);
 
-        cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
+        }
+
+        {
+            int argIndex = 0;
+
+            _learnKernel.setArg(argIndex++, visibleCs[vli]);
+            _learnKernel.setArg(argIndex++, vl._visibleActivations);
+            _learnKernel.setArg(argIndex++, _hiddenCs);
+            _learnKernel.setArg(argIndex++, vl._weights);
+            _learnKernel.setArg(argIndex++, vld._size);
+            _learnKernel.setArg(argIndex++, _hiddenSize);
+            _learnKernel.setArg(argIndex++, vl._hiddenToVisible);
+            _learnKernel.setArg(argIndex++, vld._radius);
+            _learnKernel.setArg(argIndex++, _alpha);
+
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+        }
     }
 }
 
