@@ -287,6 +287,7 @@ void SparseCoder::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::i
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
+    _backwardPartialKernel = cl::Kernel(prog.getProgram(), "scBackwardPartial");
     _backwardKernel = cl::Kernel(prog.getProgram(), "scBackward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
