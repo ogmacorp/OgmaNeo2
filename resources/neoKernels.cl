@@ -101,7 +101,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += weights[address4(wPos, hiddenSize)] * fmin(1.0f, fmax(0.0f, 1.0f - visibleActivations[visibleIndex]));
+                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
             }
         }
 
@@ -462,7 +462,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     for (int c = 0; c < hiddenSize.z; c++) {
         float s = sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
 
-        float deltaAction = beta * delta * ((c == hiddenCPrev ? 1.0f : 0.0f) - s) * s * (1.0f - s);
+        float deltaAction = beta * delta * ((c == hiddenCPrev ? 1.0f : 0.0f) - s);// * s * (1.0f - s);
 
         for (int dx = -radius; dx <= radius; dx++)
             for (int dy = -radius; dy <= radius; dy++) {
