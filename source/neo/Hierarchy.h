@@ -10,7 +10,6 @@
 
 #include "SparseCoder.h"
 #include "Predictor.h"
-#include "Actor.h"
 
 #include <memory>
 
@@ -39,7 +38,7 @@ namespace ogmaneo {
 
             //!@{
             /*!
-            \brief Radii of the sparse coder and predictor/actor
+            \brief Radii of the sparse coder and predictor
             */
             cl_int _scRadius;
             cl_int _pRadius;
