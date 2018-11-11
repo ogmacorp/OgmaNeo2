@@ -19,7 +19,7 @@ namespace ogmaneo {
     \brief Enum describing the type of operation performed by an input layer
     */
     enum InputType {
-        _none, _predict, _act
+        _none, _predict
     };
     
     /*!
@@ -42,7 +42,7 @@ namespace ogmaneo {
             \brief Radii of the sparse coder and predictor/actor
             */
             cl_int _scRadius;
-            cl_int _aRadius;
+            cl_int _pRadius;
             //!@}
 
             /*!
@@ -56,31 +56,22 @@ namespace ogmaneo {
             int _temporalHorizon;
 
             /*!
-            \brief History capacity
-            */
-            int _historyCapacity;
-
-            /*!
             \brief Initialize defaults
             */
             LayerDesc()
                 : _hiddenSize(4, 4, 16),
-                _scRadius(2), _aRadius(2),
-                _ticksPerUpdate(2), _temporalHorizon(2),
-                _historyCapacity(8)
+                _scRadius(2), _pRadius(2),
+                _ticksPerUpdate(2), _temporalHorizon(2)
             {}
         };
     private:
         std::vector<SparseCoder> _scLayers;
-        std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
+        std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
 
         std::vector<std::vector<cl::Buffer>> _histories;
         std::vector<std::vector<int>> _historySizes;
 
         std::vector<char> _updates;
-
-        std::vector<float> _rewards;
-        std::vector<float> _rewardCounts;
 
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
@@ -102,10 +93,11 @@ namespace ogmaneo {
 
         /*!
         \brief Simulation step/tick
-        \param inputs vector of input activations
+        \param inputCs vector of input states
+        \param feedBackCs feed back states
         \param learn whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, std::mt19937 &rng, bool learn = true, float reward = 0.0f);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &feedBackCs, std::mt19937 &rng, bool learn = true);
 
         /*!
         \brief Write to stream.
@@ -125,11 +117,11 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get the actor output
+        \brief Get the prediction output
         \param i the index of the input to retrieve
         */
-        const cl::Buffer &getActionCs(int i) const {
-            return _aLayers.front()[i]->getHiddenCs();
+        const cl::Buffer &getPredictionCs(int i) const {
+            return _pLayers.front()[i]->getHiddenCs();
         }
 
         /*!
@@ -170,8 +162,8 @@ namespace ogmaneo {
         /*!
         \brief Retrieve predictor layer(s)
         */
-        std::vector<std::unique_ptr<Actor>> &getALayer(int l) {
-            return _aLayers[l];
+        std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
+            return _pLayers[l];
         }
     };
 }
