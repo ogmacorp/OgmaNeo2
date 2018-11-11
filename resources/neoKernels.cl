@@ -101,7 +101,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
                 wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
+                sum += weights[address4(wPos, hiddenSize)] * fmin(1.0f, fmax(0.0f, 1.0f - visibleActivations[visibleIndex]));
             }
         }
 
