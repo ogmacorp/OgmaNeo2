@@ -11,6 +11,7 @@
 #include "../system/ComputeSystem.h"
 #include "../system/ComputeProgram.h"
 
+#include <array>
 #include <random>
 #include <assert.h>
 
