@@ -11,8 +11,8 @@
 #include "../system/ComputeSystem.h"
 #include "../system/ComputeProgram.h"
 
-#include <random>
 #include <array>
+#include <random>
 #include <assert.h>
 
 namespace ogmaneo {

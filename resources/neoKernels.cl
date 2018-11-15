@@ -84,6 +84,9 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
+
     float sum = 0.0f;
 
     for (int dx = -radius; dx <= radius; dx++)
@@ -97,8 +100,6 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
@@ -235,6 +236,9 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -245,8 +249,6 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
                 int2 offset = visiblePosition - fieldLowerBound;
 
                 for (int c = 0; c < visibleSize.z; c++) {
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
                     int wi = address4(wPos, hiddenSize);
@@ -343,6 +345,9 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
+    int4 wPos;
+    wPos.xyz = hiddenPosition;
+
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
@@ -352,8 +357,6 @@ void kernel pLearn(global const int* visibleCs, global const float* hiddenActiva
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                int4 wPos;
-                wPos.xyz = hiddenPosition;
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
                 weights[address4(wPos, hiddenSize)] += delta;
@@ -493,6 +496,10 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAs
 
     center /= fmax(1.0f, count);
 
+
+    int4 wPos;
+    wPos.xyz = (int3)(hiddenPosition, hiddenC);
+
     float weightSum = 0.0f;
 
     for (int dx = -radius; dx <= radius; dx++)
@@ -507,8 +514,6 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAs
 
                     float act = visibleAs[visibleIndex] - visibleAsPrev[visibleIndex];
 
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
                     int wi = address4(wPos, hiddenSize);
@@ -536,8 +541,6 @@ void kernel imLearn(global const float* visibleAs, global const float* visibleAs
 
                     float act = visibleAs[visibleIndex] - visibleAsPrev[visibleIndex];
 
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
                     int wi = address4(wPos, hiddenSize);
