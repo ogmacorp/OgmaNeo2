@@ -67,13 +67,13 @@ inline float sigmoid(float x) {
 void kernel scInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = 1.0f - randFloat(&stateValue) * 0.01f;
+    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.01f;
 }
 
-void kernel scForward(global const int* visibleCs, global const float* visibleActivations,
+void kernel scForward(global const int* visibleCs,
     global float* hiddenActivations,
     global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
+    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float s)
 {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
@@ -102,62 +102,14 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
 
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
+                sum += weights[address4(wPos, hiddenSize)];
             }
         }
 
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += s * sum;
 }
 
-void kernel scBackwardPartial(global const int* visibleCs, global const int* hiddenCs, global float* visibleActivations,
-    global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
-{
-    int2 visiblePosition = (int2)(get_global_id(0), get_global_id(1));
-
-    int visibleIndex = address2(visiblePosition, visibleSize.x);
-
-    int visibleC = visibleCs[visibleIndex];
-
-    int2 hiddenPositionCenter = project(visiblePosition, visibleToHidden);
-
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    float sum = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -reverseRadii.x; dx <= reverseRadii.x; dx++)
-        for (int dy = -reverseRadii.y; dy <= reverseRadii.y; dy++) {
-            int2 hiddenPosition = hiddenPositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(hiddenPosition, hiddenSize.xy)) {
-                // Next layer node's receptive field
-                int2 visibleFieldCenter = project(hiddenPosition, hiddenToVisible);
-
-                int2 fieldLowerBound = visibleFieldCenter - (int2)(radius);
-                int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
-
-                // Check for containment
-                if (inBounds(visiblePosition, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
-
-                    int2 offset = visiblePosition - fieldLowerBound;
-
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
-
-                    sum += weights[address4(wPos, hiddenSize)];
-                    count += 1.0f;
-                }
-            }
-        }
-
-    visibleActivations[visibleIndex] = sum / fmax(1.0f, count);
-}
-
-void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
+void kernel scBackward(global const int* hiddenCs, global float* reconActivations,
     global const float* weights,
     int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
 {
@@ -198,18 +150,18 @@ void kernel scBackward(global const int* hiddenCs, global float* visibleActivati
             }
         }
 
-    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
+    reconActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
 }
 
-void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
+void kernel scInhibit(global const float* activations, global int* cs, int3 size) {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int maxIndex = 0;
-    float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+    float maxValue = activations[address3((int3)(hiddenPosition, 0), size.xy)];
     
     // Find max
-    for (int c = 1; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
+    for (int c = 1; c < size.z; c++) {
+        float value = activations[address3((int3)(hiddenPosition, c), size.xy)];
 
         if (value > maxValue) {
             maxValue = value;
@@ -218,10 +170,10 @@ void kernel scInhibit(global const float* hiddenActivations, global int* hiddenC
     }
 
     // Set states
-    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
+    cs[address2(hiddenPosition, size.x)] = maxIndex;
 }
 
-void kernel scLearn(global const int* visibleCs, global const float* visibleActivations, global const int* hiddenCs,
+void kernel scLearn(global const int* visibleCs, global const int* reconCs, global const int* hiddenCs,
     global float* weights,
     int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float alpha)
 {
@@ -245,6 +197,7 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
             if (inBounds0(visiblePosition, visibleSize.xy)) {
                 int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
+                int reconC = reconCs[address2(visiblePosition, visibleSize.x)];
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
@@ -253,10 +206,8 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     int wi = address4(wPos, hiddenSize);
 
-                    float target = (c == visibleC ? 1.0f : 0.0f);
+                    float delta = (c == visibleC ? 1.0f : 0.0f) - (c == reconC ? 1.0f : 0.0f);
 
-                    float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
- 
                     weights[wi] += alpha * delta;
                 }
             }

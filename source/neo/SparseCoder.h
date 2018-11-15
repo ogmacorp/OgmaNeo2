@@ -50,7 +50,8 @@ namespace ogmaneo {
             */
             cl::Buffer _weights;
 
-            cl::Buffer _visibleActivations;
+            cl::Buffer _reconCs;
+            cl::Buffer _reconActivations;
 
             Float2 _visibleToHidden;
             Float2 _hiddenToVisible;
@@ -87,7 +88,6 @@ namespace ogmaneo {
         \brief Kernels
         */
         cl::Kernel _forwardKernel;
-        cl::Kernel _backwardPartialKernel;
         cl::Kernel _backwardKernel;
         cl::Kernel _inhibitKernel;
         cl::Kernel _learnKernel;
@@ -108,7 +108,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.001f), _explainIters(4)
+        : _alpha(0.01f), _explainIters(4)
         {}
 
         /*!
