@@ -11,7 +11,7 @@
 using namespace ogmaneo;
 
 void Predictor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    cl_int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+    Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
     std::mt19937 &rng)
 {
     _visibleLayerDescs = visibleLayerDescs;
@@ -32,9 +32,8 @@ void Predictor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
         int numVisibleColumns = vld._size.x * vld._size.y;
 
-        vl._hiddenToVisible = cl_float2{ static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
-            static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y)
-        };
+        vl._hiddenToVisible = Float2(static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
+            static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y));
 
         cl_int diam = vld._radius * 2 + 1;
 
@@ -50,7 +49,7 @@ void Predictor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             int argIndex = 0;
 
             initWeightsKernel.setArg(argIndex++, vl._weights);
-            initWeightsKernel.setArg(argIndex++, cl_uint2{ static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng)) });
+            initWeightsKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
 
             cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
         }
@@ -143,7 +142,7 @@ void Predictor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(cl_int3));
+    os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
 
@@ -164,7 +163,7 @@ void Predictor::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
         os.write(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        os.write(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(cl_float2));
+        os.write(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
 
         cl_int diam = vld._radius * 2 + 1;
 
@@ -183,7 +182,7 @@ void Predictor::writeToStream(ComputeSystem &cs, std::ostream &os) {
 }
 
 void Predictor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
-    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(cl_int3));
+    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -213,7 +212,7 @@ void Predictor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::ist
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(cl_float2));
+        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
 
         cl_int diam = vld._radius * 2 + 1;
 

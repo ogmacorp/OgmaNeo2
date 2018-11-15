@@ -22,14 +22,6 @@ find_package(OpenCL REQUIRED)
  
 include_directories(${OpenCL_INCLUDE_DIR})
 
-find_package(PythonLibs 2.7 REQUIRED)
- 
-include_directories(${PYTHON_INCLUDE_DIRS})
-
-find_package(SFML 2 REQUIRED network audio graphics window system)
- 
-include_directories(${SFML_INCLUDE_DIR})
-
 find_package(OgmaNeo REQUIRED)
  
 include_directories(${OGMANEO_INCLUDE_DIR})
@@ -41,7 +33,5 @@ set(SOURCES
 
 add_executable(Test ${SOURCES})
 
-target_link_libraries(Test ${SFML_LIBRARIES})
 target_link_libraries(Test ${OpenCL_LIBRARIES})
-target_link_libraries(Test ${PYTHON_LIBRARIES})
 target_link_libraries(Test ${OGMANEO_LIBRARIES})

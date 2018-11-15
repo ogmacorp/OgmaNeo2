@@ -10,14 +10,9 @@
 #include <ogmaneo/neo/SparseCoder.h>
 #include <ogmaneo/neo/Hierarchy.h>
 
-#define WITHOUT_NUMPY
-#include "matplotlibcpp.h"
-
 #include <CL/cl.h>
 
 #include <iostream>
-
-namespace plt = matplotlibcpp;
 
 #define TEST_WAVY
 //#define TEST_ACTOR
@@ -30,7 +25,7 @@ int main() {
     cs.create(ogmaneo::ComputeSystem::_cpu);
 
     ogmaneo::ComputeProgram prog;
-    prog.loadFromFile(cs, "../../resources/neoKernels.cl");
+    prog.loadFromFile(cs, "../resources/neoKernels.cl");
 
     int inputSize = 64;
 
@@ -115,10 +110,6 @@ int main() {
         if (it % 10 == 0)
             std::cout << "Iter " << it << std::endl;
     }
-
-    plt::plot(yvals);
-    plt::plot(yvals2);
-    plt::show();
 
     return 0;
 }
