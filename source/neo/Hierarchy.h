@@ -93,10 +93,9 @@ namespace ogmaneo {
         /*!
         \brief Simulation step/tick
         \param inputCs vector of input states
-        \param feedBackCs feed back states
         \param learn whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &feedBackCs, std::mt19937 &rng, bool learn = true);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, std::mt19937 &rng, bool learn = true);
 
         /*!
         \brief Write to stream.

@@ -67,12 +67,22 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             // Predictors
             _pLayers[l].resize(inputSizes.size());
 
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs;
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            if (l < layerDescs.size() - 1) {
+                pVisibleLayerDescs.resize(2);
 
-            pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+
+                pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+            }
+            else {
+                pVisibleLayerDescs.resize(1);
+
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            }
 
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_predict) {
@@ -103,12 +113,22 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             // Predictors
             _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs;
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            if (l < layerDescs.size() - 1) {
+                pVisibleLayerDescs.resize(2);
 
-            pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+
+                pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+            }
+            else {
+                pVisibleLayerDescs.resize(1);
+
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            }
 
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 _pLayers[l][p] = std::make_unique<Predictor>();
@@ -121,7 +141,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &feedBackCs, std::mt19937 &rng, bool learn) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, std::mt19937 &rng, bool learn) {
     assert(inputCs.size() == _inputSizes.size());
 
     _ticks[0] = 0;
@@ -200,8 +220,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
 
                 feedBack[1] = _pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
-            else
-                feedBack[1] = feedBackCs;
 
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
