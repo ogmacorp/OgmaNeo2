@@ -141,7 +141,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, std::mt19937 &rng, bool learn) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, bool learn) {
     assert(inputCs.size() == _inputSizes.size());
 
     _ticks[0] = 0;
