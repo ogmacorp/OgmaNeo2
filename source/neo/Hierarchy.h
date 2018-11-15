@@ -10,7 +10,6 @@
 
 #include "SparseCoder.h"
 #include "Predictor.h"
-#include "Actor.h"
 
 #include <memory>
 
@@ -19,7 +18,7 @@ namespace ogmaneo {
     \brief Enum describing the type of operation performed by an input layer
     */
     enum InputType {
-        _none, _predict, _act
+        _none, _predict
     };
     
     /*!
@@ -35,11 +34,11 @@ namespace ogmaneo {
             /*!
             \brief Dimensions of the hidden layer
             */
-            cl_int3 _hiddenSize;
+            Int3 _hiddenSize;
 
             //!@{
             /*!
-            \brief Radii of the sparse coder and predictor/actor
+            \brief Radii of the sparse coder and predictor
             */
             cl_int _scRadius;
             cl_int _pRadius;
@@ -59,7 +58,7 @@ namespace ogmaneo {
             \brief Initialize defaults
             */
             LayerDesc()
-                : _hiddenSize({ 4, 4, 16 }),
+                : _hiddenSize(4, 4, 16),
                 _scRadius(2), _pRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2)
             {}
@@ -67,7 +66,6 @@ namespace ogmaneo {
     private:
         std::vector<SparseCoder> _scLayers;
         std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
-        std::vector<std::unique_ptr<Actor>> _actors;
 
         std::vector<std::vector<cl::Buffer>> _histories;
         std::vector<std::vector<int>> _historySizes;
@@ -77,7 +75,7 @@ namespace ogmaneo {
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
 
-        std::vector<cl_int3> _inputSizes;
+        std::vector<Int3> _inputSizes;
 
     public:
         /*!
@@ -90,15 +88,14 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            const std::vector<cl_int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
+            const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
 
         /*!
         \brief Simulation step/tick
-        \param inputs vector of input activations
-        \param topFeedBack activations of top-level feed back state
+        \param inputCs vector of input states
         \param learn whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn = true, float reward = 0.0f);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, bool learn = true);
 
         /*!
         \brief Write to stream.
@@ -118,19 +115,11 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get the predicted version of the input
+        \brief Get the prediction output
         \param i the index of the input to retrieve
         */
         const cl::Buffer &getPredictionCs(int i) const {
             return _pLayers.front()[i]->getHiddenCs();
-        }
-
-        /*!
-        \brief Get the actor output (action)
-        \param i the index of the action to retrieve
-        */
-        const cl::Buffer &getActionCs(int i) const {
-            return _actors[i]->getHiddenCs();
         }
 
         /*!
@@ -157,7 +146,7 @@ namespace ogmaneo {
         /*!
         \brief Get input sizes.
         */
-        const std::vector<cl_int3> &getInputSizes() const {
+        const std::vector<Int3> &getInputSizes() const {
             return _inputSizes;
         }
 
@@ -173,13 +162,6 @@ namespace ogmaneo {
         */
         std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
             return _pLayers[l];
-        }
-
-        /*!
-        \brief Retrieve actor layer(s)
-        */
-        std::vector<std::unique_ptr<Actor>> &getActors() {
-            return _actors;
         }
     };
 }

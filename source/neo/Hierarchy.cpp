@@ -14,12 +14,10 @@
 using namespace ogmaneo;
 
 void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    const std::vector<cl_int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng)
+    const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng)
 {
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
-
-    _actors.resize(inputSizes.size());
 
     _ticks.assign(layerDescs.size(), 0);
 
@@ -69,31 +67,28 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             // Predictors
             _pLayers[l].resize(inputSizes.size());
 
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs;
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-            
-            pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+            if (l < layerDescs.size() - 1) {
+                pVisibleLayerDescs.resize(2);
 
-            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs(2);
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-            
-            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
+                pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+            }
+            else {
+                pVisibleLayerDescs.resize(1);
+
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            }
 
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_predict) {
                     _pLayers[l][p] = std::make_unique<Predictor>();
 
                     _pLayers[l][p]->createRandom(cs, prog, inputSizes[p], pVisibleLayerDescs, rng);
-                }
-                else if (inputTypes[p] == InputType::_act) {
-                    // Add an actor
-                    _actors[p] = std::make_unique<Actor>();
-
-                    _actors[p]->createRandom(cs, prog, inputSizes[p], aVisibleLayerDescs, rng);
                 }
             }
         }
@@ -118,12 +113,22 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             // Predictors
             _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
-            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(2);
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs;
 
-            pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-            pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-            
-            pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+            if (l < layerDescs.size() - 1) {
+                pVisibleLayerDescs.resize(2);
+
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+
+                pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+            }
+            else {
+                pVisibleLayerDescs.resize(1);
+
+                pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+                pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
+            }
 
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 _pLayers[l][p] = std::make_unique<Predictor>();
@@ -136,7 +141,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, const cl::Buffer &topFeedBack, bool learn, float reward) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, bool learn) {
     assert(inputCs.size() == _inputSizes.size());
 
     _ticks[0] = 0;
@@ -206,7 +211,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
     // Backward
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
-            std::vector<cl::Buffer> feedBack(2);
+            std::vector<cl::Buffer> feedBack(l < _scLayers.size() - 1 ? 2 : 1);
 
             feedBack[0] = _scLayers[l].getHiddenCs();
 
@@ -215,8 +220,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
 
                 feedBack[1] = _pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
-            else
-                feedBack[1] = topFeedBack;
 
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
@@ -228,13 +231,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
                     }
 
                     _pLayers[l][p]->activate(cs, feedBack);
-                }
-            }
-
-            if (l == 0) {
-                for (int p = 0; p < _actors.size(); p++) {
-                    if (_actors[p] != nullptr)
-                        _actors[p]->step(cs, feedBack, inputCs[p], reward, learn);
                 }
             }
         }
@@ -280,15 +276,6 @@ void Hierarchy::writeToStream(ComputeSystem &cs, std::ostream &os) {
                 _pLayers[l][v]->writeToStream(cs, os);
         }
     }
-
-    for (int v = 0; v < _actors.size(); v++) {
-        char exists = _actors[v] != nullptr;
-
-        os.write(reinterpret_cast<char*>(&exists), sizeof(char));
-
-        if (exists)
-            _actors[v]->writeToStream(cs, os);
-    }
 }
 
 void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
@@ -311,8 +298,6 @@ void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::ist
     _ticksPerUpdate.resize(numLayers);
 
     _updates.resize(numLayers);
-
-    _actors.resize(_inputSizes.size());
 
     is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
@@ -350,18 +335,5 @@ void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::ist
             else
                 _pLayers[l][v] = nullptr;
         }
-    }
-
-    for (int v = 0; v < _actors.size(); v++) {
-        char exists;
-
-        is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-        if (exists) {
-            _actors[v] = std::make_unique<Actor>();
-            _actors[v]->readFromStream(cs, prog, is);
-        }
-        else
-            _actors[v] = nullptr;
     }
 }

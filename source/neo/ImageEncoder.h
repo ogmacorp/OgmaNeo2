@@ -24,7 +24,7 @@ namespace ogmaneo {
             /*!
             \brief Visible layer size
             */
-            cl_int3 _size;
+            Int3 _size;
 
             /*!
             \brief Radius onto hidden layer
@@ -50,12 +50,9 @@ namespace ogmaneo {
             */
             cl::Buffer _weights;
 
-            cl::Buffer _visibleActivations;
+            cl::Buffer _visibleAs;
 
-            cl_float2 _visibleToHidden;
-            cl_float2 _hiddenToVisible;
-
-            cl_int2 _reverseRadii;
+            Float2 _hiddenToVisible;
             //!@}
         };
 
@@ -63,7 +60,7 @@ namespace ogmaneo {
         /*!
         \brief Size of the hidden layer
         */
-        cl_int3 _hiddenSize;
+        Int3 _hiddenSize;
 
         //!@{
         /*!
@@ -87,7 +84,6 @@ namespace ogmaneo {
         \brief Kernels
         */
         cl::Kernel _forwardKernel;
-        cl::Kernel _backwardKernel;
         cl::Kernel _inhibitKernel;
         cl::Kernel _learnKernel;
         //!@}
@@ -99,15 +95,10 @@ namespace ogmaneo {
         cl_float _alpha;
 
         /*!
-        \brief Explaining-away iterations
-        */
-        cl_int _explainIters;
-
-        /*!
         \brief Initialize defaults
         */
         ImageEncoder()
-        : _alpha(0.001f), _explainIters(4)
+        : _alpha(0.001f)
         {}
 
         /*!
@@ -119,7 +110,7 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            cl_int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
             std::mt19937 &rng);
 
         /*!
@@ -131,10 +122,17 @@ namespace ogmaneo {
 
         /*!
         \brief Learn the sparse code
-        \param cs is the ComputeSystem.
+        \param cs is the ComputeSystem
         \param visibleAs the visible (input) layer activations previously encoded
         */
         void learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
+
+        /*!
+        \brief End an activation and (optionally) learn step
+        \param cs is the ComputeSystem.
+        \param visibleAs the visible (input) layer activations previously encoded
+        */
+        void stepEnd(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
 
         /*!
         \brief Write to stream.
@@ -177,7 +175,7 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden size
         */
-        cl_int3 getHiddenSize() const {
+        Int3 getHiddenSize() const {
             return _hiddenSize;
         }
 
