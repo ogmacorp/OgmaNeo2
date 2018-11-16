@@ -511,7 +511,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
 void kernel imInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.01f;
+    weights[get_global_id(0)] = randFloat(&stateValue) * 2.0f - 1.0f;
 }
 
 void kernel imForward(global const float* visibleAs, global const float* visibleAsPrev,
@@ -569,9 +569,9 @@ void kernel imForward(global const float* visibleAs, global const float* visible
                     wPos.xyz = hiddenPosition;
                     wPos.w = offset.x + offset.y * diam + c * diam2;
 
-                    float d = act - center - weights[address4(wPos, hiddenSize)];
+                    float d = act - center;
 
-                    sum += -d * d;
+                    sum += weights[address4(wPos, hiddenSize)] * d;
                 }
             }
         }
