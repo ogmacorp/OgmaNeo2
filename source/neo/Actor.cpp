@@ -228,6 +228,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
+    os.write(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
     os.write(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
     os.write(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
 
@@ -297,6 +298,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     int numHidden1 = numHiddenColumns * (_hiddenSize.z + 1);
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
 
