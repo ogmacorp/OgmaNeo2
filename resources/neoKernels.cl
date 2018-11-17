@@ -414,21 +414,30 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
 
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
+    // Find max
+    float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+
+    for (int c = 1; c < hiddenSize.z; c++)
+        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)]);
+
+    // Find total
+    float total = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++)
+        total += exp(hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)] - maxValue);
+
+    float cusp = randFloat(&stateValue) * total;
+
     int selectIndex = 0;
+    float sumSoFar = 0.0f;
 
-    if (randFloat(&stateValue) < epsilon)
-        selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
-    else {
-        float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
-    
-        // Find max
-        for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
+    for (int c = 0; c < hiddenSize.z; c++) {
+        sumSoFar += exp(hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)] - maxValue);
 
-            if (value > maxValue) {
-                maxValue = value;
-                selectIndex = c;
-            }
+        if (sumSoFar >= cusp) {
+            selectIndex = c;
+
+            break;
         }
     }
 
