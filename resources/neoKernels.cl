@@ -409,7 +409,7 @@ void kernel aForward(global const int* visibleCs, global float* hiddenActivation
     hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum / fmax(1.0f, count);
 }
 
-void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize, float epsilon, uint2 seed) {
+void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize, uint2 seed) {
     int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
 
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
