@@ -67,7 +67,7 @@ inline float sigmoid(float x) {
 void kernel scInitWeights(global float* weights, uint2 seed) {
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
-    weights[get_global_id(0)] = 1.0f - randFloat(&stateValue) * 0.01f;
+    weights[get_global_id(0)] = randFloat(&stateValue);
 }
 
 void kernel scForward(global const int* visibleCs, global const float* visibleActivations,
@@ -102,7 +102,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
 
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
+                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)]) * (1.0f - visibleActivations[visibleIndex]);
             }
         }
 
@@ -154,7 +154,7 @@ void kernel scBackwardPartial(global const int* visibleCs, global const int* hid
             }
         }
 
-    visibleActivations[visibleIndex] = sum / fmax(1.0f, count);
+    visibleActivations[visibleIndex] = sigmoid(sum / fmax(1.0f, count));
 }
 
 void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
@@ -198,7 +198,7 @@ void kernel scBackward(global const int* hiddenCs, global float* visibleActivati
             }
         }
 
-    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
+    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sigmoid(sum / fmax(1.0f, count));
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
@@ -257,7 +257,7 @@ void kernel scLearn(global const int* visibleCs, global const float* visibleActi
 
                     float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
  
-                    weights[wi] = fmax(0.0f, weights[wi] + alpha * delta);
+                    weights[wi] += alpha * delta;
                 }
             }
         }
