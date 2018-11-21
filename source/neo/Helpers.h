@@ -148,28 +148,28 @@ namespace ogmaneo {
     /*!
     \brief Kernel executors
     */
-    void runKernel1(ComputeSystem &cs, std::function<void(int, std::mt19937 &rng)> &func, int size, std::mt19937 &rng, int batchSize);
-    void runKernel2(ComputeSystem &cs, std::function<void(const Int2 &, std::mt19937 &rng)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize);
-    void runKernel3(ComputeSystem &cs, std::function<void(const Int3 &, std::mt19937 &rng)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize);
+    void runKernel1(ComputeSystem &cs, const std::function<void(int, std::mt19937 &rng)> &func, int size, std::mt19937 &rng, int batchSize);
+    void runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &rng)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize);
+    void runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &rng)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize);
     //!@}
 
     //!@{
     /*!
     \brief Some useful default kernels
     */
-    void fill(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {
+    void fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {
         (*buffer)[pos] = fillValue;
     }
 
-    void fill(int pos, std::mt19937 &rng, FloatBuffer* buffer, float fillValue) {
+    void fillFloat(int pos, std::mt19937 &rng, FloatBuffer* buffer, float fillValue) {
         (*buffer)[pos] = fillValue;
     }
 
-    void copy(int pos, std::mt19937 &rng, IntBuffer* src, IntBuffer* dst) {
+    void copyInt(int pos, std::mt19937 &rng, IntBuffer* src, IntBuffer* dst) {
         (*dst)[pos] = (*src)[pos];
     }
 
-    void copy(int pos, std::mt19937 &rng, FloatBuffer* src, FloatBuffer* dst) {
+    void copyFloat(int pos, std::mt19937 &rng, FloatBuffer* src, FloatBuffer* dst) {
         (*dst)[pos] = (*src)[pos];
     }
     //!@}

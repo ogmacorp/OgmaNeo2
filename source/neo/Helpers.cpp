@@ -42,7 +42,7 @@ void KernelWorkItem3::run() {
             }
 }
 
-void ogmaneo::runKernel1(ComputeSystem &cs, std::function<void(int, std::mt19937 &rng)> &func, int size, std::mt19937 &rng, int batchSize) {
+void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::mt19937 &rng)> &func, int size, std::mt19937 &rng, int batchSize) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
@@ -62,7 +62,7 @@ void ogmaneo::runKernel1(ComputeSystem &cs, std::function<void(int, std::mt19937
     cs._pool.wait();
 }
 
-void ogmaneo::runKernel2(ComputeSystem &cs, std::function<void(const Int2 &, std::mt19937 &rng)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize) {
+void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &rng)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
@@ -84,7 +84,7 @@ void ogmaneo::runKernel2(ComputeSystem &cs, std::function<void(const Int2 &, std
     cs._pool.wait();
 }
 
-void ogmaneo::runKernel3(ComputeSystem &cs, std::function<void(const Int3 &, std::mt19937 &rng)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
+void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &rng)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     Int3 batches((size.x + batchSize.x - 1) / batchSize.x, (size.y + batchSize.y - 1) / batchSize.y, (size.z + batchSize.z - 1) / batchSize.z);

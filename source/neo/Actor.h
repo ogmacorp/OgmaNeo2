@@ -58,8 +58,8 @@ namespace ogmaneo {
         \brief History sample
         */
         struct HistorySample {
-            std::vector<IntBuffer> _visibleCs;
-            IntBuffer _hiddenCs;
+            std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
+            std::shared_ptr<IntBuffer> _hiddenCs;
         
             float _reward;
         };
@@ -80,7 +80,8 @@ namespace ogmaneo {
         \brief Buffers
         */
         IntBuffer _hiddenCs;
-        FloatDoubleBuffer _hiddenActivations;
+
+        FloatBuffer _hiddenValues;
 
         std::vector<HistorySample> _historySamples;
         //!@}
@@ -98,9 +99,8 @@ namespace ogmaneo {
         \brief Kernels
         */
         void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int3 &pos, std::mt19937 &rng, IntBuffer* inputs);
-        void inhibit(const Int2 &pos, std::mt19937 &rng);
-        void learn(const Int2 &pos, std::mt19937 &rng);
+        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, IntBuffer* hiddenCs);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g);
         //!@}
 
     public:
@@ -148,16 +148,6 @@ namespace ogmaneo {
         \param learn whether to learn
         */
         void step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, std::mt19937 &rng, float reward, bool learn);
-
-        /*!
-        \brief Write to stream.
-        */
-        void writeToStream(ComputeSystem &cs, std::ostream &os);
-
-        /*!
-        \brief Read from stream (create).
-        */
-        void readFromStream(ComputeSystem &cs, std::istream &is); 
 
         /*!
         \brief Get number of visible layers
