@@ -12,12 +12,12 @@ using namespace ogmaneo;
 
 // Kernels
 void Actor::init(int pos, std::mt19937 &rng, int vli) {
-	std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
+	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, IntBuffer* hiddenCs) {
+void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs) {
     // Value
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
 

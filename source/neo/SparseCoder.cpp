@@ -10,7 +10,128 @@
 
 using namespace ogmaneo;
 
-void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
+// Kernels
+void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
+	std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
+
+    _visibleLayers[vli]._weights[pos] = weightDist(rng);
+}
+
+void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs) {
+    // Value
+    Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
+
+    float value = 0.0f;
+    float count = 0.0f;
+
+    // For each visible layer
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+
+        Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+
+        int diam = vld._radius * 2 + 1;
+        int diam2 = diam * diam;
+
+        for (int dx = -vld._radius; dx <= vld._radius; dx++)
+            for (int dy = -vld._radius; dy <= vld._radius; dy++) {
+                Int2 visiblePosition(visiblePositionCenter.x + dx, visiblePositionCenter.y + dy);
+
+                if (inBounds0(visiblePosition, Int2(vld._size.x, vld._size.y))) {
+                    int visibleIndex = address2(visiblePosition, vld._size.x);
+
+                    int visibleC = (*inputs[vli])[visibleIndex];
+
+                    Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+
+                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
+
+                    value += vl._weights[address4(wPos, _hiddenSize)];
+                    count += 1.0f;
+                }
+            }
+    }
+
+    _hiddenValues[hiddenIndex] = value / std::max(1.0f, count);
+
+    // Action
+    std::vector<float> hiddenActivations(_hiddenSize.z);
+    float maxActivation = -999999.0f;
+
+    // For each hidden unit
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        float sum = 0.0f;
+
+        Int3 actionHiddenPosition(pos.x, pos.y, hc);
+
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
+
+            Int2 fieldLowerBound(visiblePositionCenter.x - vld._radius, visiblePositionCenter.y - vld._radius);
+
+            int diam = vld._radius * 2 + 1;
+            int diam2 = diam * diam;
+
+            for (int dx = -vld._radius; dx <= vld._radius; dx++)
+                for (int dy = -vld._radius; dy <= vld._radius; dy++) {
+                    Int2 visiblePosition(visiblePositionCenter.x + dx, visiblePositionCenter.y + dy);
+
+                    if (inBounds0(visiblePosition, Int2(vld._size.x, vld._size.y))) {
+                        int visibleIndex = address2(visiblePosition, vld._size.x);
+
+                        int visibleC = (*inputs[vli])[visibleIndex];
+
+                        Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+
+                        Int4 wPos(actionHiddenPosition.x, actionHiddenPosition.y, actionHiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
+    
+                        sum += vl._weights[address4(wPos, _hiddenSize)];
+                    }
+                }
+        }
+
+        hiddenActivations[hc] = sum / std::max(1.0f, count);
+
+        maxActivation = std::max(maxActivation, hiddenActivations[hc]);
+    }
+
+    // Boltzmann exploration
+    float total = 0.0f;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        hiddenActivations[hc] = std::exp(hiddenActivations[hc] - maxActivation);
+        total += hiddenActivations[hc];
+    }
+
+    std::uniform_real_distribution<float> cuspDist(0, total);
+
+    float cusp = cuspDist(rng);
+
+    float sumSoFar = 0.0f;
+    int selectIndex = 0;
+
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        sumSoFar += hiddenActivations[hc];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = hc;
+            break;
+        }
+    }
+
+    int hiddenIndex = address2(pos, _hiddenSize.x);
+
+    _hiddenCs[hiddenIndex] = selectIndex;
+}
+
+void SparseCoder::createRandom(ComputeSystem &cs,
     Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
     std::mt19937 &rng)
 {
@@ -22,8 +143,6 @@ void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
-
-    cl::Kernel initWeightsKernel = cl::Kernel(prog.getProgram(), "scInitWeights");
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -39,45 +158,29 @@ void SparseCoder::createRandom(ComputeSystem &cs, ComputeProgram &prog,
         vl._hiddenToVisible = Float2(static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
             static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y));
 
-        vl._reverseRadii = Int2(static_cast<cl_int>(std::ceil(vl._visibleToHidden.x * vld._radius) + 1),
-            static_cast<cl_int>(std::ceil(vl._visibleToHidden.y * vld._radius) + 1));
+        vl._reverseRadii = Int2(static_cast<int>(std::ceil(vl._visibleToHidden.x * vld._radius) + 1),
+            static_cast<int>(std::ceil(vl._visibleToHidden.y * vld._radius) + 1));
 
-        cl_int diam = vld._radius * 2 + 1;
+        int diam = vld._radius * 2 + 1;
 
-        cl_int numWeightsPerHidden = diam * diam * vld._size.z;
+        int numWeightsPerHidden = diam * diam * vld._size.z;
 
-        cl_int weightsSize = numHidden * numWeightsPerHidden;
+        int weightsSize = numHidden * numWeightsPerHidden;
 
-        vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
+        vl._weights = FloatBuffer(weightsSize);
 
-        {
-            std::uniform_int_distribution<int> seedDist(0, 99999);
+        runKernel1(cs, std::bind(init, std::placeholders::_1, std::placeholders::_2, vli), weightsSize, rng, cs._batchSize1);
 
-            int argIndex = 0;
-
-            initWeightsKernel.setArg(argIndex++, vl._weights);
-            initWeightsKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
-
-            cs.getQueue().enqueueNDRangeKernel(initWeightsKernel, cl::NullRange, cl::NDRange(weightsSize));
-        }
-
-        vl._visibleActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
+        vl._visibleActivations = FloatBuffer(numVisible);
     }
 
     // Hidden Cs
-    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+    _hiddenCs = IntBuffer(numHiddenColumns);
 
-    cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
- 
+    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, rng, cs._batchSize1);
+
     // Hidden activations
-    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
-
-    // Create kernels
-    _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
-    _backwardPartialKernel = cl::Kernel(prog.getProgram(), "scBackwardPartial");
-    _backwardKernel = cl::Kernel(prog.getProgram(), "scBackward");
-    _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
-    _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
+    _hiddenActivations = FloatBuffer(numHidden);
 }
 
 void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs) {

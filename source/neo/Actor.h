@@ -99,7 +99,7 @@ namespace ogmaneo {
         \brief Kernels
         */
         void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, IntBuffer* hiddenCs);
+        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs);
         void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g);
         //!@}
 
@@ -129,7 +129,6 @@ namespace ogmaneo {
         /*!
         \brief Create an actor layer with random initialization
         \param cs is the ComputeSystem
-        \param prog is the ComputeProgram associated with the ComputeSystem and loaded with the actor kernel code
         \param hiddenSize size of the predictions (output)
         \param historyCapacity maximum number of history samples
         \param visibleLayerDescs are descriptors for visible layers
@@ -152,7 +151,7 @@ namespace ogmaneo {
         /*!
         \brief Get number of visible layers
         */
-        size_t getNumVisibleLayers() const {
+        int getNumVisibleLayers() const {
             return _visibleLayers.size();
         }
 
@@ -180,7 +179,7 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden size
         */
-        Int3 getHiddenSize() const {
+        const Int3 &getHiddenSize() const {
             return _hiddenSize;
         }
 
