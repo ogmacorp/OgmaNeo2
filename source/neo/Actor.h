@@ -29,7 +29,8 @@ namespace ogmaneo {
             /*!
             \brief Radius onto hidden layer
             */
-            cl_int _radius;
+            int _radius;
+
             /*!
             \brief Initialize defaults
             */
@@ -47,7 +48,7 @@ namespace ogmaneo {
             /*!
             \brief Visible layer values and buffers
             */
-            cl::Buffer _weights;
+            FloatBuffer _weights;
 
             Float2 _hiddenToVisible;
             //!@}
@@ -57,8 +58,8 @@ namespace ogmaneo {
         \brief History sample
         */
         struct HistorySample {
-            std::vector<cl::Buffer> _visibleCs;
-            cl::Buffer _hiddenCs;
+            std::vector<IntBuffer> _visibleCs;
+            IntBuffer _hiddenCs;
         
             float _reward;
         };
@@ -78,8 +79,8 @@ namespace ogmaneo {
         /*!
         \brief Buffers
         */
-        cl::Buffer _hiddenCs;
-        DoubleBuffer _hiddenActivations;
+        IntBuffer _hiddenCs;
+        FloatDoubleBuffer _hiddenActivations;
 
         std::vector<HistorySample> _historySamples;
         //!@}
@@ -96,26 +97,27 @@ namespace ogmaneo {
         /*!
         \brief Kernels
         */
-        cl::Kernel _forwardKernel;
-        cl::Kernel _inhibitKernel;
-        cl::Kernel _learnKernel;
+        void init(int pos, std::mt19937 &rng, int vli);
+        void forward(const Int3 &pos, std::mt19937 &rng, IntBuffer* inputs);
+        void inhibit(const Int2 &pos, std::mt19937 &rng);
+        void learn(const Int2 &pos, std::mt19937 &rng);
         //!@}
 
     public:
         /*!
         \brief Value learning rate
         */
-        cl_float _alpha;
+        float _alpha;
 
         /*!
         \brief Action learning rate
         */
-        cl_float _beta;
+        float _beta;
 
         /*!
         \brief Discount factor
         */
-        cl_float _gamma;
+        float _gamma;
 
         /*!
         \brief Initialize defaults
@@ -133,7 +135,7 @@ namespace ogmaneo {
         \param visibleLayerDescs are descriptors for visible layers
         \param rng a random number generator
         */
-        void createRandom(ComputeSystem &cs, ComputeProgram &prog,
+        void createRandom(ComputeSystem &cs,
             Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
             std::mt19937 &rng);
 
@@ -145,7 +147,7 @@ namespace ogmaneo {
         \param reward reinforcment signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learn);
+        void step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, std::mt19937 &rng, float reward, bool learn);
 
         /*!
         \brief Write to stream.
@@ -155,7 +157,7 @@ namespace ogmaneo {
         /*!
         \brief Read from stream (create).
         */
-        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is); 
+        void readFromStream(ComputeSystem &cs, std::istream &is); 
 
         /*!
         \brief Get number of visible layers
@@ -181,7 +183,7 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden activations (predictions)
         */
-        const cl::Buffer &getHiddenCs() const {
+        const IntBuffer &getHiddenCs() const {
             return _hiddenCs;
         }
 
@@ -195,7 +197,7 @@ namespace ogmaneo {
         /*!
         \brief Get the weights for a visible layer
         */
-        const cl::Buffer &getWeights(int v) {
+        const FloatBuffer &getWeights(int v) {
             return _visibleLayers[v]._weights;
         }
     };

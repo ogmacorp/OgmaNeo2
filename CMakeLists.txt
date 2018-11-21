@@ -25,25 +25,18 @@ include_directories("${PROJECT_SOURCE_DIR}/source")
 # This is only required for the script to work in the version control
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
-find_package(OpenCL REQUIRED)
- 
-include_directories(${OpenCL_INCLUDE_DIR})
-
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
+    "${SOURCE_PATH}/system/ThreadPool.cpp"
     "${SOURCE_PATH}/system/ComputeSystem.cpp"
-    "${SOURCE_PATH}/system/ComputeProgram.cpp"
     "${SOURCE_PATH}/neo/Helpers.cpp"
     "${SOURCE_PATH}/neo/SparseCoder.cpp"
-    "${SOURCE_PATH}/neo/Predictor.cpp"
     "${SOURCE_PATH}/neo/Actor.cpp"
     "${SOURCE_PATH}/neo/Hierarchy.cpp"
     "${SOURCE_PATH}/neo/ImageEncoder.cpp"
 )
 
 add_library(OgmaNeo ${SOURCES})
-
-target_link_libraries(OgmaNeo ${OpenCL_LIBRARIES})
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin
