@@ -8,6 +8,8 @@
 
 #include "Helpers.h"
 
+#include "ComputeSystem.h"
+
 using namespace ogmaneo;
 
 void KernelWorkItem1::run() {

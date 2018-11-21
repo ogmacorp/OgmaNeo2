@@ -27,13 +27,11 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
-    "${SOURCE_PATH}/system/ThreadPool.cpp"
-    "${SOURCE_PATH}/system/ComputeSystem.cpp"
+    "${SOURCE_PATH}/neo/ThreadPool.cpp"
     "${SOURCE_PATH}/neo/Helpers.cpp"
     "${SOURCE_PATH}/neo/SparseCoder.cpp"
     "${SOURCE_PATH}/neo/Actor.cpp"
     "${SOURCE_PATH}/neo/Hierarchy.cpp"
-    "${SOURCE_PATH}/neo/ImageEncoder.cpp"
 )
 
 add_library(OgmaNeo ${SOURCES})

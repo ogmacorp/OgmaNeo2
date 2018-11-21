@@ -19,7 +19,7 @@ namespace ogmaneo {
     \brief Enum describing the type of operation performed by an input layer
     */
     enum InputType {
-        _none, _predict, _act
+        _none, _act
     };
     
     /*!
@@ -41,8 +41,8 @@ namespace ogmaneo {
             /*!
             \brief Radii of the sparse coder and predictor/actor
             */
-            cl_int _scRadius;
-            cl_int _aRadius;
+            int _scRadius;
+            int _aRadius;
             //!@}
 
             /*!
@@ -74,7 +74,7 @@ namespace ogmaneo {
         std::vector<SparseCoder> _scLayers;
         std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
-        std::vector<std::vector<cl::Buffer>> _histories;
+        std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
         std::vector<std::vector<int>> _historySizes;
 
         std::vector<char> _updates;
@@ -98,24 +98,14 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
+            const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs);
 
         /*!
         \brief Simulation step/tick
         \param inputs vector of input activations
         \param learn whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, std::mt19937 &rng, bool learn = true, float reward = 0.0f);
-
-        /*!
-        \brief Write to stream.
-        */
-        void writeToStream(ComputeSystem &cs, std::ostream &os);
-
-        /*!
-        \brief Read from stream (create).
-        */
-        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, bool learn = true, float reward = 0.0f);
 
         /*!
         \brief Get the number of (hidden) layers

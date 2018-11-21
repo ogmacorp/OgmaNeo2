@@ -101,6 +101,18 @@ namespace ogmaneo {
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs);
         void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g);
+
+        static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
+            a->init(pos, rng, vli);
+        }
+
+        static void forwardKernel(int pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs) {
+            a->forward(pos, rng, inputs);
+        }
+
+        static void initKernel(int pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g) {
+            a->learn(pos, rng, inputsPrev, hiddenCsPrev, q, g);
+        }
         //!@}
 
     public:
@@ -135,8 +147,7 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs,
-            Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
-            std::mt19937 &rng);
+            Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
 
         /*!
         \brief Activate the actor (predict values)
@@ -146,7 +157,7 @@ namespace ogmaneo {
         \param reward reinforcment signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, std::mt19937 &rng, float reward, bool learn);
+        void step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, float reward, bool learn);
 
         /*!
         \brief Get number of visible layers

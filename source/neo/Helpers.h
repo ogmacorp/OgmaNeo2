@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "ComputeSystem.h"
+#include "ThreadPool.h"
 
 #include <random>
 #include <vector>
@@ -17,6 +17,8 @@
 #include <assert.h>
 
 namespace ogmaneo {
+    class ComputeSystem;
+    
     /*!
     \brief 2D vector type
     */
@@ -207,6 +209,24 @@ namespace ogmaneo {
         int dxyz = dxy * dims.z;
 
         return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
+    }
+
+    std::vector<IntBuffer*> get(const std::vector<std::shared_ptr<IntBuffer>> &v) {
+        std::vector<IntBuffer*> vp(v.size());
+
+        for (int i = 0; i < v.size(); i++)
+            vp[i] = v[i].get();
+
+        return vp;
+    }
+
+    std::vector<FloatBuffer*> get(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
+        std::vector<FloatBuffer*> vp(v.size());
+
+        for (int i = 0; i < v.size(); i++)
+            vp[i] = v[i].get();
+
+        return vp;
     }
     //!@}
 }

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "ThreadPool.h"
+#include "Helpers.h"
 
 #include <random>
 
@@ -31,6 +31,11 @@ namespace ogmaneo {
 		Int2 _batchSize2;
 		Int3 _batchSize3;
 		//!@}
+
+		/*!
+		\brief Shared random generator
+		*/
+		std::mt19937 _rng;
 
 		/*!
 		\brief Initialize the system

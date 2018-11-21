@@ -56,15 +56,15 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
                 }
         }
 
-        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y);
+        int hiddenIndex = address3(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y));
 
         if (firstStep)
             _hiddenActivations[hiddenIndex] = sum;
         else
             _hiddenActivations[hiddenIndex] += sum;
 
-        if (hiddenActivations[hiddenIndex] > maxValue) {
-            maxValue = hiddenActivations[hiddenIndex];
+        if (_hiddenActivations[hiddenIndex] > maxValue) {
+            maxValue = _hiddenActivations[hiddenIndex];
 
             maxIndex = hc;
         }
@@ -79,25 +79,30 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
 
     int visibleColumnIndex = address2(pos, vld._size.x);
 
-    Int3 visiblePosition(pos.x, pos.y, (*inputs)[visibleColumnIndex]);
+    Int3 visiblePosition(pos.x, pos.y, (*inputs[vli])[visibleColumnIndex]);
+
+    Int2 hiddenPositionCenter = project(pos, vl._visibleToHidden);
+
+    int diam = vld._radius * 2 + 1;
+    int diam2 = diam * diam;
 
     float sum = 0.0f;
     float count = 0.0f;
 
-    for (int dx = -vld._reverseRadii.x; dx <= vld._reverseRadii.x; dx++)
-        for (int dy = -vld._reverseRadii.y; dy <= vld._reverseRadii.y; dy++) {
+    for (int dx = -vl._reverseRadii.x; dx <= vl._reverseRadii.x; dx++)
+        for (int dy = -vl._reverseRadii.y; dy <= vl._reverseRadii.y; dy++) {
             Int2 hiddenPosition(hiddenPositionCenter.x + dx, hiddenPositionCenter.y + dy);
 
             if (inBounds0(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))) {
                 // Next layer node's receptive field
-                Int2 visibleFieldCenter = project(hiddenPosition, vld._hiddenToVisible);
+                Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
 
-                Int2 fieldLowerBound(visibleFieldCenter.x - radius, visibleFieldCenter.y - radius);
-                Int2 fieldUpperBound(visibleFieldCenter.y + radius + 1, visibleFieldCenter.y + radius + 1);
+                Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
+                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = _hiddenCs[address2(hiddenPosition, hiddenSize.x)];
+                    int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
                     Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
 
@@ -118,7 +123,12 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<In
 
     int visibleColumnIndex = address2(pos, vld._size.x);
 
-    int inputC = (*inputs)[visibleColumnIndex];
+    int inputC = (*inputs[vli])[visibleColumnIndex];
+
+    Int2 hiddenPositionCenter = project(pos, vl._visibleToHidden);
+
+    int diam = vld._radius * 2 + 1;
+    int diam2 = diam * diam;
 
     for (int vc = 0; vc < vld._size.z; vc++) {
         Int3 visiblePosition(pos.x, pos.y, vc);
@@ -128,20 +138,20 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<In
         float sum = 0.0f;
         float count = 0.0f;
 
-        for (int dx = -vld._reverseRadii.x; dx <= vld._reverseRadii.x; dx++)
-            for (int dy = -vld._reverseRadii.y; dy <= vld._reverseRadii.y; dy++) {
+        for (int dx = -vl._reverseRadii.x; dx <= vl._reverseRadii.x; dx++)
+            for (int dy = -vl._reverseRadii.y; dy <= vl._reverseRadii.y; dy++) {
                 Int2 hiddenPosition(hiddenPositionCenter.x + dx, hiddenPositionCenter.y + dy);
 
                 if (inBounds0(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))) {
                     // Next layer node's receptive field
-                    Int2 visibleFieldCenter = project(hiddenPosition, vld._hiddenToVisible);
+                    Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
 
-                    Int2 fieldLowerBound(visibleFieldCenter.x - radius, visibleFieldCenter.y - radius);
-                    Int2 fieldUpperBound(visibleFieldCenter.y + radius + 1, visibleFieldCenter.y + radius + 1);
+                    Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
+                    Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                     // Check for containment
                     if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                        int hiddenC = _hiddenCs[address2(hiddenPosition, hiddenSize.x)];
+                        int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
                         Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
 
@@ -157,20 +167,20 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<In
 
         float delta = _alpha * (target - activation);
 
-        for (int dx = -vld._reverseRadii.x; dx <= vld._reverseRadii.x; dx++)
-            for (int dy = -vld._reverseRadii.y; dy <= vld._reverseRadii.y; dy++) {
+        for (int dx = -vl._reverseRadii.x; dx <= vl._reverseRadii.x; dx++)
+            for (int dy = -vl._reverseRadii.y; dy <= vl._reverseRadii.y; dy++) {
                 Int2 hiddenPosition(hiddenPositionCenter.x + dx, hiddenPositionCenter.y + dy);
 
                 if (inBounds0(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))) {
                     // Next layer node's receptive field
-                    Int2 visibleFieldCenter = project(hiddenPosition, vld._hiddenToVisible);
+                    Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
 
-                    Int2 fieldLowerBound(visibleFieldCenter.x - radius, visibleFieldCenter.y - radius);
-                    Int2 fieldUpperBound(visibleFieldCenter.y + radius + 1, visibleFieldCenter.y + radius + 1);
+                    Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
+                    Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                     // Check for containment
                     if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                        int hiddenC = _hiddenCs[address2(hiddenPosition, hiddenSize.x)];
+                        int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
                         Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
 
@@ -184,8 +194,7 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<In
 }
 
 void SparseCoder::createRandom(ComputeSystem &cs,
-    Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
-    std::mt19937 &rng)
+    Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
 {
     _visibleLayerDescs = visibleLayerDescs;
 
@@ -221,7 +230,7 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
         vl._weights = FloatBuffer(weightsSize);
 
-        runKernel1(cs, std::bind(init, std::placeholders::_1, std::placeholders::_2, vli), weightsSize, rng, cs._batchSize1);
+        runKernel1(cs, std::bind(initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
 
         vl._visibleActivations = FloatBuffer(numVisible);
     }
@@ -229,33 +238,33 @@ void SparseCoder::createRandom(ComputeSystem &cs,
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns);
 
-    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, rng, cs._batchSize1);
+    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 
     // Hidden activations
     _hiddenActivations = FloatBuffer(numHidden);
 }
 
-void SparseCoder::activate(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs) {
+void SparseCoder::activate(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     for (int it = 0; it < _explainIters; it++) {
-        runKernel2(cs, std::bind(foward, std::placeholders::_1, std::placeholders::_2, visibleCs, it == 0), Int2(_hiddenSize.x, _hiddenSize.y), rng, cs._batchSize2);
+        runKernel2(cs, std::bind(forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, it == 0), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            runKernel2(cs, std::bind(backward, std::placeholders::_1, std::placeholders::_2, visibleCs, vli), Int2(vld._size.x, vld._size.y), rng, cs._batchSize2);
+            runKernel2(cs, std::bind(backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
         }
     }
 }
 
-void SparseCoder::learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs) {
+void SparseCoder::learn(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs) {
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        runKernel2(cs, std::bind(learn, std::placeholders::_1, std::placeholders::_2, visibleCs, vli), Int2(vld._size.x, vld._size.y), rng, cs._batchSize2);
+        runKernel2(cs, std::bind(learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
     }
 }

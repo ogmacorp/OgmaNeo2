@@ -14,7 +14,7 @@
 using namespace ogmaneo;
 
 void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng)
+    const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs)
 {
     _scLayers.resize(layerDescs.size());
     _aLayers.resize(layerDescs.size());
@@ -60,9 +60,9 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
 
                 int inSize = inputSizes[i].x * inputSizes[i].y;
 				
-				_histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
+				_histories[l][v] = std::make_shared<IntBuffer>(inSize);
 
-                cs.getQueue().enqueueFillBuffer(_histories[l][v], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
+                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
 
                 _historySizes[l][v] = inSize;
 			}
@@ -106,9 +106,9 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
 
 			for (int v = 0; v < _histories[l].size(); v++) {
-				_histories[l][v] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, inSize * sizeof(cl_int));
+                _histories[l][v] = std::make_shared<IntBuffer>(inSize);
 
-                cs.getQueue().enqueueFillBuffer(_histories[l][v], static_cast<cl_int>(0), 0, inSize * sizeof(cl_int));
+                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
 
                 _historySizes[l][v] = inSize;
             }
@@ -144,7 +144,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, std::mt19937 &rng, bool learn, float reward) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<IntBuffer*> &inputCs, std::mt19937 &rng, bool learn, float reward) {
     assert(inputCs.size() == _inputSizes.size());
 
     _ticks[0] = 0;
@@ -153,7 +153,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
     {
         int temporalHorizon = _histories.front().size() / _inputSizes.size();
 
-        std::vector<cl::Buffer> lasts(_inputSizes.size());
+        std::vector<std::shared_ptr<IntBuffer>> lasts(_inputSizes.size());
         
         for (int i = 0; i < _inputSizes.size(); i++)
             lasts[i] = _histories.front()[temporalHorizon - 1 + temporalHorizon * i];
@@ -167,8 +167,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
 
         for (int i = 0; i < _inputSizes.size(); i++) {
             // Copy
-            cs.getQueue().enqueueCopyBuffer(inputCs[i], lasts[i],
-                0, 0, _inputSizes[i].x * _inputSizes[i].y * sizeof(cl_int));
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i].size(), cs._rng, cs._batchSize1);
 
             _histories.front()[0 + temporalHorizon * i] = lasts[i];
         }
@@ -187,10 +186,10 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
 
             _updates[l] = true;
             
-            _scLayers[l].activate(cs, _histories[l]);
+            _scLayers[l].activate(cs, get(_histories[l]));
 
             if (learn)
-                _scLayers[l].learn(cs, _histories[l]);
+                _scLayers[l].learn(cs, get(_histories[l]));
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
@@ -198,12 +197,14 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
 
                 int temporalHorizon = _histories[lNext].size();
 
-                cl::Buffer last = _histories[lNext].back();
+                IntBuffer* last = _histories[lNext].back().get();
 
                 for (int t = temporalHorizon - 1; t > 0; t--)
                     _histories[lNext][t] = _histories[lNext][t - 1];
 
                 // Copy
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), lasts), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+
                 cs.getQueue().enqueueCopyBuffer(_scLayers[l].getHiddenCs(), last,
                     0, 0, _scLayers[l].getHiddenSize().x * _scLayers[l].getHiddenSize().y * sizeof(cl_int));
                 
@@ -236,114 +237,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, 
                 if (_aLayers[l][p] != nullptr)
                     _aLayers[l][p]->step(cs, feedBack, rng, r, learn);
             }
-        }
-    }
-}
-
-void Hierarchy::writeToStream(ComputeSystem &cs, std::ostream &os) {
-    int numLayers = _scLayers.size();
-
-    os.write(reinterpret_cast<char*>(&numLayers), sizeof(int));
-
-    int numInputs = _inputSizes.size();
-
-    os.write(reinterpret_cast<char*>(&numInputs), sizeof(int));
-
-    os.write(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
-
-    os.write(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
-    os.write(reinterpret_cast<char*>(_rewards.data()), _rewards.size() * sizeof(float));
-    os.write(reinterpret_cast<char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
-    os.write(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
-    os.write(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
-
-    for (int l = 0; l < numLayers; l++) {
-        int numHistorySizes = _historySizes[l].size();
-
-        os.write(reinterpret_cast<char*>(&numHistorySizes), sizeof(int));
-
-        os.write(reinterpret_cast<char*>(_historySizes[l].data()), numHistorySizes * sizeof(int));
-
-        for (int i = 0; i < _historySizes[l].size(); i++) {
-            std::vector<cl_int> historyCs(_historySizes[l][i]);
-            cs.getQueue().enqueueReadBuffer(_histories[l][i], CL_TRUE, 0, _historySizes[l][i] * sizeof(cl_int), historyCs.data());
-            os.write(reinterpret_cast<char*>(historyCs.data()), _historySizes[l][i] * sizeof(cl_int));
-        }
-
-        _scLayers[l].writeToStream(cs, os);
-
-        for (int v = 0; v < _aLayers[l].size(); v++) {
-            char exists = _aLayers[l][v] != nullptr;
-
-            os.write(reinterpret_cast<char*>(&exists), sizeof(char));
-
-            if (exists)
-                _aLayers[l][v]->writeToStream(cs, os);
-        }
-    }
-}
-
-void Hierarchy::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
-    int numLayers;
-    is.read(reinterpret_cast<char*>(&numLayers), sizeof(int));
-
-    int numInputs;
-    is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
-    _inputSizes.resize(numInputs);
-    is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
-
-    _scLayers.resize(numLayers);
-    _aLayers.resize(numLayers);
-
-    _ticks.resize(numLayers);
-
-    _histories.resize(numLayers);
-    _historySizes.resize(numLayers);
-    
-    _ticksPerUpdate.resize(numLayers);
-
-    _updates.resize(numLayers);
-
-    _rewards.resize(numLayers);
-    _rewardCounts.resize(numLayers);
-
-    is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
-    is.read(reinterpret_cast<char*>(_rewards.data()), _rewards.size() * sizeof(float));
-    is.read(reinterpret_cast<char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
-    is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
-    is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
-
-    for (int l = 0; l < numLayers; l++) {
-        int numHistorySizes;
-        
-        is.read(reinterpret_cast<char*>(&numHistorySizes), sizeof(int));
-        _historySizes[l].resize(numHistorySizes);
-        is.read(reinterpret_cast<char*>(_historySizes[l].data()), numHistorySizes * sizeof(int));
-
-        _histories[l].resize(numHistorySizes);
-
-        for (int i = 0; i < _historySizes[l].size(); i++) {
-            std::vector<cl_int> historyCs(_historySizes[l][i]);
-            is.read(reinterpret_cast<char*>(historyCs.data()), _historySizes[l][i] * sizeof(cl_int));
-            _histories[l][i] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, _historySizes[l][i] * sizeof(cl_int));
-            cs.getQueue().enqueueWriteBuffer(_histories[l][i], CL_TRUE, 0, _historySizes[l][i] * sizeof(cl_int), historyCs.data());   
-        }
-
-        _scLayers[l].readFromStream(cs, prog, is);
-
-        _aLayers[l].resize(l == 0 ? _inputSizes.size() : _ticksPerUpdate[l]);
-
-        for (int v = 0; v < _aLayers[l].size(); v++) {
-            char exists;
-
-            is.read(reinterpret_cast<char*>(&exists), sizeof(char));
-
-            if (exists) {
-                _aLayers[l][v] = std::make_unique<Actor>();
-                _aLayers[l][v]->readFromStream(cs, prog, is);
-            }
-            else
-                _aLayers[l][v] = nullptr;
         }
     }
 }

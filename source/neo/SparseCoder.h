@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Helpers.h"
+#include "ComputeSystem.h"
 
 namespace ogmaneo {
     /*!
@@ -90,6 +90,22 @@ namespace ogmaneo {
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, bool firstStep);
         void backward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, int vli);
         void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, int vli);
+
+        static void initKernel(int pos, std::mt19937 &rng, SparseCoder* sc, int vli) {
+            sc->init(pos, rng, vli);
+        }
+
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<IntBuffer*> &inputs, bool firstStep) {
+            sc->forward(pos, rng, inputs, firstStep);
+        }
+
+        static void backwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<IntBuffer*> &inputs, int vli) {
+            sc->forward(pos, rng, inputs, vli);
+        }
+
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<IntBuffer*> &inputs, int vli) {
+            sc->forward(pos, rng, inputs, vli);
+        }
         //!@}
 
     public:
@@ -118,8 +134,7 @@ namespace ogmaneo {
         \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs,
-            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
-            std::mt19937 &rng);
+            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
 
         /*!
         \brief Activate the sparse coder (perform sparse coding)
