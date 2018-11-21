@@ -106,11 +106,11 @@ namespace ogmaneo {
             a->init(pos, rng, vli);
         }
 
-        static void forwardKernel(int pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs) {
+        static void forwardKernel(int pos, std::mt19937 &rng, Actor* a, const std::vector<IntBuffer*> &inputs) {
             a->forward(pos, rng, inputs);
         }
 
-        static void initKernel(int pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g) {
+        static void initKernel(int pos, std::mt19937 &rng, Actor* a, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g) {
             a->learn(pos, rng, inputsPrev, hiddenCsPrev, q, g);
         }
         //!@}
