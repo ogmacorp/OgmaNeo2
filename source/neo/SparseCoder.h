@@ -88,9 +88,8 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, bool firstStep);
-        void backward(const Int2 &pos, std::mt19937 &rng);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs);
-
+        void backward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, int vli);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, int vli);
         //!@}
 
     public:
