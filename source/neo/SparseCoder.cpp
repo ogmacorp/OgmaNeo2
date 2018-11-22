@@ -18,11 +18,17 @@ void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
 }
 
 void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, bool firstStep) {
+    // Cache address calculations
+    int dxy = _hiddenSize.x * _hiddenSize.y;
+    int dxyz = dxy * _hiddenSize.z;
+
     int maxIndex = 0;
     float maxValue = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
+
+        int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
         float sum = 0.0f;
 
@@ -38,21 +44,20 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
             int diam = vld._radius * 2 + 1;
             int diam2 = diam * diam;
 
-            for (int dx = -vld._radius; dx <= vld._radius; dx++)
-                for (int dy = -vld._radius; dy <= vld._radius; dy++) {
-                    Int2 visiblePosition(visiblePositionCenter.x + dx, visiblePositionCenter.y + dy);
+            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
 
-                    if (inBounds0(visiblePosition, Int2(vld._size.x, vld._size.y))) {
-                        int visibleIndex = address2(visiblePosition, vld._size.x);
+            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                    Int2 visiblePosition(x, y);
 
-                        int visibleC = (*inputs[vli])[visibleIndex];
+                    int visibleIndex = address2(visiblePosition, vld._size.x);
 
-                        Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+                    int visibleC = (*inputs[vli])[visibleIndex];
 
-                        Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
+                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                        sum += std::max(0.0f, vl._weights[address4(wPos, _hiddenSize)] - (firstStep ? 0.0f : vl._visibleActivations[visibleIndex]));
-                    }
+                    sum += std::max(0.0f, vl._weights[dPartial + az * dxyz] - (firstStep ? 0.0f : vl._visibleActivations[visibleIndex]));
                 }
         }
 
@@ -89,28 +94,27 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
     float sum = 0.0f;
     float count = 0.0f;
 
-    for (int dx = -vl._reverseRadii.x; dx <= vl._reverseRadii.x; dx++)
-        for (int dy = -vl._reverseRadii.y; dy <= vl._reverseRadii.y; dy++) {
-            Int2 hiddenPosition(hiddenPositionCenter.x + dx, hiddenPositionCenter.y + dy);
+    Int2 iterLowerBound(std::max(0, hiddenPositionCenter.x - vl._reverseRadii.x), std::max(0, hiddenPositionCenter.y - vl._reverseRadii.y));
+    Int2 iterUpperBound(std::min(_hiddenSize.x - 1, hiddenPositionCenter.x + vl._reverseRadii.x), std::min(_hiddenSize.y - 1, hiddenPositionCenter.y + vl._reverseRadii.y));
 
-            if (inBounds0(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))) {
-                // Next layer node's receptive field
-                Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
+    for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+        for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+            Int2 hiddenPosition(x, y);
 
-                Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+            // Next layer node's receptive field
+            Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
 
-                // Check for containment
-                if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
+            Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
+            Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
-                    Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+            // Check for containment
+            if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
+                int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
-                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, offset.x + offset.y * diam + visiblePosition.z * diam2);
+                Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                    sum += vl._weights[address4(wPos, _hiddenSize)];
-                    count += 1.0f;
-                }
+                sum += vl._weights[address4(wPos, _hiddenSize)];
+                count += 1.0f;
             }
         }
 
@@ -138,28 +142,29 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
         float sum = 0.0f;
         float count = 0.0f;
 
-        for (int dx = -vl._reverseRadii.x; dx <= vl._reverseRadii.x; dx++)
-            for (int dy = -vl._reverseRadii.y; dy <= vl._reverseRadii.y; dy++) {
-                Int2 hiddenPosition(hiddenPositionCenter.x + dx, hiddenPositionCenter.y + dy);
+        Int2 iterLowerBound(std::max(0, hiddenPositionCenter.x - vl._reverseRadii.x), std::max(0, hiddenPositionCenter.y - vl._reverseRadii.y));
+        Int2 iterUpperBound(std::min(_hiddenSize.x - 1, hiddenPositionCenter.x + vl._reverseRadii.x), std::min(_hiddenSize.y - 1, hiddenPositionCenter.y + vl._reverseRadii.y));
 
-                if (inBounds0(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))) {
-                    // Next layer node's receptive field
-                    Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
+        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                Int2 hiddenPosition(x, y);
+                
+                // Next layer node's receptive field
+                Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
 
-                    Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                    Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+                Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
+                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
-                    // Check for containment
-                    if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                        int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
+                // Check for containment
+                if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
+                    int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
-                        Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+                    Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
 
-                        Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, offset.x + offset.y * diam + visiblePosition.z * diam2);
+                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                        sum += vl._weights[address4(wPos, _hiddenSize)];
-                        count += 1.0f;
-                    }
+                    sum += vl._weights[address4(wPos, _hiddenSize)];
+                    count += 1.0f;
                 }
             }
 
@@ -167,27 +172,23 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
 
         float delta = _alpha * (target - activation);
 
-        for (int dx = -vl._reverseRadii.x; dx <= vl._reverseRadii.x; dx++)
-            for (int dy = -vl._reverseRadii.y; dy <= vl._reverseRadii.y; dy++) {
-                Int2 hiddenPosition(hiddenPositionCenter.x + dx, hiddenPositionCenter.y + dy);
+        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                Int2 hiddenPosition(x, y);
 
-                if (inBounds0(hiddenPosition, Int2(_hiddenSize.x, _hiddenSize.y))) {
-                    // Next layer node's receptive field
-                    Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
+                // Next layer node's receptive field
+                Int2 visibleFieldCenter = project(hiddenPosition, vl._hiddenToVisible);
 
-                    Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                    Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+                Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
+                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
-                    // Check for containment
-                    if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
-                        int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
+                // Check for containment
+                if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
+                    int hiddenC = _hiddenCs[address2(hiddenPosition, _hiddenSize.x)];
 
-                        Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visiblePosition.z * diam2);
 
-                        Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenC, offset.x + offset.y * diam + visiblePosition.z * diam2);
-
-                        vl._weights[address4(wPos, _hiddenSize)] += delta;
-                    }
+                    vl._weights[address4(wPos, _hiddenSize)] += delta;
                 }
             }
     }

@@ -18,10 +18,14 @@ void Actor::init(int pos, std::mt19937 &rng, int vli) {
 }
 
 void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs) {
-    Int3 hiddenSize1(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1);
-    
     // Value
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
+    
+    // Cache address calculations
+    int dxy = _hiddenSize.x * _hiddenSize.y;
+    int dxyz = dxy * (_hiddenSize.z + 1);
+
+    int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
     float value = 0.0f;
     float count = 0.0f;
@@ -38,23 +42,21 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
         int diam = vld._radius * 2 + 1;
         int diam2 = diam * diam;
 
-        for (int dx = -vld._radius; dx <= vld._radius; dx++)
-            for (int dy = -vld._radius; dy <= vld._radius; dy++) {
-                Int2 visiblePosition(visiblePositionCenter.x + dx, visiblePositionCenter.y + dy);
+        Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+        Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
 
-                if (inBounds0(visiblePosition, Int2(vld._size.x, vld._size.y))) {
-                    int visibleIndex = address2(visiblePosition, vld._size.x);
+        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                Int2 visiblePosition(x, y);
 
-                    int visibleC = (*inputs[vli])[visibleIndex];
+                int visibleC = (*inputs[vli])[address2(visiblePosition, vld._size.x)];
 
-                    Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
-
-                    value += vl._weights[address4(wPos, hiddenSize1)];
-                    count += 1.0f;
-                }
+                value += vl._weights[dPartial + az * dxyz];
             }
+
+        count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
     }
 
     value /= std::max(1.0f, count);
@@ -73,6 +75,8 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
         Int3 actionHiddenPosition(pos.x, pos.y, hc);
 
+        int dActionPartial = actionHiddenPosition.x + actionHiddenPosition.y * _hiddenSize.x + actionHiddenPosition.z * dxy;
+
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
@@ -85,23 +89,20 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
             int diam = vld._radius * 2 + 1;
             int diam2 = diam * diam;
 
-            for (int dx = -vld._radius; dx <= vld._radius; dx++)
-                for (int dy = -vld._radius; dy <= vld._radius; dy++) {
-                    Int2 visiblePosition(visiblePositionCenter.x + dx, visiblePositionCenter.y + dy);
+            Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+            Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
 
-                    if (inBounds0(visiblePosition, Int2(vld._size.x, vld._size.y))) {
-                        int visibleIndex = address2(visiblePosition, vld._size.x);
+            for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+                for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                    Int2 visiblePosition(x, y);
 
-                        int visibleC = (*inputs[vli])[visibleIndex];
+                    int visibleC = (*inputs[vli])[address2(visiblePosition, vld._size.x)];
 
-                        Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+                    int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                        Int4 wPos(actionHiddenPosition.x, actionHiddenPosition.y, actionHiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
-    
-                        sum += vl._weights[address4(wPos, hiddenSize1)];
-                    }
+                    sum += vl._weights[dActionPartial + az * dxyz];
                 }
-        }
+            }
 
         hiddenActivations[hc] = sum / std::max(1.0f, count);
 
@@ -136,10 +137,14 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 }
 
 void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
-    Int3 hiddenSize1(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1);
-    
     // New Q
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
+
+    // Cache address calculations
+    int dxy = _hiddenSize.x * _hiddenSize.y;
+    int dxyz = dxy * (_hiddenSize.z + 1);
+
+    int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
     float valuePrev = 0.0f;
     float countPrev = 0.0f;
@@ -156,23 +161,21 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
         int diam = vld._radius * 2 + 1;
         int diam2 = diam * diam;
 
-        for (int dx = -vld._radius; dx <= vld._radius; dx++)
-            for (int dy = -vld._radius; dy <= vld._radius; dy++) {
-                Int2 visiblePosition(visiblePositionCenter.x + dx, visiblePositionCenter.y + dy);
+        Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+        Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
 
-                if (inBounds0(visiblePosition, Int2(vld._size.x, vld._size.y))) {
-                    int visibleIndex = address2(visiblePosition, vld._size.x);
+        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                Int2 visiblePosition(x, y);
 
-                    int visibleC = (*inputsPrev[vli])[visibleIndex];
+                int visibleC = (*inputsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
-                    Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
-
-                    valuePrev += vl._weights[address4(wPos, hiddenSize1)];
-                    countPrev += 1.0f;
-                }
+                valuePrev += vl._weights[dPartial + az * dxyz];
             }
+
+        countPrev += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
     }
 
     valuePrev /= std::max(1.0f, countPrev);
@@ -186,6 +189,8 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 
     int actionIndex = (*hiddenCsPrev)[hiddenIndex];
 
+    int dActionPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + actionIndex * dxy;
+
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -198,24 +203,21 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
         int diam = vld._radius * 2 + 1;
         int diam2 = diam * diam;
 
-        for (int dx = -vld._radius; dx <= vld._radius; dx++)
-            for (int dy = -vld._radius; dy <= vld._radius; dy++) {
-                Int2 visiblePosition(visiblePositionCenter.x + dx, visiblePositionCenter.y + dy);
+        Int2 iterLowerBound(std::max(0, fieldLowerBound.x), std::max(0, fieldLowerBound.y));
+        Int2 iterUpperBound(std::min(vld._size.x - 1, visiblePositionCenter.x + vld._radius), std::min(vld._size.y - 1, visiblePositionCenter.y + vld._radius));
 
-                if (inBounds0(visiblePosition, Int2(vld._size.x, vld._size.y))) {
-                    int visibleIndex = address2(visiblePosition, vld._size.x);
+        for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
+            for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
+                Int2 visiblePosition(x, y);
 
-                    int visibleC = (*inputsPrev[vli])[visibleIndex];
+                int visibleC = (*inputsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
-                    Int2 offset(visiblePosition.x - fieldLowerBound.x, visiblePosition.y - fieldLowerBound.y);
+                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                    Int4 valueWPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
-                    Int4 actionWPos(hiddenPosition.x, hiddenPosition.y, actionIndex, valueWPos.w);
-
-                    vl._weights[address4(valueWPos, hiddenSize1)] += alphaTdError;
-                    vl._weights[address4(actionWPos, hiddenSize1)] += betaTdError;
-                }
+                vl._weights[dPartial + az * dxyz] += alphaTdError;
+                vl._weights[dActionPartial + az * dxyz] += betaTdError;
             }
+
     }
 }
 
