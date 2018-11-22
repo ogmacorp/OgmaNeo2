@@ -238,4 +238,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
             }
         }
     }
+
+    cs._pool.wait();
 }
