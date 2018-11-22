@@ -17,7 +17,7 @@ void Actor::init(int pos, std::mt19937 &rng, int vli) {
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs) {
+void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs) {
     // Value
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
 
@@ -131,7 +131,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuf
     _hiddenCs[hiddenIndex] = selectIndex;
 }
 
-void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g) {
+void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
     // New Q
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
 

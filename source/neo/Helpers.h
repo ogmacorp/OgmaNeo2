@@ -159,92 +159,29 @@ namespace ogmaneo {
     /*!
     \brief Some useful default kernels
     */
-    void fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {
-        (*buffer)[pos] = fillValue;
-    }
-
-    void fillFloat(int pos, std::mt19937 &rng, FloatBuffer* buffer, float fillValue) {
-        (*buffer)[pos] = fillValue;
-    }
-
-    void copyInt(int pos, std::mt19937 &rng, const IntBuffer* src, IntBuffer* dst) {
-        (*dst)[pos] = (*src)[pos];
-    }
-
-    void copyFloat(int pos, std::mt19937 &rng, const FloatBuffer* src, FloatBuffer* dst) {
-        (*dst)[pos] = (*src)[pos];
-    }
+    void fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue);
+    void fillFloat(int pos, std::mt19937 &rng, FloatBuffer* buffer, float fillValue);
+    void copyInt(int pos, std::mt19937 &rng, const IntBuffer* src, IntBuffer* dst);
+    void copyFloat(int pos, std::mt19937 &rng, const FloatBuffer* src, FloatBuffer* dst);
     //!@}
         
     //!@{
     /*!
     \brief Misc functions
     */
-    bool inBounds0(const Int2 &position, const Int2 &upperBound) {
-    return position.x >= 0 && position.x < upperBound.x && position.y >= 0 && position.y < upperBound.y;
-    }
+    bool inBounds0(const Int2 &position, const Int2 &upperBound);
+    bool inBounds(const Int2 &position, const Int2 &lowerBound, const Int2 &upperBound);
 
-    bool inBounds(const Int2 &position, const Int2 &lowerBound, const Int2 &upperBound) {
-        return position.x >= lowerBound.x && position.x < upperBound.x && position.y >= lowerBound.y && position.y < upperBound.y;
-    }
+    Int2 project(const Int2 &position, const Float2 &toScalars);
+    Int2 projectf(const Float2 &position, const Float2 &toScalars);
 
-    Int2 project(const Int2 &position, const Float2 &toScalars) {
-        return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
-    }
+    int address2(const Int2 &pos, int dim);
+    int address3(const Int3 &pos, const Int2 &dims);
+    int address4(const Int4 &pos, const Int3 &dims);
 
-    Int2 projectf(const Float2 &position, const Float2 &toScalars) {
-        return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
-    }
-
-    int address2(const Int2 &pos, int dim) {
-        return pos.x + pos.y * dim;
-    }
-
-    int address3(const Int3 &pos, const Int2 &dims) {
-        return pos.x + pos.y * dims.x + pos.z * dims.x * dims.y;
-    }
-
-    int address4(const Int4 &pos, const Int3 &dims) {
-        int dxy = dims.x * dims.y;
-        int dxyz = dxy * dims.z;
-
-        return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
-    }
-
-    std::vector<IntBuffer*> get(const std::vector<std::shared_ptr<IntBuffer>> &v) {
-        std::vector<IntBuffer*> vp(v.size());
-
-        for (int i = 0; i < v.size(); i++)
-            vp[i] = v[i].get();
-
-        return vp;
-    }
-
-    std::vector<FloatBuffer*> get(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
-        std::vector<FloatBuffer*> vp(v.size());
-
-        for (int i = 0; i < v.size(); i++)
-            vp[i] = v[i].get();
-
-        return vp;
-    }
-
-    std::vector<const IntBuffer*> constGet(const std::vector<std::shared_ptr<IntBuffer>> &v) {
-        std::vector<const IntBuffer*> vp(v.size());
-
-        for (int i = 0; i < v.size(); i++)
-            vp[i] = v[i].get();
-
-        return vp;
-    }
-
-    std::vector<const FloatBuffer*> constGet(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
-        std::vector<const FloatBuffer*> vp(v.size());
-
-        for (int i = 0; i < v.size(); i++)
-            vp[i] = v[i].get();
-
-        return vp;
-    }
+    std::vector<IntBuffer*> get(const std::vector<std::shared_ptr<IntBuffer>> &v);
+    std::vector<FloatBuffer*> get(const std::vector<std::shared_ptr<FloatBuffer>> &v);
+    std::vector<const IntBuffer*> constGet(const std::vector<std::shared_ptr<IntBuffer>> &v);
+    std::vector<const FloatBuffer*> constGet(const std::vector<std::shared_ptr<FloatBuffer>> &v);
     //!@}
 }

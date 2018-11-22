@@ -17,7 +17,7 @@ void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, bool firstStep) {
+void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, bool firstStep) {
     int maxIndex = 0;
     float maxValue = -999999.0f;
 
@@ -73,7 +73,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, int vli) {
+void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
@@ -117,7 +117,7 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
     vl._visibleActivations[visibleColumnIndex] = sum / std::max(1.0f, count);
 }
 
-void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuffer*> &inputs, int vli) {
+void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 

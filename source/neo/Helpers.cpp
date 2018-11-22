@@ -107,3 +107,86 @@ void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 
 
     cs._pool.wait();
 }
+
+void ogmaneo::fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {
+    (*buffer)[pos] = fillValue;
+}
+
+void ogmaneo::fillFloat(int pos, std::mt19937 &rng, FloatBuffer* buffer, float fillValue) {
+    (*buffer)[pos] = fillValue;
+}
+
+void ogmaneo::copyInt(int pos, std::mt19937 &rng, const IntBuffer* src, IntBuffer* dst) {
+    (*dst)[pos] = (*src)[pos];
+}
+
+void ogmaneo::copyFloat(int pos, std::mt19937 &rng, const FloatBuffer* src, FloatBuffer* dst) {
+    (*dst)[pos] = (*src)[pos];
+}
+
+bool ogmaneo::inBounds0(const Int2 &position, const Int2 &upperBound) {
+    return position.x >= 0 && position.x < upperBound.x && position.y >= 0 && position.y < upperBound.y;
+}
+
+bool ogmaneo::inBounds(const Int2 &position, const Int2 &lowerBound, const Int2 &upperBound) {
+    return position.x >= lowerBound.x && position.x < upperBound.x && position.y >= lowerBound.y && position.y < upperBound.y;
+}
+
+Int2 ogmaneo::project(const Int2 &position, const Float2 &toScalars) {
+    return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
+}
+
+Int2 ogmaneo::projectf(const Float2 &position, const Float2 &toScalars) {
+    return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
+}
+
+int ogmaneo::address2(const Int2 &pos, int dim) {
+    return pos.x + pos.y * dim;
+}
+
+int ogmaneo::address3(const Int3 &pos, const Int2 &dims) {
+    return pos.x + pos.y * dims.x + pos.z * dims.x * dims.y;
+}
+
+int ogmaneo::address4(const Int4 &pos, const Int3 &dims) {
+    int dxy = dims.x * dims.y;
+    int dxyz = dxy * dims.z;
+
+    return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
+}
+
+std::vector<IntBuffer*> ogmaneo::get(const std::vector<std::shared_ptr<IntBuffer>> &v) {
+    std::vector<IntBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = v[i].get();
+
+    return vp;
+}
+
+std::vector<FloatBuffer*> ogmaneo::get(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
+    std::vector<FloatBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = v[i].get();
+
+    return vp;
+}
+
+std::vector<const IntBuffer*> ogmaneo::constGet(const std::vector<std::shared_ptr<IntBuffer>> &v) {
+    std::vector<const IntBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = v[i].get();
+
+    return vp;
+}
+
+std::vector<const FloatBuffer*> ogmaneo::constGet(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
+    std::vector<const FloatBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = v[i].get();
+
+    return vp;
+}
