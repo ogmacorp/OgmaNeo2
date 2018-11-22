@@ -135,7 +135,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
     _hiddenCs[hiddenIndex] = selectIndex;
 }
 
-void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
+void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
     Int3 hiddenSize1(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1);
     
     // New Q
@@ -331,6 +331,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 
         float g = std::pow(_gamma, _historySize - 1);
 
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, sPrev._visibleCs, sPrev._hiddenCs.get(), q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
     }
 }

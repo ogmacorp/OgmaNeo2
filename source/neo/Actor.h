@@ -100,7 +100,7 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g);
 
         static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
             a->init(pos, rng, vli);
@@ -110,7 +110,7 @@ namespace ogmaneo {
             a->forward(pos, rng, inputs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
             a->learn(pos, rng, inputsPrev, hiddenCsPrev, q, g);
         }
         //!@}
@@ -135,7 +135,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _beta(0.5f), _gamma(0.95f)
+        : _alpha(0.1f), _beta(1.0f), _gamma(0.95f)
         {}
 
         /*!

@@ -166,6 +166,8 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
         }
 
         for (int i = 0; i < _inputSizes.size(); i++) {
+            assert(_inputSizes[i].x * _inputSizes[i].y == inputCs[i]->size());
+            
             // Copy
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i]->size(), cs._rng, cs._batchSize1);
 
@@ -197,13 +199,13 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
 
                 int temporalHorizon = _histories[lNext].size();
 
-                IntBuffer* last = _histories[lNext].back().get();
+                std::shared_ptr<IntBuffer> last = _histories[lNext].back();
 
                 for (int t = temporalHorizon - 1; t > 0; t--)
                     _histories[lNext][t] = _histories[lNext][t - 1];
 
                 // Copy
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), last), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), last.get()), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
 
                 _histories[lNext].front() = _histories[lNext].back();
 
