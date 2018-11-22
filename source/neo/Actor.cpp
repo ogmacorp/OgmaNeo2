@@ -18,6 +18,8 @@ void Actor::init(int pos, std::mt19937 &rng, int vli) {
 }
 
 void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs) {
+    Int3 hiddenSize1(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1);
+    
     // Value
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
 
@@ -49,7 +51,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
 
-                    value += vl._weights[address4(wPos, _hiddenSize)];
+                    value += vl._weights[address4(wPos, hiddenSize1)];
                     count += 1.0f;
                 }
             }
@@ -96,7 +98,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
                         Int4 wPos(actionHiddenPosition.x, actionHiddenPosition.y, actionHiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
     
-                        sum += vl._weights[address4(wPos, _hiddenSize)];
+                        sum += vl._weights[address4(wPos, hiddenSize1)];
                     }
                 }
         }
@@ -134,6 +136,8 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 }
 
 void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
+    Int3 hiddenSize1(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1);
+    
     // New Q
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
 
@@ -165,7 +169,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::sha
 
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
 
-                    valuePrev += vl._weights[address4(wPos, _hiddenSize)];
+                    valuePrev += vl._weights[address4(wPos, hiddenSize1)];
                     countPrev += 1.0f;
                 }
             }
@@ -208,8 +212,8 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::sha
                     Int4 valueWPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
                     Int4 actionWPos(hiddenPosition.x, hiddenPosition.y, actionIndex, valueWPos.w);
 
-                    vl._weights[address4(valueWPos, _hiddenSize)] += alphaTdError;
-                    vl._weights[address4(actionWPos, _hiddenSize)] += betaTdError;
+                    vl._weights[address4(valueWPos, hiddenSize1)] += alphaTdError;
+                    vl._weights[address4(actionWPos, hiddenSize1)] += betaTdError;
                 }
             }
     }

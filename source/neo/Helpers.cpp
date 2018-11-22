@@ -191,3 +191,7 @@ std::vector<const FloatBuffer*> ogmaneo::constGet(const std::vector<std::shared_
 
     return vp;
 }
+
+float ogmaneo::sigmoid(float x) {
+    return 1.0f / (1.0f + std::exp(-x));
+}

@@ -184,4 +184,9 @@ namespace ogmaneo {
     std::vector<const IntBuffer*> constGet(const std::vector<std::shared_ptr<IntBuffer>> &v);
     std::vector<const FloatBuffer*> constGet(const std::vector<std::shared_ptr<FloatBuffer>> &v);
     //!@}
+
+    /*!
+    \brief Sigmoid
+    */
+    float sigmoid(float x);
 }
