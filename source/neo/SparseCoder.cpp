@@ -51,7 +51,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
 
                         Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
 
-                        sum += std::max(0.0f, vl._weights[address4(wPos, _hiddenSize)] - vl._visibleActivations[visibleIndex]);
+                        sum += std::max(0.0f, vl._weights[address4(wPos, _hiddenSize)] - (firstStep ? 0.0f : vl._visibleActivations[visibleIndex]));
                     }
                 }
         }

@@ -55,9 +55,11 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
             }
     }
 
+    value /= std::max(1.0f, count);
+
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
-    _hiddenValues[hiddenIndex] = value / std::max(1.0f, count);
+    _hiddenValues[hiddenIndex] = value;
 
     // Action
     std::vector<float> hiddenActivations(_hiddenSize.z);
@@ -136,6 +138,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::sha
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
 
     float valuePrev = 0.0f;
+    float countPrev = 0.0f;
 
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -163,14 +166,17 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<std::sha
                     Int4 wPos(hiddenPosition.x, hiddenPosition.y, hiddenPosition.z, offset.x + offset.y * diam + visibleC * diam2);
 
                     valuePrev += vl._weights[address4(wPos, _hiddenSize)];
+                    countPrev += 1.0f;
                 }
             }
     }
 
+    valuePrev /= std::max(1.0f, countPrev);
+
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
     float tdError = q + g * _hiddenValues[hiddenIndex] - valuePrev;
-
+   
     float alphaTdError = _alpha * tdError;
     float betaTdError = _beta * tdError;
 
@@ -275,7 +281,6 @@ void Actor::createRandom(ComputeSystem &cs,
 void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learn) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
-    int numHidden1 = numHiddenColumns * (_hiddenSize.z + 1);
 
     runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 
