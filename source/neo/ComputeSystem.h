@@ -42,7 +42,7 @@ namespace ogmaneo {
 		\param numWorkers number of thread pool worker threads
 		*/
         ComputeSystem(size_t numWorkers)
-		: _batchSize1(64), _batchSize2(4, 4), _batchSize3(2, 2, 2)
+		: _batchSize1(64), _batchSize2(2, 2), _batchSize3(2, 2, 2)
 		{
 			_pool.create(numWorkers);
 		}
