@@ -167,11 +167,11 @@ namespace ogmaneo {
         (*buffer)[pos] = fillValue;
     }
 
-    void copyInt(int pos, std::mt19937 &rng, IntBuffer* src, IntBuffer* dst) {
+    void copyInt(int pos, std::mt19937 &rng, const IntBuffer* src, IntBuffer* dst) {
         (*dst)[pos] = (*src)[pos];
     }
 
-    void copyFloat(int pos, std::mt19937 &rng, FloatBuffer* src, FloatBuffer* dst) {
+    void copyFloat(int pos, std::mt19937 &rng, const FloatBuffer* src, FloatBuffer* dst) {
         (*dst)[pos] = (*src)[pos];
     }
     //!@}
@@ -222,6 +222,24 @@ namespace ogmaneo {
 
     std::vector<FloatBuffer*> get(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
         std::vector<FloatBuffer*> vp(v.size());
+
+        for (int i = 0; i < v.size(); i++)
+            vp[i] = v[i].get();
+
+        return vp;
+    }
+
+    std::vector<const IntBuffer*> constGet(const std::vector<std::shared_ptr<IntBuffer>> &v) {
+        std::vector<const IntBuffer*> vp(v.size());
+
+        for (int i = 0; i < v.size(); i++)
+            vp[i] = v[i].get();
+
+        return vp;
+    }
+
+    std::vector<const FloatBuffer*> constGet(const std::vector<std::shared_ptr<FloatBuffer>> &v) {
+        std::vector<const FloatBuffer*> vp(v.size());
 
         for (int i = 0; i < v.size(); i++)
             vp[i] = v[i].get();

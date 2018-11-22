@@ -55,6 +55,8 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuf
             }
     }
 
+    int hiddenIndex = address2(pos, _hiddenSize.x);
+
     _hiddenValues[hiddenIndex] = value / std::max(1.0f, count);
 
     // Action
@@ -125,8 +127,6 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<IntBuf
             break;
         }
     }
-
-    int hiddenIndex = address2(pos, _hiddenSize.x);
 
     _hiddenCs[hiddenIndex] = selectIndex;
 }
@@ -241,7 +241,7 @@ void Actor::createRandom(ComputeSystem &cs,
         // Set context for kernel call
         vl._weights = FloatBuffer(weightsSize);
 
-        runKernel1(cs, std::bind(init, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
     }
 
     // Hidden Cs
@@ -251,7 +251,7 @@ void Actor::createRandom(ComputeSystem &cs,
 
     _hiddenValues = FloatBuffer(numHiddenColumns);
 
-    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, 0.0f), numHiddenColumns, cs._rng, cs._batchSize1);
+    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, 0.0f), numHiddenColumns, cs._rng, cs._batchSize1);
 
     // History samples
     _historySize = 0;
@@ -272,12 +272,12 @@ void Actor::createRandom(ComputeSystem &cs,
     }
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, float reward, bool learn) {
+void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learn) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
     int numHidden1 = numHiddenColumns * (_hiddenSize.z + 1);
 
-    runKernel2(cs, std::bind(foward, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 
     // Add sample
     if (_historySize == _historySamples.size()) {
@@ -303,7 +303,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, fl
             int numVisibleColumns = vld._size.x * vld._size.y;
 
             // Copy visible Cs
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &visibleCs[vli], s._visibleCs[vli].get()), numVisibleColumns, cs._rng, cs._batchSize1);
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], s._visibleCs[vli].get()), numVisibleColumns, cs._rng, cs._batchSize1);
         }
 
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, s._hiddenCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
@@ -315,13 +315,13 @@ void Actor::step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, fl
     if (learn && _historySize > 1) {
         const HistorySample &sPrev = _historySamples[0];
 
-        cl_float q = 0.0f;
+        float q = 0.0f;
 
         for (int t = _historySize - 1; t >= 1; t--)
             q += _historySamples[t]._reward * std::pow(_gamma, t - 1);
 
-        cl_float g = std::pow(_gamma, _historySize - 1);
+        float g = std::pow(_gamma, _historySize - 1);
 
-        runKernel2(cs, std::bind(learn, std::placeholders::_1, std::placeholders::_2, this, sPrev._visibleCs, sPrev._hiddenCs.get(), q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, sPrev._visibleCs, sPrev._hiddenCs.get(), q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
     }
 }

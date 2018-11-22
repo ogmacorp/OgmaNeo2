@@ -230,7 +230,7 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
         vl._weights = FloatBuffer(weightsSize);
 
-        runKernel1(cs, std::bind(initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(SparseCoder::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
 
         vl._visibleActivations = FloatBuffer(numVisible);
     }
@@ -244,27 +244,27 @@ void SparseCoder::createRandom(ComputeSystem &cs,
     _hiddenActivations = FloatBuffer(numHidden);
 }
 
-void SparseCoder::activate(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs) {
+void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     for (int it = 0; it < _explainIters; it++) {
-        runKernel2(cs, std::bind(forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, it == 0), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, it == 0), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            runKernel2(cs, std::bind(backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
         }
     }
 }
 
-void SparseCoder::learn(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs) {
+void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        runKernel2(cs, std::bind(learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+        runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
     }
 }

@@ -9,7 +9,6 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
 #include "Actor.h"
 
 #include <memory>
@@ -91,13 +90,12 @@ namespace ogmaneo {
         /*!
         \brief Create a randomly initialized hierarchy
         \param cs is the ComputeSystem
-        \param prog is the ComputeProgram associated with the ComputeSystem and loaded with the sparse coder and predictor kernel code
         \param inputSizes vector of input dimensions
         \param predictInputs flags for which inputs to generate predictions for
         \param layerDescs vector of LayerDesc structures, describing each layer in sequence
         \param rng a random number generator
         */
-        void createRandom(ComputeSystem &cs, ComputeProgram &prog,
+        void createRandom(ComputeSystem &cs,
             const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs);
 
         /*!
@@ -105,7 +103,7 @@ namespace ogmaneo {
         \param inputs vector of input activations
         \param learn whether learning should be enabled, defaults to true
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, bool learn = true, float reward = 0.0f);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learn = true, float reward = 0.0f);
 
         /*!
         \brief Get the number of (hidden) layers
@@ -118,7 +116,7 @@ namespace ogmaneo {
         \brief Get the actor output
         \param i the index of the input to retrieve
         */
-        const cl::Buffer &getActionCs(int i) const {
+        const IntBuffer &getActionCs(int i) const {
             return _aLayers.front()[i]->getHiddenCs();
         }
 

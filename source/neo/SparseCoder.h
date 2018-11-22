@@ -141,14 +141,14 @@ namespace ogmaneo {
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
         */
-        void activate(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs);
+        void activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
 
         /*!
         \brief Learn the sparse code
         \param cs is the ComputeSystem.
         \param visibleCs the visible (input) layer states
         */
-        void learn(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs);
+        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
 
         /*!
         \brief Get the number of visible layers

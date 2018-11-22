@@ -13,7 +13,7 @@
 
 using namespace ogmaneo;
 
-void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
+void Hierarchy::createRandom(ComputeSystem &cs,
     const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs)
 {
     _scLayers.resize(layerDescs.size());
@@ -91,7 +91,7 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
                 if (inputTypes[p] == InputType::_act) {
                     _aLayers[l][p] = std::make_unique<Actor>();
 
-                    _aLayers[l][p]->createRandom(cs, prog, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs, rng);
+                    _aLayers[l][p]->createRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs);
                 }
             }
         }
@@ -136,15 +136,15 @@ void Hierarchy::createRandom(ComputeSystem &cs, ComputeProgram &prog,
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 _aLayers[l][p] = std::make_unique<Actor>();
 
-                _aLayers[l][p]->createRandom(cs, prog, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs, rng);
+                _aLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs);
             }
         }
 		
-        _scLayers[l].createRandom(cs, prog, layerDescs[l]._hiddenSize, scVisibleLayerDescs, rng);
+        _scLayers[l].createRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<IntBuffer*> &inputCs, std::mt19937 &rng, bool learn, float reward) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learn, float reward) {
     assert(inputCs.size() == _inputSizes.size());
 
     _ticks[0] = 0;
@@ -167,7 +167,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<IntBuffer*> &inputCs, 
 
         for (int i = 0; i < _inputSizes.size(); i++) {
             // Copy
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i].size(), cs._rng, cs._batchSize1);
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i]->size(), cs._rng, cs._batchSize1);
 
             _histories.front()[0 + temporalHorizon * i] = lasts[i];
         }
@@ -186,10 +186,10 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<IntBuffer*> &inputCs, 
 
             _updates[l] = true;
             
-            _scLayers[l].activate(cs, get(_histories[l]));
+            _scLayers[l].activate(cs, constGet(_histories[l]));
 
             if (learn)
-                _scLayers[l].learn(cs, get(_histories[l]));
+                _scLayers[l].learn(cs, constGet(_histories[l]));
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
@@ -203,12 +203,9 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<IntBuffer*> &inputCs, 
                     _histories[lNext][t] = _histories[lNext][t - 1];
 
                 // Copy
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), lasts), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), last), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
 
-                cs.getQueue().enqueueCopyBuffer(_scLayers[l].getHiddenCs(), last,
-                    0, 0, _scLayers[l].getHiddenSize().x * _scLayers[l].getHiddenSize().y * sizeof(cl_int));
-                
-                _histories[lNext].front() = last;
+                _histories[lNext].front() = _histories[lNext].back();
 
                 _ticks[lNext]++;
             }
@@ -218,14 +215,14 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<IntBuffer*> &inputCs, 
     // Backward
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
-            std::vector<cl::Buffer> feedBack(l < _scLayers.size() - 1 ? 2 : 1);
+            std::vector<const IntBuffer*> feedBack(l < _scLayers.size() - 1 ? 2 : 1);
 
-            feedBack[0] = _scLayers[l].getHiddenCs();
+            feedBack[0] = &_scLayers[l].getHiddenCs();
 
             if (l < _scLayers.size() - 1) {
                 assert(_aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBack[1] = _aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBack[1] = &_aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
 
             float r = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
@@ -235,7 +232,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<IntBuffer*> &inputCs, 
 
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 if (_aLayers[l][p] != nullptr)
-                    _aLayers[l][p]->step(cs, feedBack, rng, r, learn);
+                    _aLayers[l][p]->step(cs, feedBack, r, learn);
             }
         }
     }

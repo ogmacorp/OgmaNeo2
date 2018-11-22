@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Helpers.h"
+#include "ComputeSystem.h"
 
 namespace ogmaneo {
     /*!
@@ -106,11 +106,11 @@ namespace ogmaneo {
             a->init(pos, rng, vli);
         }
 
-        static void forwardKernel(int pos, std::mt19937 &rng, Actor* a, const std::vector<IntBuffer*> &inputs) {
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<IntBuffer*> &inputs) {
             a->forward(pos, rng, inputs);
         }
 
-        static void initKernel(int pos, std::mt19937 &rng, Actor* a, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g) {
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<std::shared_ptr<IntBuffer>> &inputsPrev, IntBuffer* hiddenCsPrev, float q, float g) {
             a->learn(pos, rng, inputsPrev, hiddenCsPrev, q, g);
         }
         //!@}
@@ -157,7 +157,7 @@ namespace ogmaneo {
         \param reward reinforcment signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<IntBuffer*> &visibleCs, float reward, bool learn);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learn);
 
         /*!
         \brief Get number of visible layers
