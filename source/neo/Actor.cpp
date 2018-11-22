@@ -114,7 +114,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
         total += hiddenActivations[hc];
     }
 
-    std::uniform_real_distribution<float> cuspDist(0, total);
+    std::uniform_real_distribution<float> cuspDist(0.0f, total);
 
     float cusp = cuspDist(rng);
 
