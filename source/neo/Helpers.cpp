@@ -75,8 +75,8 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
             std::shared_ptr<KernelWorkItem2> kwi = std::make_shared<KernelWorkItem2>();
 
             kwi->_func = func;
-            kwi->_pos.x = x;
-            kwi->_pos.y = y;
+            kwi->_pos.x = x * batchSize.x;
+            kwi->_pos.y = y * batchSize.y;
             kwi->_batchSize = Int2(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y));
             kwi->_rng.seed(seedDist(rng));
 
@@ -97,8 +97,9 @@ void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 
                 std::shared_ptr<KernelWorkItem3> kwi = std::make_shared<KernelWorkItem3>();
 
                 kwi->_func = func;
-                kwi->_pos.x = x;
-                kwi->_pos.y = y;
+                kwi->_pos.x = x * batchSize.x;
+                kwi->_pos.y = y * batchSize.y;
+                kwi->_pos.z = z * batchSize.z;
                 kwi->_batchSize = Int3(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y), std::min(size.z - z * batchSize.z, batchSize.z));
                 kwi->_rng.seed(seedDist(rng));
 
