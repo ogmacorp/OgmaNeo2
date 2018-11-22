@@ -169,15 +169,36 @@ namespace ogmaneo {
     /*!
     \brief Misc functions
     */
-    bool inBounds0(const Int2 &position, const Int2 &upperBound);
-    bool inBounds(const Int2 &position, const Int2 &lowerBound, const Int2 &upperBound);
+    inline bool inBounds0(const Int2 &position, const Int2 &upperBound) {
+        return position.x >= 0 && position.x < upperBound.x && position.y >= 0 && position.y < upperBound.y;
+    }
 
-    Int2 project(const Int2 &position, const Float2 &toScalars);
-    Int2 projectf(const Float2 &position, const Float2 &toScalars);
+    inline bool inBounds(const Int2 &position, const Int2 &lowerBound, const Int2 &upperBound) {
+        return position.x >= lowerBound.x && position.x < upperBound.x && position.y >= lowerBound.y && position.y < upperBound.y;
+    }
 
-    int address2(const Int2 &pos, int dim);
-    int address3(const Int3 &pos, const Int2 &dims);
-    int address4(const Int4 &pos, const Int3 &dims);
+    inline Int2 project(const Int2 &position, const Float2 &toScalars) {
+        return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
+    }
+
+    inline Int2 projectf(const Float2 &position, const Float2 &toScalars) {
+        return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
+    }
+
+    inline int address2(const Int2 &pos, int dim) {
+        return pos.x + pos.y * dim;
+    }
+
+    inline int address3(const Int3 &pos, const Int2 &dims) {
+        return pos.x + pos.y * dims.x + pos.z * dims.x * dims.y;
+    }
+
+    inline int address4(const Int4 &pos, const Int3 &dims) {
+        int dxy = dims.x * dims.y;
+        int dxyz = dxy * dims.z;
+
+        return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
+    }
 
     std::vector<IntBuffer*> get(const std::vector<std::shared_ptr<IntBuffer>> &v);
     std::vector<FloatBuffer*> get(const std::vector<std::shared_ptr<FloatBuffer>> &v);
