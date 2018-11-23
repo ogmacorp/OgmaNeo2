@@ -27,7 +27,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
     int dxyz = dxy * (_hiddenSize.z + 1);
 
     // Partially computed address of weight
-    int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+    int dValuePartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
     // ------------------------------ Value ------------------------------
 
@@ -63,7 +63,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                value += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                value += vl._weights[dValuePartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
             }
 
         // Count can be computed outside of loop, this is the value equavilent to count += 1.0f after each value increment
@@ -169,7 +169,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     int dxyz = dxy * (_hiddenSize.z + 1);
 
     // Partially computed address of weight
-    int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
+    int dValuePartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
     // As in forward, compute value and count form normalization, but based on previous (historyCapacity timesteps ago typically) visible and hidden states
     float valuePrev = 0.0f;
@@ -203,7 +203,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
-                valuePrev += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
+                valuePrev += vl._weights[dValuePartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
             }
 
         // Count can be computed outside of loop, this is the value equavilent to count += 1.0f after each value increment
@@ -257,7 +257,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
 
                 // Update both value and action using cached parts to compute weight addressed (equivalent to calling address4)
-                vl._weights[dPartial + az * dxyz] += alphaTdError;
+                vl._weights[dValuePartial + az * dxyz] += alphaTdError;
                 vl._weights[dActionPartial + az * dxyz] += betaTdError;
             }
     }
