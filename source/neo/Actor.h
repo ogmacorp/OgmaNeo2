@@ -135,7 +135,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.1f), _beta(0.5f), _gamma(0.98f)
+        : _alpha(0.1f), _beta(0.5f), _gamma(0.95f)
         {}
 
         /*!
@@ -146,7 +146,7 @@ namespace ogmaneo {
         \param visibleLayerDescs are descriptors for visible layers
         */
         void createRandom(ComputeSystem &cs,
-            Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
+            const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
 
         /*!
         \brief Activate the actor (predict values)
@@ -155,7 +155,7 @@ namespace ogmaneo {
         \param reward reinforcement signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learn);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers

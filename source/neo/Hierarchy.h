@@ -104,10 +104,10 @@ namespace ogmaneo {
         /*!
         \brief Simulation step/tick
         \param inputs vector of input activations
-        \param learn whether learning should be enabled, defaults to true
+        \param learnEnabled whether learning should be enabled, defaults to true
         \param reward reinforcement signal
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learn = true, float reward = 0.0f);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled = true, float reward = 0.0f);
 
         /*!
         \brief Get the number of (hidden) layers

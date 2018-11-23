@@ -133,7 +133,7 @@ namespace ogmaneo {
         \param visibleLayerDescs the descriptors for the visible layers
         */
         void createRandom(ComputeSystem &cs,
-            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
+            const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
 
         /*!
         \brief Activate the sparse coder (perform sparse coding)

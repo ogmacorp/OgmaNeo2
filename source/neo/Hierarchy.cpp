@@ -72,7 +72,12 @@ void Hierarchy::createRandom(ComputeSystem &cs,
 				
 				_histories[l][v] = std::make_shared<IntBuffer>(inSize);
 
+#ifdef KERNEL_DEBUG
+                for (int x = 0; x < inSize; x++)
+                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
+#else
                 runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
+#endif
 
                 _historySizes[l][v] = inSize;
 			}
@@ -120,7 +125,12 @@ void Hierarchy::createRandom(ComputeSystem &cs,
 			for (int v = 0; v < _histories[l].size(); v++) {
                 _histories[l][v] = std::make_shared<IntBuffer>(inSize);
 
+#ifdef KERNEL_DEBUG
+                for (int x = 0; x < inSize; x++)
+                    fillInt(x, cs._rng, _histories[l][v].get(), 0);
+#else
                 runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, _histories[l][v].get(), 0), inSize, cs._rng, cs._batchSize1);
+#endif
 
                 _historySizes[l][v] = inSize;
             }
@@ -158,7 +168,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learn, float reward) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled, float reward) {
     assert(inputCs.size() == _inputSizes.size());
 
     // First tick is always 0
@@ -184,7 +194,12 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
             assert(_inputSizes[i].x * _inputSizes[i].y == inputCs[i]->size());
             
             // Copy
+#ifdef KERNEL_DEBUG
+            for (int x = 0; x < inputCs[i]->size(); x++)
+                copyInt(x, cs._rng, inputCs[i], lasts[i].get());
+#else
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i]->size(), cs._rng, cs._batchSize1);
+#endif
 
             _histories.front()[0 + temporalHorizon * i] = lasts[i];
         }
@@ -212,7 +227,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
             _scLayers[l].activate(cs, constGet(_histories[l]));
 
             // Optionally learn sparse coding layer
-            if (learn)
+            if (learnEnabled)
                 _scLayers[l].learn(cs, constGet(_histories[l]));
 
             // Add to next layer's history
@@ -227,7 +242,12 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
                     _histories[lNext][t] = _histories[lNext][t - 1];
 
                 // Copy
+#ifdef KERNEL_DEBUG
+                for (int x = 0; x < _scLayers[l].getHiddenCs().size(); x++)
+                    copyInt(x, cs._rng, &_scLayers[l].getHiddenCs(), last.get());
+#else
                 runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), last.get()), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
+#endif
 
                 _histories[lNext].front() = _histories[lNext].back();
 
@@ -260,7 +280,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
             // Step actor layers
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 if (_aLayers[l][p] != nullptr)
-                    _aLayers[l][p]->step(cs, feedBack, r, learn);
+                    _aLayers[l][p]->step(cs, feedBack, r, learnEnabled);
             }
         }
     }

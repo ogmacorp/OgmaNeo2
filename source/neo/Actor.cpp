@@ -264,7 +264,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 }
 
 void Actor::createRandom(ComputeSystem &cs,
-    Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
+    const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
 {
     _visibleLayerDescs = visibleLayerDescs;
 
@@ -297,18 +297,33 @@ void Actor::createRandom(ComputeSystem &cs,
         // Create weight matrix for this visible layer and initialize randomly
         vl._weights = FloatBuffer(weightsSize);
 
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < weightsSize; x++)
+            init(x, cs._rng, vli);
+#else
         runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+#endif
     }
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns);
 
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHiddenColumns; x++)
+        fillInt(x, cs._rng, &_hiddenCs, 0);
+#else
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
 
     // Hidden values
     _hiddenValues = FloatBuffer(numHiddenColumns);
 
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHiddenColumns; x++)
+        fillFloat(x, cs._rng, &_hiddenValues, 0.0f);
+#else
     runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, 0.0f), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
 
     // Create (pre-allocated) history samples
     _historySize = 0;
@@ -332,7 +347,7 @@ void Actor::createRandom(ComputeSystem &cs,
     cs._pool.wait();
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learn) {
+void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -340,7 +355,13 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
     cs._pool.wait();
 
     // Forward kernel
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < _hiddenSize.x; x++)
+        for (int y = 0; y < _hiddenSize.y; y++)
+            forward(Int2(x, y), cs._rng, visibleCs);
+#else
     runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
 
     // Wait for all kernels to finish
     cs._pool.wait();
@@ -371,11 +392,21 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
             int numVisibleColumns = vld._size.x * vld._size.y;
 
             // Copy visible Cs
+#ifdef KERNEL_DEBUG
+            for (int x = 0; x < numVisibleColumns; x++)
+                copyInt(x, cs._rng, visibleCs[vli], s._visibleCs[vli].get());
+#else
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], s._visibleCs[vli].get()), numVisibleColumns, cs._rng, cs._batchSize1);
+#endif
         }
 
         // Copy hidden Cs
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < numHiddenColumns; x++)
+            copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
+#else
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, s._hiddenCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
 
         s._reward = reward;
 
@@ -384,7 +415,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
     }
 
     // Learn (if have sufficient samples)
-    if (learn && _historySize > 1) {
+    if (learnEnabled && _historySize > 1) {
         const HistorySample &sPrev = _historySamples[0];
 
         // Compute (partial) Q value, rest is completed in the kernel
@@ -397,6 +428,12 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         float g = std::pow(_gamma, _historySize - 1);
 
         // Learn kernel
+#ifdef KERNEL_DEBUG
+        for (int x = 0; x < _hiddenSize.x; x++)
+            for (int y = 0; y < _hiddenSize.y; y++)
+                learn(Int2(x, y), cs._rng, constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), q, g);
+#else
         runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), q, g), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
     }
 }
