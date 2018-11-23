@@ -104,7 +104,7 @@ namespace ogmaneo {
         }
 
         static void learnKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputs, int vli) {
-            sc->forward(pos, rng, inputs, vli);
+            sc->learn(pos, rng, inputs, vli);
         }
         //!@}
 
