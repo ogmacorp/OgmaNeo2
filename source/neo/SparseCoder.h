@@ -87,7 +87,7 @@ namespace ogmaneo {
         \brief Kernels
         */
         void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, bool firstStep);
+        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, bool firstIter);
         void backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli);
         void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli);
 
@@ -95,12 +95,12 @@ namespace ogmaneo {
             sc->init(pos, rng, vli);
         }
 
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputs, bool firstStep) {
-            sc->forward(pos, rng, inputs, firstStep);
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputs, bool firstIter) {
+            sc->forward(pos, rng, inputs, firstIter);
         }
 
         static void backwardKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputs, int vli) {
-            sc->forward(pos, rng, inputs, vli);
+            sc->backward(pos, rng, inputs, vli);
         }
 
         static void learnKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputs, int vli) {
@@ -123,7 +123,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.5f), _explainIters(4)
+        : _alpha(0.1f), _explainIters(4)
         {}
 
         /*!
