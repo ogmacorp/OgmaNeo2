@@ -22,7 +22,7 @@ namespace ogmaneo {
     };
     
     /*!
-    \brief A hierarchy of sparse coders and predictors, using the exponential memory structure
+    \brief A hierarchy of sparse coders and actors, using the exponential memory structure
     */
     class Hierarchy {
     public:
@@ -70,12 +70,15 @@ namespace ogmaneo {
             {}
         };
     private:
+        // Layers
         std::vector<SparseCoder> _scLayers;
         std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
+        // Histories
         std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
         std::vector<std::vector<int>> _historySizes;
 
+        // Per-layer values
         std::vector<char> _updates;
 
         std::vector<float> _rewards;
@@ -84,6 +87,7 @@ namespace ogmaneo {
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
 
+        // Input dimensions
         std::vector<Int3> _inputSizes;
 
     public:
@@ -93,7 +97,6 @@ namespace ogmaneo {
         \param inputSizes vector of input dimensions
         \param predictInputs flags for which inputs to generate predictions for
         \param layerDescs vector of LayerDesc structures, describing each layer in sequence
-        \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs,
             const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs);
@@ -102,6 +105,7 @@ namespace ogmaneo {
         \brief Simulation step/tick
         \param inputs vector of input activations
         \param learn whether learning should be enabled, defaults to true
+        \param reward reinforcement signal
         */
         void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learn = true, float reward = 0.0f);
 
@@ -142,7 +146,7 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get input sizes.
+        \brief Get input sizes
         */
         const std::vector<Int3> &getInputSizes() const {
             return _inputSizes;

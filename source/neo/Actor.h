@@ -12,8 +12,8 @@
 
 namespace ogmaneo {
     /*!
-    \brief A 2D prediction layer
-    Predicts the targets one timestep ahead of time
+    \brief A actor layer (swarm intelligence of actor columns)
+    Maps input CSDRs to actions using a swarm of actor-critic units with Boltzmann exploration
     */
     class Actor {
     public:
@@ -55,7 +55,7 @@ namespace ogmaneo {
         };
 
         /*!
-        \brief History sample
+        \brief History sample for delayed updating
         */
         struct HistorySample {
             std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
@@ -66,18 +66,18 @@ namespace ogmaneo {
 
     private:
         /*!
-        \brief Size of the hidden layer (output)
+        \brief Size of the hidden layer (output/action size)
         */
         Int3 _hiddenSize;
 
         /*!
-        \brief Current history size
+        \brief Current history size - fixed after initialization. Determines length of wait before updating value function
         */
         int _historySize;
 
         //!@{
         /*!
-        \brief Buffers
+        \brief Buffers for state
         */
         IntBuffer _hiddenCs;
 
@@ -141,10 +141,9 @@ namespace ogmaneo {
         /*!
         \brief Create an actor layer with random initialization
         \param cs is the ComputeSystem
-        \param hiddenSize size of the predictions (output)
-        \param historyCapacity maximum number of history samples
+        \param hiddenSize size of the actions (output)
+        \param historyCapacity maximum number of history samples (fixed)
         \param visibleLayerDescs are descriptors for visible layers
-        \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs,
             Int3 hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
@@ -153,8 +152,7 @@ namespace ogmaneo {
         \brief Activate the actor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
-        \param rng a random number generator
-        \param reward reinforcment signal
+        \param reward reinforcement signal
         \param learn whether to learn
         */
         void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learn);

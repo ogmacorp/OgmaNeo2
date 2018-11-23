@@ -13,6 +13,7 @@
 using namespace ogmaneo;
 
 void KernelWorkItem1::run() {
+    // Execute kernel on block (batch, 1D)
     for (int x = 0; x < _batchSize; x++) {
         int bPos = _pos + x;
 
@@ -21,6 +22,7 @@ void KernelWorkItem1::run() {
 }
 
 void KernelWorkItem2::run() {
+    // Execute kernel on block (batch, 2D)
     for (int x = 0; x < _batchSize.x; x++)
         for (int y = 0; y < _batchSize.y; y++) {
             Int2 bPos;
@@ -32,6 +34,7 @@ void KernelWorkItem2::run() {
 }
 
 void KernelWorkItem3::run() {
+    // Execute kernel on block (batch, 3D)
     for (int x = 0; x < _batchSize.x; x++)
         for (int y = 0; y < _batchSize.y; y++)
             for (int z = 0; z < _batchSize.z; z++) {
@@ -50,6 +53,7 @@ void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::m
     // Ceil divide
     int batches = (size + batchSize - 1) / batchSize;
     
+    // Create work items
     for (int x = 0; x < batches; x++) {
         std::shared_ptr<KernelWorkItem1> kwi = std::make_shared<KernelWorkItem1>();
 
@@ -68,6 +72,7 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
     // Ceil divide
     Int2 batches((size.x + batchSize.x - 1) / batchSize.x, (size.y + batchSize.y - 1) / batchSize.y);
 
+    // Create work items
     for (int x = 0; x < batches.x; x++)
         for (int y = 0; y < batches.y; y++) {
             std::shared_ptr<KernelWorkItem2> kwi = std::make_shared<KernelWorkItem2>();
@@ -85,8 +90,10 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
 void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &rng)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
+    // Ceil divide
     Int3 batches((size.x + batchSize.x - 1) / batchSize.x, (size.y + batchSize.y - 1) / batchSize.y, (size.z + batchSize.z - 1) / batchSize.z);
 
+    // Create work items
     for (int x = 0; x < batches.x; x++)
         for (int y = 0; y < batches.y; y++) 
             for (int z = 0; z < batches.z; z++) {

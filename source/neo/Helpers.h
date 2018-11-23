@@ -83,25 +83,11 @@ namespace ogmaneo {
     */
     typedef std::vector<int> IntBuffer;
     typedef std::vector<float> FloatBuffer;
-
-    /*!
-    \brief Buffer types (can be used as indices)
-    */
-    enum BufferType {
-        _front = 0, _back = 1
-    };
-
-    //!@{
-    /*!
-    \brief Double buffer types
-    */
-    typedef std::array<IntBuffer, 2> IntDoubleBuffer;
-    typedef std::array<FloatBuffer, 2> FloatDoubleBuffer;
     //!@}
 
     //!@{
     /*!
-    \brief Default kernel executors
+    \brief Default kernel executors, tied to runKernelN functions
     */
     class KernelWorkItem1 : public WorkItem {
     public:
@@ -148,7 +134,7 @@ namespace ogmaneo {
 
     //!@{
     /*!
-    \brief Kernel executors
+    \brief Kernel executors, 1-3D
     */
     void runKernel1(ComputeSystem &cs, const std::function<void(int, std::mt19937 &rng)> &func, int size, std::mt19937 &rng, int batchSize);
     void runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &rng)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize);
@@ -167,7 +153,7 @@ namespace ogmaneo {
         
     //!@{
     /*!
-    \brief Misc functions
+    \brief Bounds check functions
     */
     inline bool inBounds0(const Int2 &position, const Int2 &upperBound) {
         return position.x >= 0 && position.x < upperBound.x && position.y >= 0 && position.y < upperBound.y;
@@ -176,7 +162,12 @@ namespace ogmaneo {
     inline bool inBounds(const Int2 &position, const Int2 &lowerBound, const Int2 &upperBound) {
         return position.x >= lowerBound.x && position.x < upperBound.x && position.y >= lowerBound.y && position.y < upperBound.y;
     }
+    //!@}
 
+    //!@{
+    /*!
+    \brief Projection functions
+    */
     inline Int2 project(const Int2 &position, const Float2 &toScalars) {
         return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
     }
@@ -184,7 +175,12 @@ namespace ogmaneo {
     inline Int2 projectf(const Float2 &position, const Float2 &toScalars) {
         return Int2(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
     }
+    //!@}
 
+    //!@{
+    /*!
+    \brief High dimensional addressing functions (Nd to 1d)
+    */
     inline int address2(const Int2 &pos, int dim) {
         return pos.x + pos.y * dim;
     }
@@ -199,7 +195,12 @@ namespace ogmaneo {
 
         return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
     }
+    //!@}
 
+    //!@{
+    /*!
+    \brief Vector of shared pointers to vector of pointers
+    */
     std::vector<IntBuffer*> get(const std::vector<std::shared_ptr<IntBuffer>> &v);
     std::vector<FloatBuffer*> get(const std::vector<std::shared_ptr<FloatBuffer>> &v);
     std::vector<const IntBuffer*> constGet(const std::vector<std::shared_ptr<IntBuffer>> &v);

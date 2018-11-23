@@ -16,6 +16,7 @@ using namespace ogmaneo;
 void Hierarchy::createRandom(ComputeSystem &cs,
     const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs)
 {
+    // Create layers
     _scLayers.resize(layerDescs.size());
     _aLayers.resize(layerDescs.size());
 
@@ -26,23 +27,31 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     
     _ticksPerUpdate.resize(layerDescs.size());
 
+    // Default update state is no update
     _updates.resize(layerDescs.size(), false);
 
+    // Set reward accumulators to 0
     _rewards.resize(layerDescs.size(), 0.0f);
     _rewardCounts = _rewards;
 
+    // Cache input sizes
     _inputSizes = inputSizes;
 
+    // Determine ticks per update, first layer is always 1
     for (int l = 0; l < layerDescs.size(); l++)
         _ticksPerUpdate[l] = l == 0 ? 1 : layerDescs[l]._ticksPerUpdate; // First layer always 1
 
+    // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
+        // Histories for all input layers or just the one sparse coder (if not the first layer)
         _histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l]._temporalHorizon : layerDescs[l]._temporalHorizon);
 
         _historySizes[l].resize(_histories[l].size());
-			
+		
+        // Create sparse coder visible layer descriptors
         std::vector<SparseCoder::VisibleLayerDesc> scVisibleLayerDescs;
 
+        // If first layer
         if (l == 0) {
             scVisibleLayerDescs.resize(inputSizes.size() * layerDescs[l]._temporalHorizon);
 
@@ -55,6 +64,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 }
             }
             
+            // Initialize history buffers
 			for (int v = 0; v < _histories[l].size(); v++) {
 				int i = v / layerDescs[l]._temporalHorizon;
 
@@ -70,6 +80,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             // Predictors
             _aLayers[l].resize(inputSizes.size());
 
+            // Create actor visible layer descriptors
             std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs;
 
             if (l < layerDescs.size() - 1) {
@@ -87,6 +98,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
             }
 
+            // Create actors
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 if (inputTypes[p] == InputType::_act) {
                     _aLayers[l][p] = std::make_unique<Actor>();
@@ -113,9 +125,9 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 _historySizes[l][v] = inSize;
             }
 
-            // Predictors
             _aLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
+            // Actor visible layer descriptors
             std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs;
 
             if (l < layerDescs.size() - 1) {
@@ -133,6 +145,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
             }
 
+            // Create actors
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 _aLayers[l][p] = std::make_unique<Actor>();
 
@@ -140,6 +153,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             }
         }
 		
+        // Create the sparse coding layer
         _scLayers[l].createRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
     }
 }
@@ -147,9 +161,10 @@ void Hierarchy::createRandom(ComputeSystem &cs,
 void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learn, float reward) {
     assert(inputCs.size() == _inputSizes.size());
 
+    // First tick is always 0
     _ticks[0] = 0;
 
-    // Add to first history   
+    // Add input to first layer history   
     {
         int temporalHorizon = _histories.front().size() / _inputSizes.size();
 
@@ -175,21 +190,28 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
         }
     }
 
+    // Set all updates to no update, will be set to true if an update occurred later
     _updates.clear();
     _updates.resize(_scLayers.size(), false);
 
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
+        // Accumulate reward
         _rewards[l] += reward;
         _rewardCounts[l] += 1.0f;
 
+        // If is time for layer to tick
         if (l == 0 || _ticks[l] >= _ticksPerUpdate[l]) {
+            // Reset tick
             _ticks[l] = 0;
 
+            // Updated
             _updates[l] = true;
             
+            // Activate sparse coder
             _scLayers[l].activate(cs, constGet(_histories[l]));
 
+            // Optionally learn sparse coding layer
             if (learn)
                 _scLayers[l].learn(cs, constGet(_histories[l]));
 
@@ -217,6 +239,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
     // Backward
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
+            // Feed back is current layer state and next higher layer prediction
             std::vector<const IntBuffer*> feedBack(l < _scLayers.size() - 1 ? 2 : 1);
 
             feedBack[0] = &_scLayers[l].getHiddenCs();
@@ -227,11 +250,14 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
                 feedBack[1] = &_aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
 
+            // Determine reward from accumulators
             float r = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
 
+            // Reset accumulators
             _rewards[l] = 0.0f;
             _rewardCounts[l] = 0.0f;
 
+            // Step actor layers
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 if (_aLayers[l][p] != nullptr)
                     _aLayers[l][p]->step(cs, feedBack, r, learn);
@@ -239,5 +265,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
         }
     }
 
+    // Complete
     cs._pool.wait();
 }

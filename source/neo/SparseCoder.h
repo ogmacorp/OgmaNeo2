@@ -13,7 +13,7 @@
 namespace ogmaneo {
     /*!
     \brief Sparse Coder
-    A 2D sparse coding layer, using Columnar Binary Sparse Coding
+    A 2D sparse coding layer, using Columnar Binary Sparse Coding (computes CSDR -> compressed CSDR)
     */
     class SparseCoder {
     public:
@@ -52,10 +52,10 @@ namespace ogmaneo {
 
             FloatBuffer _visibleActivations;
 
-            Float2 _visibleToHidden;
-            Float2 _hiddenToVisible;
+            Float2 _visibleToHidden; // For projection
+            Float2 _hiddenToVisible; // For projection
 
-            Int2 _reverseRadii;
+            Int2 _reverseRadii; // Pre-computed reverse radii
             //!@}
         };
 
@@ -67,7 +67,7 @@ namespace ogmaneo {
 
         //!@{
         /*!
-        \brief Buffers
+        \brief Buffers for hidden state
         */
         IntBuffer _hiddenCs;
 
@@ -110,12 +110,12 @@ namespace ogmaneo {
 
     public:
         /*!
-        \brief Feed learning rate
+        \brief Learning rate
         */
         float _alpha;
 
         /*!
-        \brief Explaining-away iterations
+        \brief Explaining-away iterations (part of iterative sparse coding)
         */
         int _explainIters;
 
@@ -131,7 +131,6 @@ namespace ogmaneo {
         \param cs is the ComputeSystem
         \param hiddenSize size of the hidden layer
         \param visibleLayerDescs the descriptors for the visible layers
-        \param rng a random number generator
         */
         void createRandom(ComputeSystem &cs,
             Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
