@@ -342,17 +342,11 @@ void Actor::createRandom(ComputeSystem &cs,
 
         _historySamples[i]._hiddenCs = std::make_shared<IntBuffer>(numHiddenColumns);
     }
-
-    // Wait for all kernels to finish
-    cs._pool.wait();
 }
 
 void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
-
-    // Wait for all kernels to finish
-    cs._pool.wait();
 
     // Forward kernel
 #ifdef KERNEL_DEBUG
@@ -362,9 +356,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #else
     runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-    // Wait for all kernels to finish
-    cs._pool.wait();
 
     // Add sample
     if (_historySize == _historySamples.size()) {
@@ -409,9 +400,6 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #endif
 
         s._reward = reward;
-
-        // Wait for all kernels to finish
-        cs._pool.wait();
     }
 
     // Learn (if have sufficient samples)

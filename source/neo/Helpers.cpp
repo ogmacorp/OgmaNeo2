@@ -64,6 +64,8 @@ void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::m
 
         cs._pool.addItem(kwi);
     }
+
+    cs._pool.wait();
 }
 
 void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &rng)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize) {
@@ -85,6 +87,8 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
 
             cs._pool.addItem(kwi);
         }
+
+    cs._pool.wait();
 }
 
 void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &rng)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
@@ -108,6 +112,8 @@ void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 
 
                 cs._pool.addItem(kwi);
             }
+
+    cs._pool.wait();
 }
 
 void ogmaneo::fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {

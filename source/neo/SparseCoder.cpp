@@ -281,16 +281,11 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
     // Hidden activations
     _hiddenActivations = FloatBuffer(numHidden);
-
-    // Wait for init
-    cs._pool.wait();
 }
 
 void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
-
-    cs._pool.wait();
 
     // Sparse coding iterations: forward, reconstruct, repeat
     for (int it = 0; it < _explainIters; it++) {
@@ -304,8 +299,6 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*
         runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, firstIter), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
-        cs._pool.wait();
-
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
@@ -318,16 +311,10 @@ void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*
             runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
         }
-
-        // Finish
-        cs._pool.wait();
     }
 }
 
 void SparseCoder::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
-    // Finish activation (previous operation)
-    cs._pool.wait();
-
     // Final reconstruction + learning
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
