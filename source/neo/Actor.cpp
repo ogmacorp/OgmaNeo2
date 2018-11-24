@@ -122,7 +122,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 
                     sum += vl._weights[dActionPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                 }
-            }
+        }
 
         // Normalize and save value for later
         hiddenActivations[hc] = sum / std::max(1.0f, count);
