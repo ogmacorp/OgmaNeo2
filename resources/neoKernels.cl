@@ -454,7 +454,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     float delta = qTarget + gamma * qNext - qPrev;
 
     float deltaValue = alpha * delta;
-
+    
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
     int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
