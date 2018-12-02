@@ -454,6 +454,7 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     float delta = qTarget + gamma * qNext - qPrev;
 
     float deltaValue = alpha * delta;
+    float deltaAction = beta * delta;
     
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
@@ -462,29 +463,24 @@ void kernel aLearn(global const int* visibleCs, global const float* hiddenActiva
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
-    for (int c = 0; c < hiddenSize.z; c++) {
-        float deltaAction = beta * delta * (c == hiddenCPrev ? 1.0f : -1.0f);
-
-        int4 wPos;
-        wPos.xyz = (int3)(hiddenPosition, c);
-
-        for (int dx = -radius; dx <= radius; dx++)
-            for (int dy = -radius; dy <= radius; dy++) {
-                int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-                if (inBounds0(visiblePosition, visibleSize.xy)) {
-                    int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
-
-                    int2 offset = visiblePosition - fieldLowerBound;
-
-                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
-
-                    weights[address4(wPos, (int3)(hiddenSize.xy, hiddenSize.z + 1))] += deltaAction;
-                }
-            }
-    }
-
     int4 wPos;
+    wPos.xyz = (int3)(hiddenPosition, hiddenCPrev);
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(visiblePosition, visibleSize.xy)) {
+                int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
+
+                int2 offset = visiblePosition - fieldLowerBound;
+
+                wPos.w = offset.x + offset.y * diam + visibleC * diam2;
+
+                weights[address4(wPos, (int3)(hiddenSize.xy, hiddenSize.z + 1))] += deltaAction;
+            }
+        }
+            
     wPos.xyz = (int3)(hiddenPosition, hiddenSize.z);
 
     for (int dx = -radius; dx <= radius; dx++)
