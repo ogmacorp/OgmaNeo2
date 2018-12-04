@@ -21,7 +21,7 @@ void Actor::init(int pos, std::mt19937 &rng, int vli) {
 void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs) {
     // Cache address calculations (taken from addressN functions)
     int dxy = _hiddenSize.x * _hiddenSize.y;
-    int dxyz = dxy * (_hiddenSize.z + 1);
+    int dxyz = dxy * _hiddenSize.z;
 
     // ------------------------------ Action ------------------------------
 
@@ -117,7 +117,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
-    int dxyz = dxy * (_hiddenSize.z + 1);
+    int dxyz = dxy * _hiddenSize.z;
 
     int hiddenIndex = address2(pos, _hiddenSize.x);
 
@@ -398,7 +398,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && _historySize > 1) {
+    if (learnEnabled && _historySize > 2) {
         std::uniform_int_distribution<int> historyDist(1, _historySize - 1);
 
         for (int it = 0; it < _historyIters; it++) {
@@ -411,7 +411,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), q, g);
+                    learn(Int2(x, y), cs._rng, constGet(s._visibleCs), constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), s._reward);
 #else
             runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._visibleCs), constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
