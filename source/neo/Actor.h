@@ -100,7 +100,7 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float reward);
 
         static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
             a->init(pos, rng, vli);
@@ -110,8 +110,8 @@ namespace ogmaneo {
             a->forward(pos, rng, inputs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float q, float g) {
-            a->learn(pos, rng, inputsPrev, hiddenCsPrev, q, g);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputs, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float reward) {
+            a->learn(pos, rng, inputs, inputsPrev, hiddenCsPrev, reward);
         }
         //!@}
 
@@ -122,20 +122,20 @@ namespace ogmaneo {
         float _alpha;
 
         /*!
-        \brief Action learning rate
-        */
-        float _beta;
-
-        /*!
         \brief Discount factor
         */
         float _gamma;
 
         /*!
+        \brief Number of sample iterations
+        */
+        int _historyIters;
+
+        /*!
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.5f), _beta(1.0f), _gamma(0.98f)
+        : _alpha(0.1f), _gamma(0.98f), _historyIters(8)
         {}
 
         /*!
