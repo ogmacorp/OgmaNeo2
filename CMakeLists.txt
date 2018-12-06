@@ -32,7 +32,6 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
-    "${SOURCE_PATH}/neo/ThreadPool.cpp"
     "${SOURCE_PATH}/neo/Helpers.cpp"
     "${SOURCE_PATH}/neo/SparseCoder.cpp"
     "${SOURCE_PATH}/neo/Actor.cpp"

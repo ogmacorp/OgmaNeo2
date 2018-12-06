@@ -11,6 +11,7 @@
 #include "ThreadPool.h"
 
 #include <random>
+#include <future>
 #include <vector>
 #include <array>
 #include <functional>
@@ -83,53 +84,6 @@ namespace ogmaneo {
     */
     typedef std::vector<int> IntBuffer;
     typedef std::vector<float> FloatBuffer;
-    //!@}
-
-    //!@{
-    /*!
-    \brief Default kernel executors, tied to runKernelN functions
-    */
-    class KernelWorkItem1 : public WorkItem {
-    public:
-        std::function<void(int, std::mt19937 &rng)> _func;
-        int _pos;
-        int _batchSize;
-
-        std::mt19937 _rng;
-
-        KernelWorkItem1()
-        {}
-
-        void run() override;
-    };
-
-    class KernelWorkItem2 : public WorkItem {
-    public:
-        std::function<void(const Int2 &, std::mt19937 &rng)> _func;
-        Int2 _pos;
-        Int2 _batchSize;
-
-        std::mt19937 _rng;
-
-        KernelWorkItem2()
-        {}
-
-        void run() override;
-    };
-
-    class KernelWorkItem3 : public WorkItem {
-    public:
-        std::function<void(const Int3 &, std::mt19937 &rng)> _func;
-        Int3 _pos;
-        Int3 _batchSize;
-
-        std::mt19937 _rng;
-
-        KernelWorkItem3()
-        {}
-
-        void run() override;
-    };
     //!@}
 
     //!@{
