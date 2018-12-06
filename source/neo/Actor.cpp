@@ -85,9 +85,6 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
 }
 
 void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionsCs, float reward) {
-    // New Q
-    Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
-
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -98,13 +95,12 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        float sum = 0.0f;
-
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
         // Partially computed address of weight
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
+        float sum = 0.0f;
         float count = 0.0f;
     
         // For each visible layer
@@ -149,7 +145,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     int actionIndex = (*hiddenActionsCs)[hiddenIndex];
 
     // Partially computed address, this time for action
-    int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + actionIndex * dxy;
+    int dPartial = pos.x + pos.y * _hiddenSize.x + actionIndex * dxy;
 
     // As in forward, compute value and count form normalization, but based on previous (historyCapacity timesteps ago typically) visible and hidden states
     float valuePrev = 0.0f;
@@ -178,10 +174,10 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                 Int2 visiblePosition(x, y);
 
-                int visibleC = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
+                int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
                 // Final component of address
-                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
+                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
 
                 valuePrev += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
             }
@@ -221,10 +217,10 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                 Int2 visiblePosition(x, y);
 
-                int visibleC = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
+                int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
                 // Final component of address
-                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
+                int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
 
                 // Update both value and action using cached parts to compute weight addressed (equivalent to calling address4)
                 vl._weights[dPartial + az * dxyz] += alphaTdError;
@@ -330,9 +326,8 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Circular buffer swap
         HistorySample temp = _historySamples.front();
 
-        for (int i = 0; i < _historySamples.size() - 1; i++) {
+        for (int i = 0; i < _historySamples.size() - 1; i++)
             _historySamples[i] = _historySamples[i + 1];
-        }
 
         _historySamples.back() = temp;
     }
