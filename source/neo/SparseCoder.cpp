@@ -186,13 +186,10 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
                 }
             }
 
-        // Normalized activation (reconstruction)
-        float activation = sum / std::max(1.0f, count);
-
         // Weight increment
         float target = (vc == inputC ? 1.0f : 0.0f);
 
-        float delta = _alpha * (target - activation);
+        float delta = _alpha * (target - sum / std::max(1.0f, count));
 
         for (int x = iterLowerBound.x; x <= iterUpperBound.x; x++)
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {

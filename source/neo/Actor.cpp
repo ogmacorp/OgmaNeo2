@@ -89,8 +89,6 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
-    int hiddenIndex = address2(pos, _hiddenSize.x);
-
     float maxQ = -999999.0f;
 
     // For each hidden unit
@@ -142,7 +140,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     }
 
     // Selected (past) action index
-    int actionIndex = (*hiddenActionsCs)[hiddenIndex];
+    int actionIndex = (*hiddenActionsCs)[address2(pos, _hiddenSize.x)];
 
     // Partially computed address, this time for action
     int dPartial = pos.x + pos.y * _hiddenSize.x + actionIndex * dxy;

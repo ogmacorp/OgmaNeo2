@@ -28,8 +28,8 @@ void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::m
             std::mt19937 subRng(seed);
 
             for (int x = 0; x < batchSize; x++)
-                func(x, subRng);
-        }, seedDist(rng), x, itemBatchSize, func);
+                func(pos + x, subRng);
+        }, seedDist(rng), x * batchSize, itemBatchSize, func);
 
         futures.push_back(std::move(f));
     }
@@ -63,7 +63,7 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
 
                         func(bPos, subRng);
                     }
-            }, seedDist(rng), Int2(x, y), itemBatchSize, func);
+            }, seedDist(rng), Int2(x * batches.x, y * batches.y), itemBatchSize, func);
 
             futures.push_back(std::move(f));
         }
@@ -100,7 +100,7 @@ void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 
 
                                 func(bPos, subRng);
                             }
-                }, seedDist(rng), Int3(x, y, z), itemBatchSize, func);
+                }, seedDist(rng), Int3(x * batches.x, y * batches.y, z * batches.z), itemBatchSize, func);
 
                 futures.push_back(std::move(f));
             }
