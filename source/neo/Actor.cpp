@@ -13,30 +13,29 @@ using namespace ogmaneo;
 // Kernels
 void Actor::init(int pos, std::mt19937 &rng, int vli) {
     // Randomly initialize weights in range
-	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
+	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs) {
+void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
     // Cache address calculations (taken from addressN functions)
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
     // ------------------------------ Action ------------------------------
 
-    std::vector<float> hiddenActivations(_hiddenSize.z);
+    int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        float sum = 0.0f;
-
         Int3 hiddenPosition(pos.x, pos.y, hc);
 
         // Partially computed address of weight
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
+        float sum = 0.0f;
         float count = 0.0f;
     
         // For each visible layer
@@ -62,7 +61,7 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
                 for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                     Int2 visiblePosition(x, y);
 
-                    int visibleC = (*inputs[vli])[address2(visiblePosition, vld._size.x)];
+                    int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
 
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
@@ -74,44 +73,18 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
         }
 
         // Normalize and save value for later
-        hiddenActivations[hc] = sum / std::max(1.0f, count);
+        float activation = sum / std::max(1.0f, count);
 
-        // Determine highest value
-        maxActivation = std::max(maxActivation, hiddenActivations[hc]);
-    }
-
-    // Boltzmann exploration with roulette wheel
-    float total = 0.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        hiddenActivations[hc] = std::exp(hiddenActivations[hc] - maxActivation); // Subtract max for numerical stability
-        total += hiddenActivations[hc];
-    }
-
-    // Random cusp for roulette wheel selection
-    std::uniform_real_distribution<float> cuspDist(0.0f, total);
-
-    float cusp = cuspDist(rng);
-
-    float sumSoFar = 0.0f;
-    int selectIndex = 0;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        sumSoFar += hiddenActivations[hc];
-
-        if (sumSoFar >= cusp) {
-            selectIndex = hc;
-            break;
+        if (activation > maxActivation) {
+            maxActivation = activation;
+            maxIndex = hc;
         }
     }
 
-    // Selected action output
-    int hiddenIndex = address2(pos, _hiddenSize.x);
-
-    _hiddenCs[hiddenIndex] = selectIndex;
+    _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float reward) {
+void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionsCs, float reward) {
     // New Q
     Int3 hiddenPosition(pos.x, pos.y, _hiddenSize.z);
 
@@ -157,7 +130,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
                 for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                     Int2 visiblePosition(x, y);
 
-                    int visibleC = (*inputs[vli])[address2(visiblePosition, vld._size.x)];
+                    int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
 
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
@@ -173,7 +146,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     }
 
     // Selected (past) action index
-    int actionIndex = (*hiddenCsPrev)[hiddenIndex];
+    int actionIndex = (*hiddenActionsCs)[hiddenIndex];
 
     // Partially computed address, this time for action
     int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + actionIndex * dxy;
@@ -205,7 +178,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                 Int2 visiblePosition(x, y);
 
-                int visibleC = (*inputsPrev[vli])[address2(visiblePosition, vld._size.x)];
+                int visibleC = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
@@ -221,7 +194,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
 
     // Temporal difference error
     float tdError = reward + _gamma * maxQ - valuePrev;
-   
+
     // Deltas for value and action
     float alphaTdError = _alpha * tdError;
 
@@ -248,7 +221,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                 Int2 visiblePosition(x, y);
 
-                int visibleC = (*inputsPrev[vli])[address2(visiblePosition, vld._size.x)];
+                int visibleC = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
 
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
@@ -335,11 +308,11 @@ void Actor::createRandom(ComputeSystem &cs,
             _historySamples[i]._visibleCs[vli] = std::make_shared<IntBuffer>(numVisibleColumns);
         }
 
-        _historySamples[i]._hiddenCs = std::make_shared<IntBuffer>(numHiddenColumns);
+        _historySamples[i]._hiddenActionsCs = std::make_shared<IntBuffer>(numHiddenColumns);
     }
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled) {
+void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionsCs, float reward, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -391,7 +364,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         for (int x = 0; x < numHiddenColumns; x++)
             copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
 #else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, s._hiddenCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenActionsCs, s._hiddenActionsCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
         s._reward = reward;
@@ -411,9 +384,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, constGet(s._visibleCs), constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), s._reward);
+                    learn(Int2(x, y), cs._rng, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenActionsCs.get(), s._reward);
 #else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._visibleCs), constGet(sPrev._visibleCs), sPrev._hiddenCs.get(), s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenActionsCs.get(), s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
         }
     }

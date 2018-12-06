@@ -59,7 +59,7 @@ namespace ogmaneo {
         */
         struct HistorySample {
             std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
-            std::shared_ptr<IntBuffer> _hiddenCs;
+            std::shared_ptr<IntBuffer> _hiddenActionsCs;
         
             float _reward;
         };
@@ -99,19 +99,19 @@ namespace ogmaneo {
         \brief Kernels
         */
         void init(int pos, std::mt19937 &rng, int vli);
-        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float reward);
+        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionsCs, float reward);
 
         static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
             a->init(pos, rng, vli);
         }
 
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputs) {
-            a->forward(pos, rng, inputs);
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs) {
+            a->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputs, const std::vector<const IntBuffer*> &inputsPrev, const IntBuffer* hiddenCsPrev, float reward) {
-            a->learn(pos, rng, inputs, inputsPrev, hiddenCsPrev, reward);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionsCs, float reward) {
+            a->learn(pos, rng, inputCs, inputCsPrev, hiddenActionsCs, reward);
         }
         //!@}
 
@@ -152,10 +152,11 @@ namespace ogmaneo {
         \brief Activate the actor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
+        \param hiddenActionsCs the previously taken actions
         \param reward reinforcement signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, float reward, bool learnEnabled);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionsCs, float reward, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers
