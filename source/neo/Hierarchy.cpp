@@ -249,7 +249,7 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
                 runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), last.get()), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
 #endif
 
-                _histories[lNext].front() = _histories[lNext].back();
+                _histories[lNext].front() = last;
 
                 _ticks[lNext]++;
             }
