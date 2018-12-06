@@ -18,10 +18,10 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# if(CMAKE_BUILD_TYPE STREQUAL Debug)
-#     message("Debug mode, enabling easier kernel debugging")
-#     add_compile_definitions(KERNEL_DEBUG)
-# endif()
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+    message("Debug mode, enabling easier kernel debugging")
+    add_compile_definitions(KERNEL_DEBUG)
+endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
