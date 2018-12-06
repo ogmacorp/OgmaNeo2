@@ -357,7 +357,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Copy hidden Cs
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, &_hiddenCs, s._hiddenCs.get());
+            copyInt(x, cs._rng, hiddenActionsCs, s._hiddenActionsCs.get());
 #else
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenActionsCs, s._hiddenActionsCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
