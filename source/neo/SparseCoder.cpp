@@ -18,7 +18,7 @@ void SparseCoder::init(int pos, std::mt19937 &rng, int vli) {
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, bool firstIter) {
+void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, bool firstIter) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -61,7 +61,7 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
 
                     int visibleIndex = address2(visiblePosition, vld._size.x);
 
-                    int visibleC = (*inputs[vli])[visibleIndex];
+                    int visibleC = (*inputCs[vli])[visibleIndex];
 
                     // Complete the partial address with final value needed
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
@@ -90,13 +90,13 @@ void SparseCoder::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli) {
+void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
     int visibleIndex = address2(pos, vld._size.x);
 
-    Int3 visiblePosition(pos.x, pos.y, (*inputs[vli])[visibleIndex]);
+    Int3 visiblePosition(pos.x, pos.y, (*inputCs[vli])[visibleIndex]);
 
     // Project to hidden
     Int2 hiddenPositionCenter = project(pos, vl._visibleToHidden);
@@ -140,13 +140,13 @@ void SparseCoder::backward(const Int2 &pos, std::mt19937 &rng, const std::vector
     vl._visibleActivations[visibleIndex] = sum / std::max(1.0f, count);
 }
 
-void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputs, int vli) {
+void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli) {
     VisibleLayer &vl = _visibleLayers[vli];
     VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
     int visibleIndex = address2(pos, vld._size.x);
 
-    int inputC = (*inputs[vli])[visibleIndex];
+    int inputC = (*inputCs[vli])[visibleIndex];
 
     // Project to hidden
     Int2 hiddenPositionCenter = project(pos, vl._visibleToHidden);
