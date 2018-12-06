@@ -41,10 +41,8 @@ namespace ogmaneo {
 		\brief Initialize the system
 		\param numWorkers number of thread pool worker threads
 		*/
-        ComputeSystem(size_t numWorkers)
-		: _batchSize1(256), _batchSize2(1, 1), _batchSize3(2, 2, 2)
-		{
-			_pool.create(numWorkers);
-		}
+        ComputeSystem(int numWorkers)
+		: _pool(numWorkers), _batchSize1(256), _batchSize2(1, 1), _batchSize3(2, 2, 2)
+		{}
     };
 }

@@ -12,108 +12,102 @@
 
 using namespace ogmaneo;
 
-void KernelWorkItem1::run() {
-    // Execute kernel on block (batch, 1D)
-    for (int x = 0; x < _batchSize; x++) {
-        int bPos = _pos + x;
-
-        _func(bPos, _rng);
-    }
-}
-
-void KernelWorkItem2::run() {
-    // Execute kernel on block (batch, 2D)
-    for (int x = 0; x < _batchSize.x; x++)
-        for (int y = 0; y < _batchSize.y; y++) {
-            Int2 bPos;
-            bPos.x = _pos.x + x;
-            bPos.y = _pos.y + y;
-
-            _func(bPos, _rng);
-        }
-}
-
-void KernelWorkItem3::run() {
-    // Execute kernel on block (batch, 3D)
-    for (int x = 0; x < _batchSize.x; x++)
-        for (int y = 0; y < _batchSize.y; y++)
-            for (int z = 0; z < _batchSize.z; z++) {
-                Int3 bPos;
-                bPos.x = _pos.x + x;
-                bPos.y = _pos.y + y;
-                bPos.z = _pos.z + z;
-
-                _func(bPos, _rng);
-            }
-}
-
-void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::mt19937 &rng)> &func, int size, std::mt19937 &rng, int batchSize) {
+void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::mt19937 &)> &func, int size, std::mt19937 &rng, int batchSize) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
     int batches = (size + batchSize - 1) / batchSize;
-    
+
+    std::vector<std::future<void>> futures;
+
     // Create work items
     for (int x = 0; x < batches; x++) {
-        std::shared_ptr<KernelWorkItem1> kwi = std::make_shared<KernelWorkItem1>();
+        int itemBatchSize = std::min(size - x * batchSize, batchSize);
 
-        kwi->_func = func;
-        kwi->_pos = x * batchSize;
-        kwi->_batchSize = std::min(size - x * batchSize, batchSize);
-        kwi->_rng.seed(seedDist(rng));
+        std::future<void> f = cs._pool.enqueue([](int seed, int pos, int batchSize, const std::function<void(int, std::mt19937 &)> &func) {
+            std::mt19937 subRng(seed);
 
-        cs._pool.addItem(kwi);
+            for (int x = 0; x < batchSize; x++)
+                func(x, subRng);
+        }, seedDist(rng), x, itemBatchSize, func);
+
+        futures.push_back(std::move(f));
     }
 
-    cs._pool.wait();
+    // Wait
+    for (int i = 0 ; i < futures.size(); i++)
+        futures[i].get();
 }
 
-void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &rng)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize) {
+void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
     Int2 batches((size.x + batchSize.x - 1) / batchSize.x, (size.y + batchSize.y - 1) / batchSize.y);
 
+    std::vector<std::future<void>> futures;
+
     // Create work items
     for (int x = 0; x < batches.x; x++)
         for (int y = 0; y < batches.y; y++) {
-            std::shared_ptr<KernelWorkItem2> kwi = std::make_shared<KernelWorkItem2>();
+            Int2 itemBatchSize = Int2(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y));
 
-            kwi->_func = func;
-            kwi->_pos.x = x * batchSize.x;
-            kwi->_pos.y = y * batchSize.y;
-            kwi->_batchSize = Int2(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y));
-            kwi->_rng.seed(seedDist(rng));
+            std::future<void> f = cs._pool.enqueue([](int seed, const Int2 &pos, const Int2 &batchSize, const std::function<void(const Int2 &, std::mt19937 &)> &func) {
+                std::mt19937 subRng(seed);
 
-            cs._pool.addItem(kwi);
+                for (int x = 0; x < batchSize.x; x++)
+                    for (int y = 0; y < batchSize.y; y++) {
+                        Int2 bPos;
+                        bPos.x = pos.x + x;
+                        bPos.y = pos.y + y;
+
+                        func(bPos, subRng);
+                    }
+            }, seedDist(rng), Int2(x, y), itemBatchSize, func);
+
+            futures.push_back(std::move(f));
         }
 
-    cs._pool.wait();
+    // Wait
+    for (int i = 0 ; i < futures.size(); i++)
+        futures[i].get();
 }
 
-void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &rng)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
+void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
     std::uniform_int_distribution<int> seedDist(0, 999999);
 
     // Ceil divide
     Int3 batches((size.x + batchSize.x - 1) / batchSize.x, (size.y + batchSize.y - 1) / batchSize.y, (size.z + batchSize.z - 1) / batchSize.z);
 
+    std::vector<std::future<void>> futures;
+
     // Create work items
     for (int x = 0; x < batches.x; x++)
         for (int y = 0; y < batches.y; y++) 
             for (int z = 0; z < batches.z; z++) {
-                std::shared_ptr<KernelWorkItem3> kwi = std::make_shared<KernelWorkItem3>();
+                Int3 itemBatchSize = Int3(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y), std::min(size.z - z * batchSize.z, batchSize.z));
 
-                kwi->_func = func;
-                kwi->_pos.x = x * batchSize.x;
-                kwi->_pos.y = y * batchSize.y;
-                kwi->_pos.z = z * batchSize.z;
-                kwi->_batchSize = Int3(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y), std::min(size.z - z * batchSize.z, batchSize.z));
-                kwi->_rng.seed(seedDist(rng));
+                std::future<void> f = cs._pool.enqueue([](int seed, const Int3 &pos, const Int3 &batchSize, const std::function<void(const Int3 &, std::mt19937 &)> &func) {
+                    std::mt19937 subRng(seed);
 
-                cs._pool.addItem(kwi);
+                    for (int x = 0; x < batchSize.x; x++)
+                        for (int y = 0; y < batchSize.x; y++)
+                            for (int z = 0; z < batchSize.z; z++) {
+                                Int3 bPos;
+                                bPos.x = pos.x + x;
+                                bPos.y = pos.y + y;
+                                bPos.z = pos.z + z;
+
+                                func(bPos, subRng);
+                            }
+                }, seedDist(rng), Int3(x, y, z), itemBatchSize, func);
+
+                futures.push_back(std::move(f));
             }
 
-    cs._pool.wait();
+    // Wait
+    for (int i = 0 ; i < futures.size(); i++)
+        futures[i].get();
 }
 
 void ogmaneo::fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {
