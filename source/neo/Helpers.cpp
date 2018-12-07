@@ -23,8 +23,8 @@ void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::m
     // Create work items
     for (int x = 0; x < batches; x++) {
         int itemBatchSize = std::min(size - x * batchSize, batchSize);
-
-        std::future<void> f = cs._pool.enqueue([](int seed, int pos, int batchSize, const std::function<void(int, std::mt19937 &)> &func) {
+        
+        std::future<void> f = cs._pool.push([](int id, int seed, int pos, int batchSize, const std::function<void(int, std::mt19937 &)> &func) {
             std::mt19937 subRng(seed);
 
             for (int x = 0; x < batchSize; x++)
@@ -36,7 +36,7 @@ void ogmaneo::runKernel1(ComputeSystem &cs, const std::function<void(int, std::m
 
     // Wait
     for (int i = 0 ; i < futures.size(); i++)
-        futures[i].get();
+        futures[i].wait();
 }
 
 void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 &, std::mt19937 &)> &func, const Int2 &size, std::mt19937 &rng, const Int2 &batchSize) {
@@ -52,7 +52,7 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
         for (int y = 0; y < batches.y; y++) {
             Int2 itemBatchSize = Int2(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y));
 
-            std::future<void> f = cs._pool.enqueue([](int seed, const Int2 &pos, const Int2 &batchSize, const std::function<void(const Int2 &, std::mt19937 &)> &func) {
+            std::future<void> f = cs._pool.push([](int id, int seed, const Int2 &pos, const Int2 &batchSize, const std::function<void(const Int2 &, std::mt19937 &)> &func) {
                 std::mt19937 subRng(seed);
 
                 for (int x = 0; x < batchSize.x; x++)
@@ -70,7 +70,7 @@ void ogmaneo::runKernel2(ComputeSystem &cs, const std::function<void(const Int2 
 
     // Wait
     for (int i = 0 ; i < futures.size(); i++)
-        futures[i].get();
+        futures[i].wait();
 }
 
 void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 &, std::mt19937 &)> &func, const Int3 &size, std::mt19937 &rng, const Int3 &batchSize) {
@@ -87,11 +87,11 @@ void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 
             for (int z = 0; z < batches.z; z++) {
                 Int3 itemBatchSize = Int3(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y), std::min(size.z - z * batchSize.z, batchSize.z));
 
-                std::future<void> f = cs._pool.enqueue([](int seed, const Int3 &pos, const Int3 &batchSize, const std::function<void(const Int3 &, std::mt19937 &)> &func) {
+                std::future<void> f = cs._pool.push([](int id, int seed, const Int3 &pos, const Int3 &batchSize, const std::function<void(const Int3 &, std::mt19937 &)> &func) {
                     std::mt19937 subRng(seed);
 
                     for (int x = 0; x < batchSize.x; x++)
-                        for (int y = 0; y < batchSize.x; y++)
+                        for (int y = 0; y < batchSize.y; y++)
                             for (int z = 0; z < batchSize.z; z++) {
                                 Int3 bPos;
                                 bPos.x = pos.x + x;
@@ -107,7 +107,7 @@ void ogmaneo::runKernel3(ComputeSystem &cs, const std::function<void(const Int3 
 
     // Wait
     for (int i = 0 ; i < futures.size(); i++)
-        futures[i].get();
+        futures[i].wait();
 }
 
 void ogmaneo::fillInt(int pos, std::mt19937 &rng, IntBuffer* buffer, int fillValue) {

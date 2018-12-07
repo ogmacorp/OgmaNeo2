@@ -172,7 +172,7 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
 
                 // Bounds of receptive field, clamped to input size
                 Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+                Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
@@ -200,7 +200,7 @@ void SparseCoder::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<co
 
                 // Bounds of receptive field, clamped to input size
                 Int2 fieldLowerBound(visibleFieldCenter.x - vld._radius, visibleFieldCenter.y - vld._radius);
-                Int2 fieldUpperBound(visibleFieldCenter.y + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
+                Int2 fieldUpperBound(visibleFieldCenter.x + vld._radius + 1, visibleFieldCenter.y + vld._radius + 1);
 
                 // Check for containment
                 if (inBounds(pos, fieldLowerBound, fieldUpperBound)) {
