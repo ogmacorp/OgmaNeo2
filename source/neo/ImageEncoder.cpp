@@ -128,13 +128,13 @@ void ImageEncoder::createRandom(ComputeSystem &cs,
 #endif
 
         // Reconstruction buffer
-        vl._visibleActivationsPrev = FloatBuffer(numVisibleColumns);
+        vl._visibleActivationsPrev = FloatBuffer(numVisible);
 
 #ifdef KERNEL_DEBUG
-        for (int x = 0; x < numVisibleColumns; x++)
+        for (int x = 0; x < numVisible; x++)
             fillFloat(x, cs._rng, &vl._visibleActivationsPrev, 0.0f);
 #else
-        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._visibleActivationsPrev, 0.0f), numVisibleColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &vl._visibleActivationsPrev, 0.0f), numVisible, cs._rng, cs._batchSize1);
 #endif
     }
 
