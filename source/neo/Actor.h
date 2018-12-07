@@ -59,7 +59,7 @@ namespace ogmaneo {
         */
         struct HistorySample {
             std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
-            std::shared_ptr<IntBuffer> _hiddenActionsCs;
+            std::shared_ptr<IntBuffer> _hiddenActionCs;
         
             float _reward;
         };
@@ -100,7 +100,7 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionsCs, float reward);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward);
 
         static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
             a->init(pos, rng, vli);
@@ -110,8 +110,8 @@ namespace ogmaneo {
             a->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionsCs, float reward) {
-            a->learn(pos, rng, inputCs, inputCsPrev, hiddenActionsCs, reward);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward) {
+            a->learn(pos, rng, inputCs, inputCsPrev, hiddenActionCs, reward);
         }
         //!@}
 
@@ -152,11 +152,11 @@ namespace ogmaneo {
         \brief Activate the actor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
-        \param hiddenActionsCs the previously taken actions
+        \param hiddenActionCs the previously taken actions
         \param reward reinforcement signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionsCs, float reward, bool learnEnabled);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionCs, float reward, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers
