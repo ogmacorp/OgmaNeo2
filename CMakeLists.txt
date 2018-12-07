@@ -36,6 +36,7 @@ set(SOURCES
     "${SOURCE_PATH}/neo/SparseCoder.cpp"
     "${SOURCE_PATH}/neo/Actor.cpp"
     "${SOURCE_PATH}/neo/Hierarchy.cpp"
+    "${SOURCE_PATH}/neo/ImageEncoder.cpp"
 )
 
 add_library(OgmaNeo ${SOURCES})
