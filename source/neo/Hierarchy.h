@@ -125,7 +125,7 @@ namespace ogmaneo {
         /*!
         \brief Get hidden layer state
         */
-        const IntBuffer &getPredictionCs(int l) const {
+        const IntBuffer &getHiddenCs(int l) const {
             return _scLayers[l].getHiddenCs();
         }
 
