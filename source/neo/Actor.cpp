@@ -277,16 +277,6 @@ void Actor::createRandom(ComputeSystem &cs,
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
-    // Hidden values
-    _hiddenValues = FloatBuffer(numHiddenColumns);
-
-#ifdef KERNEL_DEBUG
-    for (int x = 0; x < numHiddenColumns; x++)
-        fillFloat(x, cs._rng, &_hiddenValues, 0.0f);
-#else
-    runKernel1(cs, std::bind(fillFloat, std::placeholders::_1, std::placeholders::_2, &_hiddenValues, 0.0f), numHiddenColumns, cs._rng, cs._batchSize1);
-#endif
-
     // Create (pre-allocated) history samples
     _historySize = 0;
     _historySamples.resize(historyCapacity);

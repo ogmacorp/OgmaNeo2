@@ -81,8 +81,6 @@ namespace ogmaneo {
         */
         IntBuffer _hiddenCs;
 
-        FloatBuffer _hiddenValues;
-
         std::vector<HistorySample> _historySamples;
         //!@}
 
