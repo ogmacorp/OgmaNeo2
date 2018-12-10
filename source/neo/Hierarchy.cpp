@@ -252,22 +252,22 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBack(2);
+            std::vector<const IntBuffer*> feedBackCs(2);
 
-            feedBack[0] = &_scLayers[l].getHiddenCs();
+            feedBackCs[0] = &_scLayers[l].getHiddenCs();
 
             if (l < _scLayers.size() - 1) {
                 assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBack[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBackCs[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
             else
-                feedBack[1] = goalCs;
+                feedBackCs[1] = goalCs;
 
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr)
-                    _pLayers[l][p]->step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p].get(), learnEnabled);
+                    _pLayers[l][p]->step(cs, feedBackCs, l == 0 ? inputCs[p] : _histories[l][p].get(), learnEnabled);
             }
         }
     }
