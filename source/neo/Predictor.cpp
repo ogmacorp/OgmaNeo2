@@ -91,8 +91,6 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
 
     float maxQ = -999999.0f;
 
-    float reward = 0.0f;
-
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         Int3 hiddenPosition(pos.x, pos.y, hc);
