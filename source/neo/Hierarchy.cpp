@@ -81,23 +81,13 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             // Predictors
             _pLayers[l].resize(inputSizes.size());
 
-            // Create actor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs;
+            // Predictor visible layer descriptors
+            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs(2);
 
-            if (l < layerDescs.size() - 1) {
-                aVisibleLayerDescs.resize(2);
+            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-                aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-
-                aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
-            }
-            else {
-                aVisibleLayerDescs.resize(1);
-
-                aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-            }
+            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
@@ -134,22 +124,12 @@ void Hierarchy::createRandom(ComputeSystem &cs,
             _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
             // Predictor visible layer descriptors
-            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs;
+            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs(2);
 
-            if (l < layerDescs.size() - 1) {
-                aVisibleLayerDescs.resize(2);
+            aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
+            aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-                aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-
-                aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
-            }
-            else {
-                aVisibleLayerDescs.resize(1);
-                
-                aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
-            }
+            aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {

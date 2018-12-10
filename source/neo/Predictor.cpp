@@ -177,7 +177,8 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
 
                 int visibleCPrev = (*inputCsPrev[vli])[visibleIndex];
 
-                reward += ((*inputCs[0])[visibleIndex] == (*inputCsPrev[1])[visibleIndex] ? 1.0f : 0.0f);
+                if (vli == 0)
+                    reward += (((*inputCs[0])[visibleIndex]) == ((*inputCsPrev[1])[visibleIndex]) ? 1.0f : 0.0f);
 
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
