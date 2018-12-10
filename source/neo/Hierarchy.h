@@ -123,13 +123,6 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get hidden layer state
-        */
-        const IntBuffer &getHiddenCs(int l) const {
-            return _scLayers[l].getHiddenCs();
-        }
-
-        /*!
         \brief Whether this layer received on update this timestep
         */
         bool getUpdate(int l) const {
