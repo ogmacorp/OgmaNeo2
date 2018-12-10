@@ -15,7 +15,7 @@ namespace ogmaneo {
     \brief A actor layer (swarm intelligence of actor columns)
     Maps input CSDRs to actions using a swarm of actor-critic units with Boltzmann exploration
     */
-    class Actor {
+    class Predictor {
     public:
         /*!
         \brief Visible layer descriptor
@@ -59,9 +59,7 @@ namespace ogmaneo {
         */
         struct HistorySample {
             std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
-            std::shared_ptr<IntBuffer> _hiddenActionCs;
-        
-            float _reward;
+            std::shared_ptr<IntBuffer> _hiddenPredictionCsPrev;
         };
 
     private:
@@ -98,18 +96,18 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenPredictionCsPrev);
 
-        static void initKernel(int pos, std::mt19937 &rng, Actor* a, int vli) {
+        static void initKernel(int pos, std::mt19937 &rng, Predictor* a, int vli) {
             a->init(pos, rng, vli);
         }
 
-        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs) {
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, Predictor* a, const std::vector<const IntBuffer*> &inputCs) {
             a->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Actor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward) {
-            a->learn(pos, rng, inputCs, inputCsPrev, hiddenActionCs, reward);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Predictor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenPredictionCsPrev) {
+            a->learn(pos, rng, inputCs, inputCsPrev, hiddenPredictionCsPrev);
         }
         //!@}
 
@@ -132,7 +130,7 @@ namespace ogmaneo {
         /*!
         \brief Initialize defaults
         */
-        Actor()
+        Predictor()
         : _alpha(0.01f), _gamma(0.9f), _historyIters(8)
         {}
 
@@ -144,17 +142,16 @@ namespace ogmaneo {
         \param visibleLayerDescs are descriptors for visible layers
         */
         void createRandom(ComputeSystem &cs,
-            const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
+            const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs); // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
 
         /*!
         \brief Activate the actor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
-        \param hiddenActionCs the previously taken actions
-        \param reward reinforcement signal
+        \param hiddenPredictionCsPrev the previously taken actions
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionCs, float reward, bool learnEnabled);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenPredictionCsPrev, bool learnEnabled);
 
         /*!
         \brief Get number of visible layers

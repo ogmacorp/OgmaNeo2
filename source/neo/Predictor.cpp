@@ -6,19 +6,19 @@
 //  in the OGMANEO_LICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
-#include "Actor.h"
+#include "Predictor.h"
 
 using namespace ogmaneo;
 
 // Kernels
-void Actor::init(int pos, std::mt19937 &rng, int vli) {
+void Predictor::init(int pos, std::mt19937 &rng, int vli) {
     // Randomly initialize weights in range
 	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
 
-void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
+void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs) {
     // Cache address calculations (taken from addressN functions)
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
@@ -84,12 +84,14 @@ void Actor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const 
     _hiddenCs[address2(pos, _hiddenSize.x)] = maxIndex;
 }
 
-void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenActionCs, float reward) {
+void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenPredictionCsPrev) {
     // Cache address calculations
     int dxy = _hiddenSize.x * _hiddenSize.y;
     int dxyz = dxy * _hiddenSize.z;
 
     float maxQ = -999999.0f;
+
+    float reward = 0.0f;
 
     // For each hidden unit
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
@@ -140,13 +142,14 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     }
 
     // Selected (past) action index
-    int actionIndex = (*hiddenActionCs)[address2(pos, _hiddenSize.x)];
+    int actionIndex = (*hiddenPredictionCsPrev)[address2(pos, _hiddenSize.x)];
 
     // Partially computed address, this time for action
     int dPartial = pos.x + pos.y * _hiddenSize.x + actionIndex * dxy;
 
     // As in forward, compute value and count form normalization, but based on previous (historyCapacity timesteps ago typically) visible and hidden states
     float valuePrev = 0.0f;
+    float reward = 0.0f;
     float count = 0.0f;
 
     // For each visible layer
@@ -172,7 +175,11 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
             for (int y = iterLowerBound.y; y <= iterUpperBound.y; y++) {
                 Int2 visiblePosition(x, y);
 
-                int visibleCPrev = (*inputCsPrev[vli])[address2(visiblePosition, vld._size.x)];
+                int visibleIndex = address2(visiblePosition, vld._size.x);
+
+                int visibleCPrev = (*inputCsPrev[vli])[visibleIndex];
+
+                reward += ((*inputCs[0])[visibleIndex] == (*inputCsPrev[1])[visibleIndex] ? 1.0f : 0.0f);
 
                 // Final component of address
                 int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleCPrev * diam2;
@@ -185,6 +192,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     }
 
     valuePrev /= std::max(1.0f, count);
+    reward /= std::max(1.0f, count);
 
     // Temporal difference error
     float tdError = reward + _gamma * maxQ - valuePrev;
@@ -226,7 +234,7 @@ void Actor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const In
     }
 }
 
-void Actor::createRandom(ComputeSystem &cs,
+void Predictor::createRandom(ComputeSystem &cs,
     const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs)
 {
     _visibleLayerDescs = visibleLayerDescs;
@@ -263,7 +271,7 @@ void Actor::createRandom(ComputeSystem &cs,
         for (int x = 0; x < weightsSize; x++)
             init(x, cs._rng, vli);
 #else
-        runKernel1(cs, std::bind(Actor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(Predictor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
 #endif
     }
 
@@ -292,11 +300,11 @@ void Actor::createRandom(ComputeSystem &cs,
             _historySamples[i]._visibleCs[vli] = std::make_shared<IntBuffer>(numVisibleColumns);
         }
 
-        _historySamples[i]._hiddenActionCs = std::make_shared<IntBuffer>(numHiddenColumns);
+        _historySamples[i]._hiddenPredictionCsPrev = std::make_shared<IntBuffer>(numHiddenColumns);
     }
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenActionCs, float reward, bool learnEnabled) {
+void Predictor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenPredictionCsPrev, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -306,7 +314,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         for (int y = 0; y < _hiddenSize.y; y++)
             forward(Int2(x, y), cs._rng, visibleCs);
 #else
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     // Add sample
@@ -345,12 +353,10 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
         // Copy hidden Cs
 #ifdef KERNEL_DEBUG
         for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs._rng, hiddenActionCs, s._hiddenActionCs.get());
+            copyInt(x, cs._rng, hiddenPredictionCsPrev, s._hiddenPredictionCsPrev.get());
 #else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenActionCs, s._hiddenActionCs.get()), numHiddenColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenPredictionCsPrev, s._hiddenPredictionCsPrev.get()), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
-
-        s._reward = reward;
     }
 
     // Learn (if have sufficient samples)
@@ -367,9 +373,9 @@ void Actor::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visible
 #ifdef KERNEL_DEBUG
             for (int x = 0; x < _hiddenSize.x; x++)
                 for (int y = 0; y < _hiddenSize.y; y++)
-                    learn(Int2(x, y), cs._rng, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenActionCs.get(), s._reward);
+                    learn(Int2(x, y), cs._rng, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenPredictionCsPrev.get());
 #else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenActionCs.get(), s._reward), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(s._visibleCs), constGet(sPrev._visibleCs), s._hiddenPredictionCsPrev.get()), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
         }
     }

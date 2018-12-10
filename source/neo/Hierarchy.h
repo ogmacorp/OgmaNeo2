@@ -9,7 +9,7 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Actor.h"
+#include "Predictor.h"
 
 #include <memory>
 
@@ -18,7 +18,7 @@ namespace ogmaneo {
     \brief Enum describing the type of operation performed by an input layer
     */
     enum InputType {
-        _none, _act
+        _none = 0, _predict = 1
     };
     
     /*!
@@ -41,7 +41,7 @@ namespace ogmaneo {
             \brief Radii of the sparse coder and predictor/actor
             */
             int _scRadius;
-            int _aRadius;
+            int _pRadius;
             //!@}
 
             /*!
@@ -64,7 +64,7 @@ namespace ogmaneo {
             */
             LayerDesc()
                 : _hiddenSize(4, 4, 16),
-                _scRadius(2), _aRadius(2),
+                _scRadius(2), _pRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2),
                 _historyCapacity(64)
             {}
@@ -72,7 +72,7 @@ namespace ogmaneo {
     private:
         // Layers
         std::vector<SparseCoder> _scLayers;
-        std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
+        std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
 
         // Histories
         std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -80,9 +80,6 @@ namespace ogmaneo {
 
         // Per-layer values
         std::vector<char> _updates;
-
-        std::vector<float> _rewards;
-        std::vector<float> _rewardCounts;
 
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
@@ -103,11 +100,12 @@ namespace ogmaneo {
 
         /*!
         \brief Simulation step/tick
+        \param cs is the ComputeSystem
         \param inputs vector of input activations
+        \param goalCs top down goal
         \param learnEnabled whether learning should be enabled, defaults to true
-        \param reward reinforcement signal
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled = true, float reward = 0.0f);
+        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* goalCs, bool learnEnabled = true);
 
         /*!
         \brief Get the number of (hidden) layers
@@ -120,8 +118,8 @@ namespace ogmaneo {
         \brief Get the actor output
         \param i the index of the input to retrieve
         */
-        const IntBuffer &getActionCs(int i) const {
-            return _aLayers.front()[i]->getHiddenCs();
+        const IntBuffer &getPredictionCs(int i) const {
+            return _pLayers.front()[i]->getHiddenCs();
         }
 
         /*!
@@ -162,8 +160,8 @@ namespace ogmaneo {
         /*!
         \brief Retrieve predictor layer(s)
         */
-        std::vector<std::unique_ptr<Actor>> &getALayer(int l) {
-            return _aLayers[l];
+        std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
+            return _pLayers[l];
         }
     };
 }

@@ -18,7 +18,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
 {
     // Create layers
     _scLayers.resize(layerDescs.size());
-    _aLayers.resize(layerDescs.size());
+    _pLayers.resize(layerDescs.size());
 
     _ticks.assign(layerDescs.size(), 0);
 
@@ -29,10 +29,6 @@ void Hierarchy::createRandom(ComputeSystem &cs,
 
     // Default update state is no update
     _updates.resize(layerDescs.size(), false);
-
-    // Set reward accumulators to 0
-    _rewards.resize(layerDescs.size(), 0.0f);
-    _rewardCounts = _rewards;
 
     // Cache input sizes
     _inputSizes = inputSizes;
@@ -83,16 +79,16 @@ void Hierarchy::createRandom(ComputeSystem &cs,
 			}
 
             // Predictors
-            _aLayers[l].resize(inputSizes.size());
+            _pLayers[l].resize(inputSizes.size());
 
             // Create actor visible layer descriptors
-            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs;
+            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs;
 
             if (l < layerDescs.size() - 1) {
                 aVisibleLayerDescs.resize(2);
 
                 aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
+                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
                 aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
             }
@@ -100,15 +96,15 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 aVisibleLayerDescs.resize(1);
 
                 aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
+                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
             }
 
             // Create actors
-            for (int p = 0; p < _aLayers[l].size(); p++) {
-                if (inputTypes[p] == InputType::_act) {
-                    _aLayers[l][p] = std::make_unique<Actor>();
+            for (int p = 0; p < _pLayers[l].size(); p++) {
+                if (inputTypes[p] == InputType::_predict) {
+                    _pLayers[l][p] = std::make_unique<Predictor>();
 
-                    _aLayers[l][p]->createRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs);
+                    _pLayers[l][p]->createRandom(cs, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs);
                 }
             }
         }
@@ -135,16 +131,16 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 _historySizes[l][v] = inSize;
             }
 
-            _aLayers[l].resize(layerDescs[l]._ticksPerUpdate);
+            _pLayers[l].resize(layerDescs[l]._ticksPerUpdate);
 
-            // Actor visible layer descriptors
-            std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs;
+            // Predictor visible layer descriptors
+            std::vector<Predictor::VisibleLayerDesc> aVisibleLayerDescs;
 
             if (l < layerDescs.size() - 1) {
                 aVisibleLayerDescs.resize(2);
 
                 aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
+                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
                 aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
             }
@@ -152,14 +148,14 @@ void Hierarchy::createRandom(ComputeSystem &cs,
                 aVisibleLayerDescs.resize(1);
                 
                 aVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
-                aVisibleLayerDescs[0]._radius = layerDescs[l]._aRadius;
+                aVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
             }
 
             // Create actors
-            for (int p = 0; p < _aLayers[l].size(); p++) {
-                _aLayers[l][p] = std::make_unique<Actor>();
+            for (int p = 0; p < _pLayers[l].size(); p++) {
+                _pLayers[l][p] = std::make_unique<Predictor>();
 
-                _aLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs);
+                _pLayers[l][p]->createRandom(cs, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs);
             }
         }
 		
@@ -168,7 +164,7 @@ void Hierarchy::createRandom(ComputeSystem &cs,
     }
 }
 
-void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, bool learnEnabled, float reward) {
+void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* goalCs, bool learnEnabled) {
     assert(inputCs.size() == _inputSizes.size());
 
     // First tick is always 0
@@ -211,10 +207,6 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
 
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
-        // Accumulate reward
-        _rewards[l] += reward;
-        _rewardCounts[l] += 1.0f;
-
         // If is time for layer to tick
         if (l == 0 || _ticks[l] >= _ticksPerUpdate[l]) {
             // Reset tick
@@ -260,27 +252,22 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBack(l < _scLayers.size() - 1 ? 2 : 1);
+            std::vector<const IntBuffer*> feedBack(2);
 
             feedBack[0] = &_scLayers[l].getHiddenCs();
 
             if (l < _scLayers.size() - 1) {
-                assert(_aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
+                assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]] != nullptr);
 
-                feedBack[1] = &_aLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
+                feedBack[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
-
-            // Determine reward from accumulators
-            float r = _rewards[l] / std::max(1.0f, _rewardCounts[l]);
-
-            // Reset accumulators
-            _rewards[l] = 0.0f;
-            _rewardCounts[l] = 0.0f;
+            else
+                feedBack[1] = goalCs;
 
             // Step actor layers
-            for (int p = 0; p < _aLayers[l].size(); p++) {
-                if (_aLayers[l][p] != nullptr)
-                    _aLayers[l][p]->step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p].get(), r, learnEnabled);
+            for (int p = 0; p < _pLayers[l].size(); p++) {
+                if (_pLayers[l][p] != nullptr)
+                    _pLayers[l][p]->step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p].get(), learnEnabled);
             }
         }
     }
