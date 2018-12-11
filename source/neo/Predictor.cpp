@@ -138,7 +138,7 @@ void Predictor::learn(const Int2 &pos, std::mt19937 &rng, const std::vector<cons
             count += (iterUpperBound.x - iterLowerBound.x + 1) * (iterUpperBound.y - iterLowerBound.y + 1);
         }
 
-        float delta = _alpha * ((hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f) - sum / std::max(1.0f, count));
+        float delta = _alpha * ((hc == (*hiddenTargetCs)[hiddenIndex] ? 1.0f : 0.0f) - sigmoid(sum / std::max(1.0f, count)));
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
