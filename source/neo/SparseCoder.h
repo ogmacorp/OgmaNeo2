@@ -52,10 +52,17 @@ namespace ogmaneo {
 
             FloatBuffer _visibleActivations;
 
+<<<<<<< HEAD
             Float2 _visibleToHidden; // For projection
             Float2 _hiddenToVisible; // For projection
 
             Int2 _reverseRadii; // Pre-computed reverse radii
+=======
+            Float2 _visibleToHidden;
+            Float2 _hiddenToVisible;
+
+            Int2 _reverseRadii;
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
             //!@}
         };
 
@@ -87,6 +94,7 @@ namespace ogmaneo {
         /*!
         \brief Kernels
         */
+<<<<<<< HEAD
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, bool firstIter);
         void backward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, int vli);
@@ -107,6 +115,13 @@ namespace ogmaneo {
         static void learnKernel(const Int2 &pos, std::mt19937 &rng, SparseCoder* sc, const std::vector<const IntBuffer*> &inputCs, int vli) {
             sc->learn(pos, rng, inputCs, vli);
         }
+=======
+        cl::Kernel _forwardKernel;
+        cl::Kernel _backwardPartialKernel;
+        cl::Kernel _backwardKernel;
+        cl::Kernel _inhibitKernel;
+        cl::Kernel _learnKernel;
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
         //!@}
 
     public:
@@ -124,7 +139,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         SparseCoder()
-        : _alpha(0.1f), _explainIters(4)
+        : _alpha(0.001f), _explainIters(4)
         {}
 
         /*!
@@ -133,8 +148,14 @@ namespace ogmaneo {
         \param hiddenSize size of the hidden layer
         \param visibleLayerDescs the descriptors for the visible layers
         */
+<<<<<<< HEAD
         void createRandom(ComputeSystem &cs,
             const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
+=======
+        void createRandom(ComputeSystem &cs, ComputeProgram &prog,
+            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+            std::mt19937 &rng);
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 
         /*!
         \brief Activate the sparse coder (perform sparse coding)
@@ -149,6 +170,16 @@ namespace ogmaneo {
         \param visibleCs the visible (input) layer states
         */
         void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
+
+        /*!
+        \brief Write to stream.
+        */
+        void writeToStream(ComputeSystem &cs, std::ostream &os);
+
+        /*!
+        \brief Read from stream (create).
+        */
+        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is); 
 
         /*!
         \brief Get the number of visible layers
@@ -188,7 +219,11 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden size
         */
+<<<<<<< HEAD
         const Int3 &getHiddenSize() const {
+=======
+        Int3 getHiddenSize() const {
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
             return _hiddenSize;
         }
 

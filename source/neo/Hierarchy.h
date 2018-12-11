@@ -18,7 +18,11 @@ namespace ogmaneo {
     \brief Enum describing the type of operation performed by an input layer
     */
     enum InputType {
+<<<<<<< HEAD
         _none = 0, _predict = 1
+=======
+        _none, _predict
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
     };
     
     /*!
@@ -38,7 +42,7 @@ namespace ogmaneo {
 
             //!@{
             /*!
-            \brief Radii of the sparse coder and predictor/actor
+            \brief Radii of the sparse coder and predictor
             */
             int _scRadius;
             int _pRadius;
@@ -74,17 +78,26 @@ namespace ogmaneo {
         std::vector<SparseCoder> _scLayers;
         std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
 
+<<<<<<< HEAD
         // Histories
         std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
         std::vector<std::vector<int>> _historySizes;
 
         // Per-layer values
+=======
+        std::vector<std::vector<cl::Buffer>> _histories;
+        std::vector<std::vector<int>> _historySizes;
+
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
         std::vector<char> _updates;
 
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
 
+<<<<<<< HEAD
         // Input dimensions
+=======
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
         std::vector<Int3> _inputSizes;
 
     public:
@@ -95,6 +108,7 @@ namespace ogmaneo {
         \param predictInputs flags for which inputs to generate predictions for
         \param layerDescs vector of LayerDesc structures, describing each layer in sequence
         */
+<<<<<<< HEAD
         void createRandom(ComputeSystem &cs,
             const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs);
 
@@ -106,6 +120,27 @@ namespace ogmaneo {
         \param learnEnabled whether learning should be enabled, defaults to true
         */
         void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* goalCs, bool learnEnabled = true);
+=======
+        void createRandom(ComputeSystem &cs, ComputeProgram &prog,
+            const std::vector<Int3> &inputSizes, const std::vector<InputType> &inputTypes, const std::vector<LayerDesc> &layerDescs, std::mt19937 &rng);
+
+        /*!
+        \brief Simulation step/tick
+        \param inputCs vector of input states
+        \param learn whether learning should be enabled, defaults to true
+        */
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &inputCs, bool learn = true);
+
+        /*!
+        \brief Write to stream.
+        */
+        void writeToStream(ComputeSystem &cs, std::ostream &os);
+
+        /*!
+        \brief Read from stream (create).
+        */
+        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is);
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 
         /*!
         \brief Get the number of (hidden) layers
@@ -115,7 +150,11 @@ namespace ogmaneo {
         }
 
         /*!
+<<<<<<< HEAD
         \brief Get the actor output
+=======
+        \brief Get the prediction output
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
         \param i the index of the input to retrieve
         */
         const IntBuffer &getPredictionCs(int i) const {
@@ -144,7 +183,11 @@ namespace ogmaneo {
         }
 
         /*!
+<<<<<<< HEAD
         \brief Get input sizes
+=======
+        \brief Get input sizes.
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
         */
         const std::vector<Int3> &getInputSizes() const {
             return _inputSizes;

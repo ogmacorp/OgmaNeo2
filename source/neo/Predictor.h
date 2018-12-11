@@ -114,8 +114,14 @@ namespace ogmaneo {
         \param historyCapacity maximum number of history samples (fixed)
         \param visibleLayerDescs are descriptors for visible layers
         */
+<<<<<<< HEAD
         void createRandom(ComputeSystem &cs,
             const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs); // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+=======
+        void createRandom(ComputeSystem &cs, ComputeProgram &prog,
+            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+            std::mt19937 &rng);
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 
         /*!
         \brief Activate the predictor (predict values)
@@ -133,6 +139,16 @@ namespace ogmaneo {
         \param hiddenTargetCs the target states
         */
         void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCsPrev, const IntBuffer* hiddenTargetCs);
+
+        /*!
+        \brief Write to stream.
+        */
+        void writeToStream(ComputeSystem &cs, std::ostream &os);
+
+        /*!
+        \brief Read from stream (create).
+        */
+        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is);
 
         /*!
         \brief Get number of visible layers
@@ -165,7 +181,11 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden size
         */
+<<<<<<< HEAD
         const Int3 &getHiddenSize() const {
+=======
+        Int3 getHiddenSize() const {
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
             return _hiddenSize;
         }
 

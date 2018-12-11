@@ -18,11 +18,14 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+<<<<<<< HEAD
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     message("Debug mode, enabling easier kernel debugging")
     add_compile_definitions(KERNEL_DEBUG)
 endif()
 
+=======
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include_directories("${PROJECT_SOURCE_DIR}/source")
@@ -30,6 +33,13 @@ include_directories("${PROJECT_SOURCE_DIR}/source")
 # This is only required for the script to work in the version control
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
+<<<<<<< HEAD
+=======
+find_package(OpenCL REQUIRED)
+ 
+include_directories(${OpenCL_INCLUDE_DIR})
+
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
     "${SOURCE_PATH}/neo/Helpers.cpp"

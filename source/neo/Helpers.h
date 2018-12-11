@@ -10,6 +10,7 @@
 
 #include "ThreadPool.h"
 
+#include <array>
 #include <random>
 #include <future>
 #include <vector>
@@ -21,7 +22,69 @@ namespace ogmaneo {
     class ComputeSystem;
     
     /*!
+<<<<<<< HEAD
     \brief 2D vector type
+=======
+    \brief 2D vector type.
+    */
+    template <typename T> 
+    struct Vec2 {
+        T x, y;
+
+        Vec2()
+        {}
+
+        Vec2(T X, T Y)
+        : x(X), y(Y)
+        {}
+    };
+
+    /*!
+    \brief 3D vector type.
+    */
+    template <typename T> 
+    struct Vec3 {
+        T x, y, z;
+        T pad;
+
+        Vec3()
+        {}
+
+        Vec3(T X, T Y, T Z)
+        : x(X), y(Y), z(Z)
+        {}
+    };
+
+    /*!
+    \brief 4D vector type.
+    */
+    template <typename T> 
+    struct Vec4 {
+        T x, y, z, w;
+
+        Vec4()
+        {}
+
+        Vec4(T X, T Y, T Z, T W)
+        : x(X), y(Y), z(Z), w(W)
+        {}
+    };
+
+    //!@{
+    /*!
+    \brief Common type definitions.
+    */
+    typedef Vec2<cl_int> Int2;
+    typedef Vec3<cl_int> Int3;
+    typedef Vec4<cl_int> Int4;
+    typedef Vec2<cl_float> Float2;
+    typedef Vec3<cl_float> Float3;
+    typedef Vec4<cl_float> Float4;
+    //!@}
+
+    /*!
+    \brief Buffer types (can be used as indices)
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
     */
     template <typename T> 
     struct Vec2 {
@@ -66,10 +129,10 @@ namespace ogmaneo {
         {}
     };
 
-    //!@{
     /*!
     \brief Common type definitions
     */
+<<<<<<< HEAD
     typedef Vec2<int> Int2;
     typedef Vec3<int> Int3;
     typedef Vec4<int> Int4;
@@ -77,11 +140,14 @@ namespace ogmaneo {
     typedef Vec3<float> Float3;
     typedef Vec4<float> Float4;
     //!@}
+=======
+    typedef std::array<cl::Buffer, 2> DoubleBuffer;
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 
-    //!@{
     /*!
     \brief Two main buffer types
     */
+<<<<<<< HEAD
     typedef std::vector<int> IntBuffer;
     typedef std::vector<float> FloatBuffer;
     //!@}
@@ -165,4 +231,7 @@ namespace ogmaneo {
     \brief Sigmoid
     */
     float sigmoid(float x);
+=======
+    DoubleBuffer createDoubleBuffer(ComputeSystem &cs, cl_int size);
+>>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 }
