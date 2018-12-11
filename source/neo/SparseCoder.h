@@ -70,6 +70,7 @@ namespace ogmaneo {
         \brief Buffers for hidden state
         */
         IntBuffer _hiddenCs;
+        IntBuffer _hiddenCsPrev;
 
         FloatBuffer _hiddenActivations;
         //!@}
@@ -175,6 +176,13 @@ namespace ogmaneo {
         */
         const IntBuffer &getHiddenCs() const {
             return _hiddenCs;
+        }
+        
+        /*!
+        \brief Get the hidden activations (state)
+        */
+        const IntBuffer &getHiddenCsPrev() const {
+            return _hiddenCsPrev;
         }
 
         /*!

@@ -268,12 +268,20 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns);
+    _hiddenCsPrev = IntBuffer(numHiddenColumns);
 
 #ifdef KERNEL_DEBUG
     for (int x = 0; x < numHiddenColumns; x++)
         fillInt(x, cs._rng, &_hiddenCs, 0);
 #else
     runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, 0), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
+
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHiddenColumns; x++)
+        fillInt(x, cs._rng, &_hiddenCsPrev, 0);
+#else
+    runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCsPrev, 0), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
 
     // Hidden activations
@@ -283,6 +291,13 @@ void SparseCoder::createRandom(ComputeSystem &cs,
 void SparseCoder::activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
+
+#ifdef KERNEL_DEBUG
+    for (int x = 0; x < numHiddenColumns; x++)
+        copyInt(x, cs._rng, &_hiddenCs, &_hiddenCsPrev);
+#else
+    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &_hiddenCsPrev), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
 
     // Sparse coding iterations: forward, reconstruct, repeat
     for (int it = 0; it < _explainIters; it++) {

@@ -54,14 +54,6 @@ namespace ogmaneo {
             //!@}
         };
 
-        /*!
-        \brief History sample for delayed updating
-        */
-        struct HistorySample {
-            std::vector<std::shared_ptr<IntBuffer>> _visibleCs;
-            std::shared_ptr<IntBuffer> _hiddenPredictionCsPrev;
-        };
-
     private:
         /*!
         \brief Size of the hidden layer (output/action size)
@@ -69,18 +61,9 @@ namespace ogmaneo {
         Int3 _hiddenSize;
 
         /*!
-        \brief Current history size - fixed after initialization. Determines length of wait before updating value function
-        */
-        int _historySize;
-
-        //!@{
-        /*!
         \brief Buffers for state
         */
         IntBuffer _hiddenCs;
-
-        std::vector<HistorySample> _historySamples;
-        //!@}
 
         //!@{
         /*!
@@ -96,7 +79,7 @@ namespace ogmaneo {
         */
         void init(int pos, std::mt19937 &rng, int vli);
         void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs);
-        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenPredictionCsPrev);
+        void learn(const Int2 &pos, std::mt19937 &rng, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenTargetCs);
 
         static void initKernel(int pos, std::mt19937 &rng, Predictor* a, int vli) {
             a->init(pos, rng, vli);
@@ -106,8 +89,8 @@ namespace ogmaneo {
             a->forward(pos, rng, inputCs);
         }
 
-        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Predictor* a, const std::vector<const IntBuffer*> &inputCs, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenPredictionCsPrev) {
-            a->learn(pos, rng, inputCs, inputCsPrev, hiddenPredictionCsPrev);
+        static void learnKernel(const Int2 &pos, std::mt19937 &rng, Predictor* a, const std::vector<const IntBuffer*> &inputCsPrev, const IntBuffer* hiddenTargetCs) {
+            a->learn(pos, rng, inputCsPrev, hiddenTargetCs);
         }
         //!@}
 
@@ -118,20 +101,10 @@ namespace ogmaneo {
         float _alpha;
 
         /*!
-        \brief Discount factor
-        */
-        float _gamma;
-
-        /*!
-        \brief Number of sample iterations
-        */
-        int _historyIters;
-
-        /*!
         \brief Initialize defaults
         */
         Predictor()
-        : _alpha(0.2f), _gamma(0.9f), _historyIters(8)
+        : _alpha(1.0f)
         {}
 
         /*!
@@ -145,13 +118,21 @@ namespace ogmaneo {
             const Int3 &hiddenSize, int historyCapacity, const std::vector<VisibleLayerDesc> &visibleLayerDescs); // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
 
         /*!
-        \brief Activate the actor (predict values)
+        \brief Activate the predictor (predict values)
         \param cs is the ComputeSystem
         \param visibleCs the visible (input) layer states
         \param hiddenPredictionCsPrev the previously taken actions
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs, const IntBuffer* hiddenPredictionCsPrev, bool learnEnabled);
+        void activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
+
+        /*!
+        \brief Learn the predictor (update weogjts)
+        \param cs is the ComputeSystem
+        \param visibleCsPrev the previous visible (input) layer states
+        \param hiddenTargetCs the target states
+        */
+        void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCsPrev, const IntBuffer* hiddenTargetCs);
 
         /*!
         \brief Get number of visible layers
