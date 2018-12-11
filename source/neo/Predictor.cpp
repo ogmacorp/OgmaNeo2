@@ -10,18 +10,10 @@
 
 using namespace ogmaneo;
 
-<<<<<<< HEAD
 // Kernels
 void Predictor::init(int pos, std::mt19937 &rng, int vli) {
     // Randomly initialize weights in range
 	std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0f);
-=======
-void Predictor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
-    Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
-    std::mt19937 &rng)
-{
-    _visibleLayerDescs = visibleLayerDescs;
->>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 
     _visibleLayers[vli]._weights[pos] = weightDist(rng);
 }
@@ -43,7 +35,6 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
         // Partially computed address of weight
         int dPartial = hiddenPosition.x + hiddenPosition.y * _hiddenSize.x + hiddenPosition.z * dxy;
 
-<<<<<<< HEAD
         float sum = 0.0f;
         float count = 0.0f;
     
@@ -51,10 +42,6 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-=======
-        vl._hiddenToVisible = Float2(static_cast<float>(vld._size.x) / static_cast<float>(_hiddenSize.x),
-            static_cast<float>(vld._size.y) / static_cast<float>(_hiddenSize.y));
->>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 
             // Center of projected position
             Int2 visiblePositionCenter = project(pos, vl._hiddenToVisible);
@@ -76,13 +63,8 @@ void Predictor::forward(const Int2 &pos, std::mt19937 &rng, const std::vector<co
 
                     int visibleC = (*inputCs[vli])[address2(visiblePosition, vld._size.x)];
 
-<<<<<<< HEAD
                     // Final component of address
                     int az = visiblePosition.x - fieldLowerBound.x + (visiblePosition.y - fieldLowerBound.y) * diam + visibleC * diam2;
-=======
-            initWeightsKernel.setArg(argIndex++, vl._weights);
-            initWeightsKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
->>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 
                     sum += vl._weights[dPartial + az * dxyz]; // Used cached parts to compute weight address, equivalent to calling address4
                 }
@@ -232,7 +214,6 @@ void Predictor::createRandom(ComputeSystem &cs,
         runKernel1(cs, std::bind(Predictor::initKernel, std::placeholders::_1, std::placeholders::_2, this, vli), weightsSize, cs._rng, cs._batchSize1);
 #endif
     }
-<<<<<<< HEAD
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns);
@@ -268,105 +249,4 @@ void Predictor::learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &vi
 #else
     runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCsPrev, hiddenTargetCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-=======
-}
-
-void Predictor::writeToStream(ComputeSystem &cs, std::ostream &os) {
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
-    os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
-
-    os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
-
-    std::vector<cl_int> hiddenCs(numHiddenColumns);
-    cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
-    os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
-
-    int numVisibleLayers = _visibleLayers.size();
-
-    os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
-    
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
-        os.write(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
-
-        os.write(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
-
-        cl_int diam = vld._radius * 2 + 1;
-
-        cl_int numWeightsPerHidden = diam * diam * vld._size.z;
-
-        cl_int weightsSize = numHidden * numWeightsPerHidden;
-
-        std::vector<cl_float> weights(weightsSize);
-        cs.getQueue().enqueueReadBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
-        os.write(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
-
-        std::vector<cl_int> visibleCs(numVisibleColumns);
-        cs.getQueue().enqueueReadBuffer(vl._visibleCs, CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
-        os.write(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
-    }
-}
-
-void Predictor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
-    is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
-
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
-    is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
-
-    std::vector<cl_int> hiddenCs(numHiddenColumns);
-    is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
-    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-    cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
-
-    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
-
-    int numVisibleLayers;
-    
-    is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
-
-    _visibleLayers.resize(numVisibleLayers);
-    _visibleLayerDescs.resize(numVisibleLayers);
-    
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
-
-        int numVisibleColumns = vld._size.x * vld._size.y;
-        int numVisible = numVisibleColumns * vld._size.z;
-
-        is.read(reinterpret_cast<char*>(&vl._hiddenToVisible), sizeof(Float2));
-
-        cl_int diam = vld._radius * 2 + 1;
-
-        cl_int numWeightsPerHidden = diam * diam * vld._size.z;
-
-        cl_int weightsSize = numHidden * numWeightsPerHidden;
-
-        std::vector<cl_float> weights(weightsSize);
-        is.read(reinterpret_cast<char*>(weights.data()), weightsSize * sizeof(cl_float));
-        vl._weights = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, weightsSize * sizeof(cl_float));
-        cs.getQueue().enqueueWriteBuffer(vl._weights, CL_TRUE, 0, weightsSize * sizeof(cl_float), weights.data());
-
-        std::vector<cl_int> visibleCs(numVisibleColumns);
-        is.read(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
-        vl._visibleCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
-        cs.getQueue().enqueueWriteBuffer(vl._visibleCs, CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
-    }
-
-    // Create kernels
-    _forwardKernel = cl::Kernel(prog.getProgram(), "pForward");
-    _inhibitKernel = cl::Kernel(prog.getProgram(), "pInhibit");
-    _learnKernel = cl::Kernel(prog.getProgram(), "pLearn");
->>>>>>> 4fa97ae0f684e2beabb2f68b1994bbe2033fa71e
 }
