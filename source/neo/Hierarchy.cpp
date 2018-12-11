@@ -250,7 +250,8 @@ void Hierarchy::step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inp
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
-                    _pLayers[l][p]->learn(cs, feedBackLearnCs, l == 0 ? inputCs[p] : _histories[l][p].get());
+                    if (learnEnabled)
+                        _pLayers[l][p]->learn(cs, feedBackLearnCs, l == 0 ? inputCs[p] : _histories[l][p].get());
 
                     _pLayers[l][p]->activate(cs, feedBackCs);
                 }
