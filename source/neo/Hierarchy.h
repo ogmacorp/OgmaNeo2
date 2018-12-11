@@ -92,7 +92,7 @@ namespace ogmaneo {
         \brief Create a randomly initialized hierarchy
         \param cs is the ComputeSystem
         \param inputSizes vector of input dimensions
-        \param predictInputs flags for which inputs to generate predictions for
+        \param inputTypes type of the input layer (predict or none)
         \param layerDescs vector of LayerDesc structures, describing each layer in sequence
         */
         void createRandom(ComputeSystem &cs,
@@ -102,7 +102,7 @@ namespace ogmaneo {
         \brief Simulation step/tick
         \param cs is the ComputeSystem
         \param inputs vector of input activations
-        \param goalCs top down goal
+        \param goalCs top down goal state, must be same size as the CSDR of the topmost layer encoder
         \param learnEnabled whether learning should be enabled, defaults to true
         */
         void step(ComputeSystem &cs, const std::vector<const IntBuffer*> &inputCs, const IntBuffer* goalCs, bool learnEnabled = true);
@@ -115,7 +115,7 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get the actor output
+        \brief Get the prediction output (next timestep prediction)
         \param i the index of the input to retrieve
         */
         const IntBuffer &getPredictionCs(int i) const {

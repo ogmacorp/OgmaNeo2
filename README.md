@@ -6,17 +6,15 @@
   in the OGMANEO_LICENSE.md file included in this distribution.
 --->
 
-# OgmaNeo, V2
+# OgmaNeo, V2 - goaltron branch
 
-[![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby) [![Build Status](https://travis-ci.org/ogmacorp/OgmaNeo.svg?branch=master)](https://travis-ci.org/ogmacorp/OgmaNeo)
+[![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby)
 
 ## Introduction 
 
-Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that contains an implementation of Sparse Predictive Hierarchies.
+Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that contains an implementation of Sparse Predictive Hierarchies (SPH).
 
-For an introduction to how the algorithm works, see [the presentation](./OgmaNeo_Presentation.pdf).
-
-Note that there are two libraries implementing SPH: This one (OgmaNeo V2), and an embedded (CPU only) version [EOgmaNeo](https://github.com/ogmacorp/EOgmaNeo).
+This particular branch contains a CPU-only implementation of the goaltron, and version of SPH capable of performing reinforcement-learning-like tasks without the use of temporal difference learning.
 
 There is also a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of this repository that contains an outdated implementation of SPH. Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
 
@@ -24,17 +22,7 @@ There is also a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of thi
 
 ### CMake
 
-Version 3.1+ of [CMake](https://cmake.org/) is required when building the library.
-
-### OpenCL
-
-[OpenCL](https://www.khronos.org/opencl/) (Open Compute Language, version 1.2 and upwards) is used to compile, upload and run kernel code on CPU and GPU devices. An OpenCL SDK, with system drivers that support OpenCL 1.2, is required to build and use the OgmaNeo library.
-
-The open source POCL package ([Portable Computing Language](http://portablecl.org/)) can be used for devices that don't have OpenCL vendor driver support. 
-
-### CL2 header file
-
-The Khronos Group's [cl2.hpp](http://github.khronos.org/OpenCL-CLHPP/) header file is required when building OgmaNeo. It needs to be placed alongside your OpenCL header files. The header file can be downloaded from Github [https://github.com/KhronosGroup/OpenCL-CLHPP/releases](https://github.com/KhronosGroup/OpenCL-CLHPP/releases)
+Version 3.8+ of [CMake](https://cmake.org/) is required when building the library.
 
 ### Building
 
@@ -67,3 +55,6 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for information on making
 Contact Ogma via licenses@ogmacorp.com to discuss commercial use and licensing options.
 
 OgmaNeo Copyright (c) 2016-2018 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
+
+Note: External libraries used:
+CTPL (for thread pooling): https://github.com/vit-vit/CTPL

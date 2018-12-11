@@ -63,7 +63,7 @@ namespace ogmaneo {
         Int3 _hiddenSize;
 
         /*!
-        \brief Buffers for hidden state
+        \brief Buffer for hidden state
         */
         IntBuffer _hiddenCs;
 
@@ -108,9 +108,9 @@ namespace ogmaneo {
             const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
 
         /*!
-        \brief Activate the sparse coder (perform sparse coding)
+        \brief Activate the image encoder (perform encoding)
         \param cs is the ComputeSystem
-        \param visibleCs the visible (input) layer states
+        \param inputActivations the visible (input) layer states
         */
         void activate(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations);
 

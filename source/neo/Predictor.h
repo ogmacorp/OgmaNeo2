@@ -127,10 +127,10 @@ namespace ogmaneo {
         void activate(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCs);
 
         /*!
-        \brief Learn the predictor (update weogjts)
+        \brief Learn the predictor (update weights)
         \param cs is the ComputeSystem
         \param visibleCsPrev the previous visible (input) layer states
-        \param hiddenTargetCs the target states
+        \param hiddenTargetCs the target states that should be predicted
         */
         void learn(ComputeSystem &cs, const std::vector<const IntBuffer*> &visibleCsPrev, const IntBuffer* hiddenTargetCs);
 
