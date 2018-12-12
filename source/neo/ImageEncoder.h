@@ -8,12 +8,12 @@
 
 #pragma once
 
-#include "Helpers.h"
+#include "ComputeSystem.h"
 
 namespace ogmaneo {
     /*!
-    \brief Image encoder
-    A 2D sparse coding layer, using Columnar Binary Sparse Coding, but with dense inputs (as opposed to columnar as in SparseCoder)
+    \brief Sparse Coder
+    A 2D sparse coding layer, using Columnar Binary Sparse Coding (computes CSDR -> compressed CSDR)
     */
     class ImageEncoder {
     public:
@@ -29,13 +29,13 @@ namespace ogmaneo {
             /*!
             \brief Radius onto hidden layer
             */
-            cl_int _radius;
+            int _radius;
 
             /*!
             \brief Initialize defaults
             */
             VisibleLayerDesc()
-                : _size({ 8, 8, 3 }),
+                : _size({ 4, 4, 16 }),
                 _radius(2)
             {}
         };
@@ -48,11 +48,11 @@ namespace ogmaneo {
             /*!
             \brief Visible layer values and buffers
             */
-            cl::Buffer _weights;
+            FloatBuffer _weights;
 
-            cl::Buffer _visibleAs;
+            FloatBuffer _visibleActivationsPrev;
 
-            Float2 _hiddenToVisible;
+            Float2 _hiddenToVisible; // For projection
             //!@}
         };
 
@@ -62,14 +62,10 @@ namespace ogmaneo {
         */
         Int3 _hiddenSize;
 
-        //!@{
         /*!
-        \brief Buffers
+        \brief Buffer for hidden state
         */
-        cl::Buffer _hiddenCs;
-
-        cl::Buffer _hiddenActivations;
-        //!@}
+        IntBuffer _hiddenCs;
 
         //!@{
         /*!
@@ -83,71 +79,45 @@ namespace ogmaneo {
         /*!
         \brief Kernels
         */
-        cl::Kernel _forwardKernel;
-        cl::Kernel _inhibitKernel;
-        cl::Kernel _learnKernel;
+        void init(int pos, std::mt19937 &rng, int vli);
+        void forward(const Int2 &pos, std::mt19937 &rng, const std::vector<const FloatBuffer*> &inputActivations);
+
+        static void initKernel(int pos, std::mt19937 &rng, ImageEncoder* sc, int vli) {
+            sc->init(pos, rng, vli);
+        }
+
+        static void forwardKernel(const Int2 &pos, std::mt19937 &rng, ImageEncoder* sc, const std::vector<const FloatBuffer*> &inputActivations) {
+            sc->forward(pos, rng, inputActivations);
+        }
         //!@}
 
     public:
         /*!
-        \brief Feed learning rate
-        */
-        cl_float _alpha;
-
-        /*!
         \brief Initialize defaults
         */
         ImageEncoder()
-        : _alpha(0.001f)
         {}
 
         /*!
         \brief Create a sparse coding layer with random initialization
         \param cs is the ComputeSystem
-        \param prog is the ComputeProgram associated with the ComputeSystem and loaded with the sparse coder kernel code
         \param hiddenSize size of the hidden layer
         \param visibleLayerDescs the descriptors for the visible layers
-        \param rng a random number generator
         */
-        void createRandom(ComputeSystem &cs, ComputeProgram &prog,
-            Int3 hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs,
-            std::mt19937 &rng);
+        void createRandom(ComputeSystem &cs,
+            const Int3 &hiddenSize, const std::vector<VisibleLayerDesc> &visibleLayerDescs);
 
         /*!
-        \brief Activate the sparse coder (perform sparse coding)
+        \brief Activate the image encoder (perform encoding)
         \param cs is the ComputeSystem
-        \param visibleAs the visible (input) layer activations to encode
+        \param inputActivations the visible (input) layer states
         */
-        void activate(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
-
-        /*!
-        \brief Learn the sparse code
-        \param cs is the ComputeSystem
-        \param visibleAs the visible (input) layer activations previously encoded
-        */
-        void learn(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
-
-        /*!
-        \brief End an activation and (optionally) learn step
-        \param cs is the ComputeSystem.
-        \param visibleAs the visible (input) layer activations previously encoded
-        */
-        void stepEnd(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleAs);
-
-        /*!
-        \brief Write to stream.
-        */
-        void writeToStream(ComputeSystem &cs, std::ostream &os);
-
-        /*!
-        \brief Read from stream (create).
-        */
-        void readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is); 
+        void activate(ComputeSystem &cs, const std::vector<const FloatBuffer*> &inputActivations);
 
         /*!
         \brief Get the number of visible layers
         */
-        size_t getNumVisibleLayers() const {
+        int getNumVisibleLayers() const {
             return _visibleLayers.size();
         }
 
@@ -168,21 +138,21 @@ namespace ogmaneo {
         /*!
         \brief Get the hidden activations (state)
         */
-        const cl::Buffer &getHiddenCs() const {
+        const IntBuffer &getHiddenCs() const {
             return _hiddenCs;
         }
 
         /*!
         \brief Get the hidden size
         */
-        Int3 getHiddenSize() const {
+        const Int3 &getHiddenSize() const {
             return _hiddenSize;
         }
 
         /*!
         \brief Get a visible layer's feed weights
         */
-        const cl::Buffer &getWeights(int v) const {
+        const FloatBuffer &getWeights(int v) const {
             return _visibleLayers[v]._weights;
         }
     };

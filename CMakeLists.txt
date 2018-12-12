@@ -6,7 +6,7 @@
 #  in the OGMANEO_LICENSE.md file included in this distribution.
 # ----------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+    message("Debug mode, enabling easier kernel debugging")
+    add_compile_definitions(KERNEL_DEBUG)
+endif()
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include_directories("${PROJECT_SOURCE_DIR}/source")
@@ -25,14 +30,8 @@ include_directories("${PROJECT_SOURCE_DIR}/source")
 # This is only required for the script to work in the version control
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
-find_package(OpenCL REQUIRED)
- 
-include_directories(${OpenCL_INCLUDE_DIR})
-
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
-    "${SOURCE_PATH}/system/ComputeSystem.cpp"
-    "${SOURCE_PATH}/system/ComputeProgram.cpp"
     "${SOURCE_PATH}/neo/Helpers.cpp"
     "${SOURCE_PATH}/neo/SparseCoder.cpp"
     "${SOURCE_PATH}/neo/Predictor.cpp"
@@ -41,8 +40,6 @@ set(SOURCES
 )
 
 add_library(OgmaNeo ${SOURCES})
-
-target_link_libraries(OgmaNeo ${OpenCL_LIBRARIES})
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin

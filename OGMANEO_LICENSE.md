@@ -9,3 +9,8 @@ You should have received a copy of the CC BY-NC-SA 4.0 along with this
 program.  If not, see https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 Please contact licenses@ogmacorp.com regarding uses not covered by this license.
+
+--------------------------- NOTE -------------------------------
+
+External libraries used:
+CTPL (for thread pooling): https://github.com/vit-vit/CTPL
