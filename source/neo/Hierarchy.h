@@ -42,7 +42,7 @@ namespace ogmaneo {
             \brief Radii of the sparse coder and predictor/actor
             */
             cl_int _scRadius;
-            cl_int _aRadius;
+            cl_int _pRadius;
             //!@}
 
             /*!
@@ -65,22 +65,20 @@ namespace ogmaneo {
             */
             LayerDesc()
                 : _hiddenSize(4, 4, 16),
-                _scRadius(2), _aRadius(2),
+                _scRadius(2), _pRadius(2),
                 _ticksPerUpdate(2), _temporalHorizon(2),
                 _historyCapacity(8)
             {}
         };
     private:
         std::vector<SparseCoder> _scLayers;
-        std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
+        std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+        std::vector<std::unique_ptr<Actor>> _aLayers;
 
         std::vector<std::vector<cl::Buffer>> _histories;
         std::vector<std::vector<int>> _historySizes;
 
         std::vector<char> _updates;
-
-        std::vector<float> _rewards;
-        std::vector<float> _rewardCounts;
 
         std::vector<int> _ticks;
         std::vector<int> _ticksPerUpdate;
@@ -125,11 +123,17 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get the actor output
+        \brief Get the predicted output
         \param i the index of the input to retrieve
         */
-        const cl::Buffer &getActionCs(int i) const {
-            return _aLayers.front()[i]->getHiddenCs();
+        const cl::Buffer &getPredictionCs(int i) const {
+            if (_aLayers[i] == nullptr) {
+                assert(_pLayers.front()[i] != nullptr);
+
+                return _pLayers.front()[i]->getHiddenCs();
+            }
+            
+            return _aLayers[i]->getHiddenCs();
         }
 
         /*!
@@ -170,8 +174,15 @@ namespace ogmaneo {
         /*!
         \brief Retrieve predictor layer(s)
         */
-        std::vector<std::unique_ptr<Actor>> &getALayer(int l) {
-            return _aLayers[l];
+        std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
+            return _pLayers[l];
+        }
+
+        /*!
+        \brief Retrieve actor layer(s)
+        */
+        std::vector<std::unique_ptr<Actor>> &getALayers() {
+            return _aLayers;
         }
     };
 }
