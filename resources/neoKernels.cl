@@ -461,7 +461,7 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
     hiddenCs[address2(hiddenPosition, hiddenSize.x)] = selectIndex;
 }
 
-void kernel aLearn(global const int* visibleCs,
+void kernel aLearn(global const int* visibleCsPrev,
     global const float* hiddenValues, global const float* hiddenValuesPrev, global const float* hiddenValuesPrevPrev,
     global const float* hiddenActivationsPrev,
     global const int* hiddenCsPrev,
@@ -495,11 +495,11 @@ void kernel aLearn(global const int* visibleCs,
             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
 
             if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
+                int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                wPos.z = offset.x + offset.y * diam + visibleC * diam2;
+                wPos.z = offset.x + offset.y * diam + visibleCPrev * diam2;
 
                 valueWeights[address3(wPos, hiddenSize.xy)] += deltaValue;
             }
@@ -516,11 +516,11 @@ void kernel aLearn(global const int* visibleCs,
                 int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
 
                 if (inBounds0(visiblePosition, visibleSize.xy)) {
-                    int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
+                    int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
 
                     int2 offset = visiblePosition - fieldLowerBound;
 
-                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
+                    wPos.w = offset.x + offset.y * diam + visibleCPrev * diam2;
 
                     actionWeights[address4(wPos, hiddenSize)] += delta;
                 }

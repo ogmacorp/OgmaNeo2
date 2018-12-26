@@ -121,7 +121,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
         _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
         _forwardKernel.setArg(argIndex++, vld._radius);
 
-        cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+        cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 
     // Activate
@@ -204,7 +204,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
             _forwardKernel.setArg(argIndex++, vl._hiddenToVisible);
             _forwardKernel.setArg(argIndex++, vld._radius);
 
-            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
 
         cl_float g = std::pow(_gamma, _historySize - 1);
