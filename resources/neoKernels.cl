@@ -426,7 +426,7 @@ void kernel aForward(global const int* visibleCs, global float* hiddenValues, gl
 
                     wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                    sum += weights[address4(wPos, hiddenSize)];
+                    sum += actionWeights[address4(wPos, hiddenSize)];
                 }
             }
 
@@ -475,10 +475,10 @@ void kernel aLearn(global const int* visibleCs,
 
     int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
-    float q = qTarget + hiddenValues[hiddenColumnIndex] * qNext;
+    float qUpdate = qTarget + gamma * hiddenValues[hiddenColumnIndex];
 
-    float deltaValue = alpha * (q - hiddenValuesPrev[hiddenColumnIndex]);
-    float deltaAction = beta * (q - hiddenValuesPrevPrev[hiddenColumnIndex]);
+    float deltaValue = alpha * (qUpdate - hiddenValuesPrev[hiddenColumnIndex]);
+    float deltaAction = beta * (qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex]);
     
     int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
 
