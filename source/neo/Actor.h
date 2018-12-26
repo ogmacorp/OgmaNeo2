@@ -12,8 +12,7 @@
 
 namespace ogmaneo {
     /*!
-    \brief A 2D prediction layer
-    Predicts the targets one timestep ahead of time
+    \brief A 2D actor layer
     */
     class Actor {
     public:
@@ -47,7 +46,8 @@ namespace ogmaneo {
             /*!
             \brief Visible layer values and buffers
             */
-            cl::Buffer _weights;
+            cl::Buffer _valueWeights;
+            cl::Buffer _actionWeights;
 
             Float2 _hiddenToVisible;
             //!@}
@@ -59,6 +59,7 @@ namespace ogmaneo {
         struct HistorySample {
             std::vector<cl::Buffer> _visibleCs;
             cl::Buffer _hiddenCs;
+            cl::Buffer _hiddenValues;
         
             float _reward;
         };
@@ -79,7 +80,10 @@ namespace ogmaneo {
         \brief Buffers
         */
         cl::Buffer _hiddenCs;
-        DoubleBuffer _hiddenActivations;
+
+        DoubleBuffer _hiddenValues;
+
+        cl::Buffer _hiddenActivations;
 
         std::vector<HistorySample> _historySamples;
         //!@}
@@ -126,7 +130,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.01f), _beta(0.01f), _gamma(0.99f), _epsilon(0.05f)
+        : _alpha(0.1f), _beta(1.0f), _gamma(0.9f), _epsilon(0.01f)
         {}
 
         /*!
@@ -198,10 +202,17 @@ namespace ogmaneo {
         }
 
         /*!
-        \brief Get the weights for a visible layer
+        \brief Get the value weights for a visible layer
         */
-        const cl::Buffer &getWeights(int v) {
-            return _visibleLayers[v]._weights;
+        const cl::Buffer &getValueWeights(int v) {
+            return _visibleLayers[v]._valueWeights;
+        }
+
+        /*!
+        \brief Get the action weights for a visible layer
+        */
+        const cl::Buffer &getActionWeights(int v) {
+            return _visibleLayers[v]._actionWeights;
         }
     };
 }
