@@ -505,45 +505,45 @@ void kernel aLearn(global const int* visibleCsPrev,
             }
         }
     
-    // for (int c = 0; c < hiddenSize.z; c++) {
-    //     int4 wPosAction;
-    //     wPosAction.xyz = (int3)(hiddenPosition, c);
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int4 wPosAction;
+        wPosAction.xyz = (int3)(hiddenPosition, c);
 
-    //     float delta = deltaAction * ((c == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]));
+        float delta = deltaAction * ((c == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]));
 
-    //     for (int dx = -radius; dx <= radius; dx++)
-    //         for (int dy = -radius; dy <= radius; dy++) {
-    //             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+        for (int dx = -radius; dx <= radius; dx++)
+            for (int dy = -radius; dy <= radius; dy++) {
+                int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
 
-    //             if (inBounds0(visiblePosition, visibleSize.xy)) {
-    //                 int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
+                if (inBounds0(visiblePosition, visibleSize.xy)) {
+                    int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
 
-    //                 int2 offset = visiblePosition - fieldLowerBound;
+                    int2 offset = visiblePosition - fieldLowerBound;
 
-    //                 wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
+                    wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
 
-    //                 actionWeights[address4(wPosAction, hiddenSize)] += delta;
-    //             }
-    //         }
-    // }
-
-    int4 wPosAction;
-    wPosAction.xyz = (int3)(hiddenPosition, hiddenCPrev);
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
-
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
-
-                actionWeights[address4(wPosAction, hiddenSize)] += deltaAction;
+                    actionWeights[address4(wPosAction, hiddenSize)] += delta;
+                }
             }
-        }
+    }
+
+    // int4 wPosAction;
+    // wPosAction.xyz = (int3)(hiddenPosition, hiddenCPrev);
+
+    // for (int dx = -radius; dx <= radius; dx++)
+    //     for (int dy = -radius; dy <= radius; dy++) {
+    //         int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+    //         if (inBounds0(visiblePosition, visibleSize.xy)) {
+    //             int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
+
+    //             int2 offset = visiblePosition - fieldLowerBound;
+
+    //             wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
+
+    //             actionWeights[address4(wPosAction, hiddenSize)] += deltaAction;
+    //         }
+    //     }
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
