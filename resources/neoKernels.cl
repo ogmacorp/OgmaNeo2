@@ -385,8 +385,8 @@ void kernel aForward(global const int* visibleCs, global float* hiddenValues, gl
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
-    int3 wPos;
-    wPos.xy = hiddenPosition;
+    int3 wPosValue;
+    wPosValue.xy = hiddenPosition;
 
     float value = 0.0f;
     float count = 0.0f;
@@ -400,9 +400,9 @@ void kernel aForward(global const int* visibleCs, global float* hiddenValues, gl
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                wPos.z = offset.x + offset.y * diam + visibleC * diam2;
+                wPosValue.z = offset.x + offset.y * diam + visibleC * diam2;
 
-                value += valueWeights[address3(wPos, hiddenSize.xy)];
+                value += valueWeights[address3(wPosValue, hiddenSize.xy)];
                 count += 1.0f;
             }
         }
@@ -410,8 +410,8 @@ void kernel aForward(global const int* visibleCs, global float* hiddenValues, gl
     hiddenValues[address2(hiddenPosition, hiddenSize.x)] += value / fmax(1.0f, count);
 
     for (int c = 0; c < hiddenSize.z; c++) {
-        int4 wPos;
-        wPos.xyz = (int3)(hiddenPosition.xy, c);
+        int4 wPosAction;
+        wPosAction.xyz = (int3)(hiddenPosition.xy, c);
 
         float sum = 0.0f;
 
@@ -424,9 +424,9 @@ void kernel aForward(global const int* visibleCs, global float* hiddenValues, gl
 
                     int2 offset = visiblePosition - fieldLowerBound;
 
-                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
+                    wPosAction.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                    sum += actionWeights[address4(wPos, hiddenSize)];
+                    sum += actionWeights[address4(wPosAction, hiddenSize)];
                 }
             }
 
@@ -487,8 +487,8 @@ void kernel aLearn(global const int* visibleCsPrev,
     int diam = radius * 2 + 1;
     int diam2 = diam * diam;
 
-    int3 wPos;
-    wPos.xy = hiddenPosition;
+    int3 wPosValue;
+    wPosValue.xy = hiddenPosition;
 
     for (int dx = -radius; dx <= radius; dx++)
         for (int dy = -radius; dy <= radius; dy++) {
@@ -499,33 +499,51 @@ void kernel aLearn(global const int* visibleCsPrev,
 
                 int2 offset = visiblePosition - fieldLowerBound;
 
-                wPos.z = offset.x + offset.y * diam + visibleCPrev * diam2;
+                wPosValue.z = offset.x + offset.y * diam + visibleCPrev * diam2;
 
-                valueWeights[address3(wPos, hiddenSize.xy)] += deltaValue;
+                valueWeights[address3(wPosValue, hiddenSize.xy)] += deltaValue;
             }
         }
     
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int4 wPos;
-        wPos.xyz = (int3)(hiddenPosition, c);
+    // for (int c = 0; c < hiddenSize.z; c++) {
+    //     int4 wPosAction;
+    //     wPosAction.xyz = (int3)(hiddenPosition, c);
 
-        float delta = deltaAction * ((c == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]));
+    //     float delta = deltaAction * ((c == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]));
 
-        for (int dx = -radius; dx <= radius; dx++)
-            for (int dy = -radius; dy <= radius; dy++) {
-                int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+    //     for (int dx = -radius; dx <= radius; dx++)
+    //         for (int dy = -radius; dy <= radius; dy++) {
+    //             int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
 
-                if (inBounds0(visiblePosition, visibleSize.xy)) {
-                    int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
+    //             if (inBounds0(visiblePosition, visibleSize.xy)) {
+    //                 int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
 
-                    int2 offset = visiblePosition - fieldLowerBound;
+    //                 int2 offset = visiblePosition - fieldLowerBound;
 
-                    wPos.w = offset.x + offset.y * diam + visibleCPrev * diam2;
+    //                 wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
 
-                    actionWeights[address4(wPos, hiddenSize)] += delta;
-                }
+    //                 actionWeights[address4(wPosAction, hiddenSize)] += delta;
+    //             }
+    //         }
+    // }
+
+    int4 wPosAction;
+    wPosAction.xyz = (int3)(hiddenPosition, hiddenCPrev);
+
+    for (int dx = -radius; dx <= radius; dx++)
+        for (int dy = -radius; dy <= radius; dy++) {
+            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
+
+            if (inBounds0(visiblePosition, visibleSize.xy)) {
+                int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
+
+                int2 offset = visiblePosition - fieldLowerBound;
+
+                wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
+
+                actionWeights[address4(wPosAction, hiddenSize)] += deltaAction;
             }
-    }
+        }
 }
 
 // ------------------------------------------- Image Encoder -------------------------------------------
