@@ -507,7 +507,7 @@ void kernel aLearn(global const int* visibleCsPrev,
     
     for (int c = 0; c < hiddenSize.z; c++) {
         int4 wPos;
-        wPos.xyz = (int3)(hiddenPosition, hiddenSize.z);
+        wPos.xyz = (int3)(hiddenPosition, c);
 
         float delta = deltaAction * ((c == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]));
 
