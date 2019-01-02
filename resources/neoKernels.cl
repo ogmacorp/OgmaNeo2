@@ -102,7 +102,7 @@ void kernel scForward(global const int* visibleCs, global const float* visibleAc
 
                 wPos.w = offset.x + offset.y * diam + visibleC * diam2;
 
-                sum += fmax(0.0f, weights[address4(wPos, hiddenSize)] - visibleActivations[visibleIndex]);
+                sum += weights[address4(wPos, hiddenSize)] * (1.0f - visibleActivations[visibleIndex]);
             }
         }
 
@@ -154,7 +154,7 @@ void kernel scBackwardPartial(global const int* visibleCs, global const int* hid
             }
         }
 
-    visibleActivations[visibleIndex] = sum / fmax(1.0f, count);
+    visibleActivations[visibleIndex] = sigmoid(sum / fmax(1.0f, count));
 }
 
 void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
@@ -198,7 +198,7 @@ void kernel scBackward(global const int* hiddenCs, global float* visibleActivati
             }
         }
 
-    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sum / fmax(1.0f, count);
+    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sigmoid(sum / fmax(1.0f, count));
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
