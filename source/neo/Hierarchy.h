@@ -158,9 +158,23 @@ namespace ogmaneo {
         }
 
         /*!
+        \brief Retrieve a sparse coding layer
+        */
+        const SparseCoder &getSCLayer(int l) const {
+            return _scLayers[l];
+        }
+
+        /*!
         \brief Retrieve predictor layer(s)
         */
         std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) {
+            return _pLayers[l];
+        }
+
+        /*!
+        \brief Retrieve predictor layer(s)
+        */
+        const std::vector<std::unique_ptr<Predictor>> &getPLayer(int l) const {
             return _pLayers[l];
         }
     };
