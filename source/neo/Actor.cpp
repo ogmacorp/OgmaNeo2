@@ -96,7 +96,7 @@ void Actor::createRandom(ComputeSystem &cs, ComputeProgram &prog,
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 }
 
-void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learn) {
+void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learnEnabled) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
@@ -175,7 +175,7 @@ void Actor::step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, st
     }
 
     // Learn
-    if (learn && _historySize > 1) {
+    if (learnEnabled && _historySize > 1) {
         const HistorySample &sPrev = _historySamples[0];
 
         cl_float q = 0.0f;

@@ -130,7 +130,7 @@ namespace ogmaneo {
         \brief Initialize defaults
         */
         Actor()
-        : _alpha(0.1f), _beta(1.0f), _gamma(0.9f), _epsilon(0.05f)
+        : _alpha(0.1f), _beta(1.0f), _gamma(0.9f), _epsilon(0.02f)
         {}
 
         /*!
@@ -154,7 +154,7 @@ namespace ogmaneo {
         \param reward reinforcment signal
         \param learn whether to learn
         */
-        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learn);
+        void step(ComputeSystem &cs, const std::vector<cl::Buffer> &visibleCs, std::mt19937 &rng, float reward, bool learnEnabled);
 
         /*!
         \brief Write to stream.
