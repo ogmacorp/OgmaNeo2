@@ -171,7 +171,7 @@ namespace ogmaneo {
         /*!
         \brief Retrieve predictor layer(s)
         */
-        std::vector<std::unique_ptr<Actor>> &getALayers(int l) {
+        std::vector<std::unique_ptr<Actor>> &getALayer(int l) {
             return _aLayers[l];
         }
     };
