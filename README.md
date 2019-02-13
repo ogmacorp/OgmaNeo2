@@ -57,3 +57,6 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for information on making
 Contact Ogma via licenses@ogmacorp.com to discuss commercial use and licensing options.
 
 OgmaNeo Copyright (c) 2016-2018 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
+
+This library depends on the [CPTL library](https://github.com/vit-vit/CTPL) for thread pooling.
+See the repository or [its source](./source/ThreadPool.h) for license details with regards to that library.
