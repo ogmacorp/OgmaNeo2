@@ -16,25 +16,13 @@ Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that c
 
 For an introduction to how the algorithm works, see [the presentation](./OgmaNeo_Presentation.pdf).
 
-Note that there are two libraries implementing SPH: This one (OgmaNeo V2), and an embedded (CPU only) version [EOgmaNeo](https://github.com/ogmacorp/EOgmaNeo).
-
-There is also a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of this repository that contains an outdated implementation of SPH. Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
+There is a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of this repository that contains an outdated implementation of SPH. Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
 
 ## Installation
 
 ### CMake
 
 Version 3.1+ of [CMake](https://cmake.org/) is required when building the library.
-
-### OpenCL
-
-[OpenCL](https://www.khronos.org/opencl/) (Open Compute Language, version 1.2 and upwards) is used to compile, upload and run kernel code on CPU and GPU devices. An OpenCL SDK, with system drivers that support OpenCL 1.2, is required to build and use the OgmaNeo library.
-
-The open source POCL package ([Portable Computing Language](http://portablecl.org/)) can be used for devices that don't have OpenCL vendor driver support. 
-
-### CL2 header file
-
-The Khronos Group's [cl2.hpp](http://github.khronos.org/OpenCL-CLHPP/) header file is required when building OgmaNeo. It needs to be placed alongside your OpenCL header files. The header file can be downloaded from Github [https://github.com/KhronosGroup/OpenCL-CLHPP/releases](https://github.com/KhronosGroup/OpenCL-CLHPP/releases)
 
 ### Building
 
@@ -50,7 +38,9 @@ The following commands can be used to build the OgmaNeo library:
 
 The `cmake` command can be passed a `CMAKE_INSTALL_PREFIX` to determine where to install the library and header files.  
 
-The `BUILD_SHARED_LIBS` boolean cmake option can be used to create dynamic/shared object library (default is to create a _static_ library). On Linux it's recommended to add `-DBUILD_SHARED_LIBS=ON`
+The `BUILD_SHARED_LIBS` boolean cmake option can be used to create dynamic/shared object library (default is to create a _static_ library). On Linux it's recommended to add `-DBUILD_SHARED_LIBS=ON` (especially if you plan to use the Python bindings in PyOgmaNeo2).
+
+Multithreading can be disabled by setting the `DISABLE_THREADING` boolean cmake option to `On`.
 
 `make install` can be run to install the library. `make uninstall` can be used to uninstall the library.
 
@@ -67,3 +57,6 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for information on making
 Contact Ogma via licenses@ogmacorp.com to discuss commercial use and licensing options.
 
 OgmaNeo Copyright (c) 2016-2018 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
+
+This library depends on the [CPTL library](https://github.com/vit-vit/CTPL) for thread pooling.
+See the repository or [its source](./source/ThreadPool.h) for license details with regards to that library.
