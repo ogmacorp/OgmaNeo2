@@ -18,41 +18,43 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+if(DISABLE_THREADING)
+    message("Disabling threading")
+    add_compile_definitions(KERNEL_NOTHREAD)
+endif()
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include_directories("${PROJECT_SOURCE_DIR}/source")
 
-# This is only required for the script to work in the version control
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
-find_package(OpenCL REQUIRED)
- 
-include_directories(${OpenCL_INCLUDE_DIR})
-
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
-    "${SOURCE_PATH}/system/ComputeSystem.cpp"
-    "${SOURCE_PATH}/system/ComputeProgram.cpp"
-    "${SOURCE_PATH}/neo/Helpers.cpp"
-    "${SOURCE_PATH}/neo/SparseCoder.cpp"
-    "${SOURCE_PATH}/neo/Predictor.cpp"
-    "${SOURCE_PATH}/neo/Hierarchy.cpp"
-    "${SOURCE_PATH}/neo/ImageEncoder.cpp"
+    "${SOURCE_PATH}/Helpers.cpp"
+    "${SOURCE_PATH}/SparseCoder.cpp"
+    "${SOURCE_PATH}/Predictor.cpp"
+    "${SOURCE_PATH}/Hierarchy.cpp"
+    "${SOURCE_PATH}/ImageEncoder.cpp"
+	"${SOURCE_PATH}/SparseMatrix.cpp"
 )
 
-add_library(OgmaNeo ${SOURCES})
+set(HEADERS
+	"${SOURCE_PATH}/Helpers.h"
+    "${SOURCE_PATH}/SparseCoder.h"
+    "${SOURCE_PATH}/Predictor.h"
+    "${SOURCE_PATH}/Hierarchy.h"
+    "${SOURCE_PATH}/ImageEncoder.h"
+	"${SOURCE_PATH}/SparseMatrix.h"
+)
 
-target_link_libraries(OgmaNeo ${OpenCL_LIBRARIES})
+add_library(OgmaNeo ${SOURCES} ${HEADERS})
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-install(DIRECTORY "${SOURCE_PATH}/system"
-        DESTINATION include/ogmaneo
-        FILES_MATCHING PATTERN "*.h*")
-
-install(DIRECTORY "${SOURCE_PATH}/neo"
+install(DIRECTORY "${SOURCE_PATH}/"
         DESTINATION include/ogmaneo
         FILES_MATCHING PATTERN "*.h*")
