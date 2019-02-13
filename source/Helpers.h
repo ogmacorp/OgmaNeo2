@@ -268,6 +268,12 @@ std::vector<const FloatBuffer*> constGet(
 inline float sigmoid(
     float x
 ) {
+    if (x < 0.0f) {
+        x = std::exp(x);
+
+        return x / (1.0f + x);
+    }
+    
     return 1.0f / (1.0f + std::exp(-x));
 }
 
