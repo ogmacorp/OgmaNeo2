@@ -338,6 +338,7 @@ void ogmaneo::writeSMToStream(
     os.write(reinterpret_cast<const char*>(&mat._columns), sizeof(int));
 
     writeBufferToStream(os, &mat._nonZeroValues);
+    writeBufferToStream(os, &mat._nonZeroValueIndices);
     writeBufferToStream(os, &mat._rowRanges);
     writeBufferToStream(os, &mat._columnIndices);
     writeBufferToStream(os, &mat._columnRanges);
@@ -352,6 +353,7 @@ void ogmaneo::readSMFromStream(
     is.read(reinterpret_cast<char*>(&mat._columns), sizeof(int));
 
     readBufferFromStream(is, &mat._nonZeroValues);
+    readBufferFromStream(is, &mat._nonZeroValueIndices);
     readBufferFromStream(is, &mat._rowRanges);
     readBufferFromStream(is, &mat._columnIndices);
     readBufferFromStream(is, &mat._columnRanges);
