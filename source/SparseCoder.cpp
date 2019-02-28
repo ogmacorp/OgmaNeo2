@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "SparseCoder.h"
-#include <iostream>
+
 using namespace ogmaneo;
 
 void SparseCoder::forward(
@@ -162,6 +162,8 @@ void SparseCoder::writeToStream(
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         const VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
 
