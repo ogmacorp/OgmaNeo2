@@ -41,7 +41,7 @@ private:
     Int3 _hiddenSize; // Hidden layer size
 
     IntBuffer _hiddenCs; // Hidden state
-
+    
     std::vector<VisibleLayer> _visibleLayers; // Layers
     std::vector<VisibleLayerDesc> _visibleLayerDescs; // Descs
 
@@ -50,8 +50,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActivations,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActivations
     );
 
     void backward(
@@ -61,14 +60,20 @@ private:
         int vli
     );
 
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const FloatBuffer*> &inputActivations,
+        int vli
+    );
+
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActivations,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActivations
     ) {
-        sc->forward(pos, rng, inputActivations, learnEnabled);
+        sc->forward(pos, rng, inputActivations);
     }
 
     static void backwardKernel(
@@ -81,13 +86,23 @@ private:
         sc->backward(pos, rng, hiddenCs, vli);
     }
 
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const std::vector<const FloatBuffer*> &inputActivations,
+        int vli
+    ) {
+        sc->learn(pos, rng, inputActivations, vli);
+    }
+
 public:
     float _alpha; // Learning rate
 
     // Initialize defaults
     ImageEncoder()
     :
-    _alpha(0.01f)
+    _alpha(0.1f)
     {}
 
     // Create a randomly initialized image encoder
