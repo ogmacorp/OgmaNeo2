@@ -20,11 +20,14 @@ public:
 
         int _radius; // Radius onto input
 
+        float _strength; // Strength of visible layer activation contribution
+
         // Defaults
         VisibleLayerDesc()
         :
         _size({ 4, 4, 16 }),
-        _radius(2)
+        _radius(2),
+        _strength(1.0f)
         {}
     };
 
