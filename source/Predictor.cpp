@@ -52,19 +52,21 @@ void Predictor::learn(
 
     // --- Delta Rule ---
 
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+    if (_hiddenCs[hiddenColumnIndex] != targetC) {
+        for (int hc = 0; hc < _hiddenSize.z; hc++) {
+            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float target = (hc == targetC ? 1.0f : 0.0f);
+            float target = (hc == targetC ? 1.0f : 0.0f);
 
-        float delta = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]))); // Delta
+            float delta = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]))); // Delta
 
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+            // For each visible layer
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.deltaOHVs(vl._inputCsPrev, delta, hiddenIndex, vld._size.z); // Apply delta rule
+                vl._weights.deltaOHVs(vl._inputCsPrev, delta, hiddenIndex, vld._size.z); // Apply delta rule
+            }
         }
     }
 }
