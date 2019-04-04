@@ -32,7 +32,7 @@ The following commands can be used to build the OgmaNeo library:
 > cd OgmaNeo2
 > mkdir build  
 > cd build  
-> cmake -DCMAKE_INSTALL_PREFIX=../install ..  
+> cmake ..  
 > make  
 > make install
 
@@ -58,5 +58,5 @@ Contact Ogma via licenses@ogmacorp.com to discuss commercial use and licensing o
 
 OgmaNeo Copyright (c) 2016-2018 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
 
-This library depends on the [CPTL library](https://github.com/vit-vit/CTPL) for thread pooling.
+This library depends on the [CTPL library](https://github.com/vit-vit/CTPL) for thread pooling.
 See the repository or [its source](./source/ThreadPool.h) for license details with regards to that library.

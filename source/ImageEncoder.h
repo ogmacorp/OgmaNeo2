@@ -42,6 +42,8 @@ private:
 
     IntBuffer _hiddenCs; // Hidden state
 
+    FloatBuffer _hiddenRates; // Rates
+    
     std::vector<VisibleLayer> _visibleLayers; // Layers
     std::vector<VisibleLayerDesc> _visibleLayerDescs; // Descs
 
@@ -83,11 +85,15 @@ private:
 
 public:
     float _alpha; // Learning rate
+    float _beta; // Learning rate decay
+    float _gamma; // SOM falloff
 
     // Initialize defaults
     ImageEncoder()
     :
-    _alpha(0.01f)
+    _alpha(1.0f),
+    _beta(0.99f),
+    _gamma(0.2f)
     {}
 
     // Create a randomly initialized image encoder

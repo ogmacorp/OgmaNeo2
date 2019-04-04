@@ -9,7 +9,7 @@
 #pragma once
 
 #include <vector>
-
+#include <math.h>
 #include <assert.h>
 
 namespace ogmaneo {
@@ -76,8 +76,18 @@ struct SparseMatrix {
 		int row
 	);
 
+	float distance(
+		const std::vector<float> &in,
+		int row
+	);
+
 	// Count number of elements in each row
 	int counts(
+		int row
+	);
+
+	float counts(
+		const std::vector<float> &in,
 		int row
 	);
 
@@ -88,22 +98,42 @@ struct SparseMatrix {
 		int column
 	);
 
+	float distanceT(
+		const std::vector<float> &in,
+		int column
+	);
+
 	// Count number of elements in each column
 	int countsT(
 		int column
 	);
 
+	float countsT(
+		const std::vector<float> &in,
+		int column
+	);
+
 	// --- One-Hot Vectors Operations ---
 
-	// Multiply by a one-hot-row matrix
 	float multiplyOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize
 	);
 
-	// Multiply by a one-hot-row matrix
 	float multiplyOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
+	float distanceOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float distanceOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize
@@ -111,7 +141,18 @@ struct SparseMatrix {
 
 	// --- Delta Rules ---
 
-	// For dense deltas
+	void deltas(
+		const std::vector<float> &in,
+		float delta,
+		int row
+	);
+
+	void deltasT(
+		const std::vector<float> &in,
+		float delta,
+		int column
+	);
+
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
@@ -119,12 +160,21 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// For dense deltas
 	void deltaOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	// --- Normalization ---
+
+	void normalize(
+		int row
+	);
+
+	void normalizeT(
+		int column
 	);
 
 	// --- Hebb Rules ---

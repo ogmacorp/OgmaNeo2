@@ -369,7 +369,7 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
     is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
-
+    
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes;
         
@@ -386,7 +386,7 @@ void Hierarchy::readFromStream(
         }
 
         _scLayers[l].readFromStream(is);
-
+        
         _pLayers[l].resize(l == 0 ? _inputSizes.size() : _ticksPerUpdate[l]);
 
         for (int v = 0; v < _pLayers[l].size(); v++) {
