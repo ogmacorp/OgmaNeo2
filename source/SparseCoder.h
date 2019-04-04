@@ -40,6 +40,8 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
+    FloatBuffer _hiddenBiases;
+
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -49,7 +51,8 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     );
 
     void learnWeights(
@@ -63,9 +66,10 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputCs);
+        sc->forward(pos, rng, inputCs, learnEnabled);
     }
 
     static void learnWeightsKernel(
@@ -80,11 +84,13 @@ private:
 
 public:
     float _alpha; // Weight learning rate
+    float _beta; // Bias learning rate
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f)
+    _alpha(0.1f),
+    _beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
