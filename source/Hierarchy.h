@@ -31,6 +31,8 @@ private:
     
     std::vector<std::vector<IntBuffer>> _histories;
 
+    std::vector<std::vector<IntBuffer>> _predictions;
+
 public:
     void initZero(
         const Hierarchy &h

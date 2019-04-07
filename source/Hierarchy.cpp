@@ -19,11 +19,10 @@ void State::initZero(
     int numLayers = h.getNumLayers();
 
     _ticks.assign(numLayers, 0);
+    _updates.resize(numLayers, false);
 
     _histories.resize(numLayers);
-
-    // Default update state is no update
-    _updates.resize(numLayers, false);
+    _predictions.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         // Histories for all input layers or just the one sparse coder (if not the first layer)
@@ -31,9 +30,19 @@ void State::initZero(
 
         for (int v = 0; v < _histories[l].size(); v++)
             _histories[l][v] = IntBuffer(h._historySizes[l][v], 0);
+            
+        const std::vector<std::unique_ptr<Predictor>> &predictors = h.getPLayer(l);
+
+        _predictions[l].resize(predictors.size());
+
+        for (int v = 0; v < _predictions[l].size(); v++) {
+            if (predictors[v] != nullptr)
+                _predictions[l][v] = IntBuffer(predictors[v]->getHiddenSize().x * predictors[v]->getHiddenSize().y, 0);
+            else
+                _predictions[l][v].clear();
+        }
     }
 }
-
 
 void State::writeToStream(
     std::ostream &os
@@ -52,6 +61,13 @@ void State::writeToStream(
 
         for (int i = 0; i < numHistorySizes; i++)
             writeBufferToStream(os, &_histories[l][i]);
+
+        int numPredictions = _predictions[l].size();
+
+        os.write(reinterpret_cast<const char*>(&numPredictions), sizeof(int));
+
+        for (int i = 0; i < numPredictions; i++)
+            writeBufferToStream(os, &_predictions[l][i]);
     }
 }
 
@@ -65,6 +81,7 @@ void State::readFromStream(
     _updates.resize(numLayers);
     _ticks.resize(numLayers);
     _histories.resize(numLayers);
+    _predictions.resize(numLayers);
 
     is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(char));
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
@@ -78,6 +95,15 @@ void State::readFromStream(
 
         for (int i = 0; i < numHistorySizes; i++)
             readBufferFromStream(is, &_histories[l][i]);
+
+        int numPredictions;
+
+        is.read(reinterpret_cast<char*>(&numPredictions), sizeof(int));
+
+        _predictions[l].resize(numPredictions);
+
+        for (int i = 0; i < numPredictions; i++)
+            readBufferFromStream(is, &_predictions[l][i]);
     }
 }
 
@@ -316,7 +342,7 @@ void Hierarchy::step(
             if (l < _scLayers.size() - 1) {
                 assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - state._ticks[l + 1]] != nullptr);
 
-                feedBackCs[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - state._ticks[l + 1]]->getHiddenCs();
+                feedBackCs[1] = &state._predictions[l + 1][_ticksPerUpdate[l + 1] - 1 - state._ticks[l + 1]];
             }
 
             // Step actor layers
@@ -326,6 +352,14 @@ void Hierarchy::step(
                         _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : &state._histories[l][p]);
 
                     _pLayers[l][p]->activate(cs, feedBackCs);
+
+                    // Copy
+#ifdef KERNEL_NOTHREAD
+                    for (int x = 0; x < _pLayers[l][p]->getHiddenCs().size(); x++)
+                        copyInt(x, cs._rng, &_pLayers[l][p]->getHiddenCs(), &state._predictions[l][p]);
+#else
+                    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_pLayers[l][p]->getHiddenCs(), &state._predictions[l][p]), _pLayers[l][p]->getHiddenCs().size(), cs._rng, cs._batchSize1);
+#endif
                 }
             }
         }
