@@ -18,13 +18,15 @@ void State::initZero(
 ) {
     int numLayers = h.getNumLayers();
 
-    _ticks.assign(numLayers, 0);
+    _ticks.resize(numLayers, 0);
     _updates.resize(numLayers, false);
-
+    _hiddenCs.resize(numLayers);
     _histories.resize(numLayers);
     _predictions.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
+        _hiddenCs[l] = IntBuffer(h.getSCLayer(l).getHiddenCs().size(), 0);
+
         // Histories for all input layers or just the one sparse coder (if not the first layer)
         _histories[l].resize(h._historySizes[l].size());
 
@@ -55,6 +57,8 @@ void State::writeToStream(
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
 
     for (int l = 0; l < numLayers; l++) {
+        writeBufferToStream(os, &_hiddenCs);
+
         int numHistorySizes = _histories[l].size();
 
         os.write(reinterpret_cast<const char*>(&numHistorySizes), sizeof(int));
@@ -81,6 +85,7 @@ void State::readFromStream(
 
     _updates.resize(numLayers);
     _ticks.resize(numLayers);
+    _hiddenCs.resize(numLayers);
     _histories.resize(numLayers);
     _predictions.resize(numLayers);
 
@@ -88,6 +93,8 @@ void State::readFromStream(
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
 
     for (int l = 0; l < numLayers; l++) {
+        readBufferFromStream(is, &_hiddenCs);
+
         int numHistorySizes;
 
         is.read(reinterpret_cast<char*>(&numHistorySizes), sizeof(int));
@@ -281,10 +288,9 @@ void Hierarchy::step(
     }
 
     // Set all updates to no update, will be set to true if an update occurred later
-    state._updates.clear();
-    state._updates.resize(_scLayers.size(), false);
+    state._updates = std::vector<char>(_scLayers.size(), false);
 
-    std::vector<IntBuffer> hiddenCsPrev(_scLayers.size());
+    std::vector<IntBuffer> hiddenCsPrev = state._hiddenCs;
 
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
@@ -296,11 +302,11 @@ void Hierarchy::step(
             // Updated
             state._updates[l] = true;
 
-            hiddenCsPrev[l] = _scLayers[l].getHiddenCs();
-            
             // Activate sparse coder
             _scLayers[l].step(cs, constGet(state._histories[l]), learnEnabled);
 
+            state._hiddenCs[l] = _scLayers[l].getHiddenCs();
+            
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
                 int lNext = l + 1;
@@ -324,8 +330,7 @@ void Hierarchy::step(
             std::vector<const IntBuffer*> feedBackCs(l < _scLayers.size() - 1 ? 2 : 1);
             std::vector<const IntBuffer*> feedBackCsPrev(feedBackCs.size());
 
-            feedBackCs[0] = &_scLayers[l].getHiddenCs();
-
+            feedBackCs[0] = &state._hiddenCs[l];
             feedBackCsPrev[0] = &hiddenCsPrev[l];
 
             if (l < _scLayers.size() - 1) {

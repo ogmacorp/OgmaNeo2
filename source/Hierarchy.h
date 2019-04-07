@@ -28,6 +28,8 @@ private:
     std::vector<char> _updates;
 
     std::vector<int> _ticks;
+
+    std::vector<IntBuffer> _hiddenCs;
     
     std::vector<std::vector<IntBuffer>> _histories;
 
