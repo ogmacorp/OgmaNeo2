@@ -32,6 +32,7 @@ private:
     std::vector<std::vector<IntBuffer>> _histories;
 
     std::vector<std::vector<IntBuffer>> _predictions;
+    std::vector<std::vector<IntBuffer>> _predictionsPrev;
 
 public:
     void initZero(

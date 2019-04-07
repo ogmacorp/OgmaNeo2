@@ -42,6 +42,8 @@ void State::initZero(
                 _predictions[l][v].clear();
         }
     }
+
+    _predictionsPrev = _predictions;
 }
 
 void State::writeToStream(
@@ -66,8 +68,10 @@ void State::writeToStream(
 
         os.write(reinterpret_cast<const char*>(&numPredictions), sizeof(int));
 
-        for (int i = 0; i < numPredictions; i++)
+        for (int i = 0; i < numPredictions; i++) {
             writeBufferToStream(os, &_predictions[l][i]);
+            writeBufferToStream(os, &_predictionsPrev[l][i]);
+        }
     }
 }
 
@@ -102,8 +106,10 @@ void State::readFromStream(
 
         _predictions[l].resize(numPredictions);
 
-        for (int i = 0; i < numPredictions; i++)
+        for (int i = 0; i < numPredictions; i++) {
             readBufferFromStream(is, &_predictions[l][i]);
+            readBufferFromStream(is, &_predictionsPrev[l][i]);
+        }
     }
 }
 
@@ -254,6 +260,10 @@ void Hierarchy::step(
 ) {
     assert(inputCs.size() == _inputSizes.size());
 
+    std::vector<int> ticksPrev = state._ticks;
+
+    state._predictionsPrev = state._predictions;
+
     // First tick is always 0
     state._ticks[0] = 0;
 
@@ -292,6 +302,8 @@ void Hierarchy::step(
     state._updates.clear();
     state._updates.resize(_scLayers.size(), false);
 
+    std::vector<IntBuffer> hiddenCsPrev(_scLayers.size());
+
     // Forward
     for (int l = 0; l < _scLayers.size(); l++) {
         // If is time for layer to tick
@@ -301,6 +313,8 @@ void Hierarchy::step(
 
             // Updated
             state._updates[l] = true;
+
+            hiddenCsPrev[l] = _scLayers[l].getHiddenCs();
             
             // Activate sparse coder
             _scLayers[l].step(cs, constGet(state._histories[l]), learnEnabled);
@@ -336,20 +350,24 @@ void Hierarchy::step(
         if (state._updates[l]) {
             // Feed back is current layer state and next higher layer prediction
             std::vector<const IntBuffer*> feedBackCs(l < _scLayers.size() - 1 ? 2 : 1);
+            std::vector<const IntBuffer*> feedBackCsPrev(feedBackCs.size());
 
             feedBackCs[0] = &_scLayers[l].getHiddenCs();
+
+            feedBackCsPrev[0] = &hiddenCsPrev[l];
 
             if (l < _scLayers.size() - 1) {
                 assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - state._ticks[l + 1]] != nullptr);
 
                 feedBackCs[1] = &state._predictions[l + 1][_ticksPerUpdate[l + 1] - 1 - state._ticks[l + 1]];
+                feedBackCsPrev[1] = &state._predictionsPrev[l + 1][_ticksPerUpdate[l + 1] - 1 - ticksPrev[l + 1]];
             }
 
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {
                 if (_pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : &state._histories[l][p]);
+                        _pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : &state._histories[l][p], feedBackCsPrev);
 
                     _pLayers[l][p]->activate(cs, feedBackCs);
 
