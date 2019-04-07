@@ -430,3 +430,13 @@ void SparseMatrix::hebbDecreasingOHVs(
 		}
 	}
 }
+
+void SparseMatrix::hebbErrors(
+	const std::vector<float> &errors,
+	int row
+) {
+	int nextIndex = row + 1;
+	
+	for (int j = _rowRanges[row]; j < _rowRanges[nextIndex]; j++)
+		_nonZeroValues[j] += errors[_columnIndices[j]];
+}
