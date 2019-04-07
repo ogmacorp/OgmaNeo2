@@ -66,6 +66,10 @@ public:
         return _histories[l];
     }
 
+    int getNumLayers() const {
+        return _histories.size();
+    }
+
     friend class Hierarchy;
 };
 
