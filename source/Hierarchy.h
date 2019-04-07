@@ -20,7 +20,56 @@ enum InputType {
     _predict = 1
 };
 
-// A SPH
+class Hierarchy;
+
+// State of SPH
+class State {
+private:
+    std::vector<char> _updates;
+
+    std::vector<int> _ticks;
+    
+    std::vector<std::vector<IntBuffer>> _histories;
+
+public:
+    void initZero(
+        const Hierarchy &h
+    );
+
+    // Write to stream
+    void writeToStream(
+        std::ostream &os // Stream to write to
+    ) const;
+
+    // Read from stream
+    void readFromStream(
+        std::istream &is // Stream to read from
+    );
+
+    // Whether this layer received on update this timestep
+    bool getUpdate(
+        int l // Layer index
+    ) const {
+        return _updates[l];
+    }
+
+    // Get current layer ticks, relative to previous layer
+    int getTick(
+        int l // Layer Index
+    ) const {
+        return _ticks[l];
+    }
+
+    std::vector<IntBuffer> &getHistory(
+        int l // Layer Index
+    ) {
+        return _histories[l];
+    }
+
+    friend class Hierarchy;
+};
+
+// SPH weights and other slow moving or stationary elements
 class Hierarchy {
 public:
     // Describes a layer for construction
@@ -48,14 +97,10 @@ private:
     std::vector<SparseCoder> _scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
 
-    // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
+    // History information
     std::vector<std::vector<int>> _historySizes;
 
     // Per-layer values
-    std::vector<char> _updates;
-
-    std::vector<int> _ticks;
     std::vector<int> _ticksPerUpdate;
 
     // Input dimensions
@@ -89,6 +134,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        State &state,
         bool learnEnabled = true // Whether learning is enabled
     );
 
@@ -102,6 +148,11 @@ public:
         std::istream &is // Stream to read from
     );
 
+    // Get input dimensions
+    const std::vector<Int3> &getInputSizes() const {
+        return _inputSizes;
+    }
+
     // Get the number of layers (scLayers)
     int getNumLayers() const {
         return _scLayers.size();
@@ -112,20 +163,6 @@ public:
         int i // Index of input layer to get predictions for
     ) const {
         return _pLayers.front()[i]->getHiddenCs();
-    }
-
-    // Whether this layer received on update this timestep
-    bool getUpdate(
-        int l // Layer index
-    ) const {
-        return _updates[l];
-    }
-
-    // Get current layer ticks, relative to previous layer
-    int getTicks(
-        int l // Layer Index
-    ) const {
-        return _ticks[l];
     }
 
     // Get layer ticks per update, relative to previous layer
@@ -167,5 +204,7 @@ public:
     ) const {
         return _pLayers[l];
     }
+
+    friend class State;
 };
 } // namespace ogmaneo
