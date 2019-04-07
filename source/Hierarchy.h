@@ -72,6 +72,13 @@ public:
         return _histories.size();
     }
 
+    // Retrieve predictions
+    const IntBuffer &getPredictionCs(
+        int i // Index of input layer to get predictions for
+    ) const {
+        return _predictions.front()[i];
+    }
+
     friend class Hierarchy;
 };
 
@@ -157,13 +164,6 @@ public:
     // Get the number of layers (scLayers)
     int getNumLayers() const {
         return _scLayers.size();
-    }
-
-    // Retrieve predictions
-    const IntBuffer &getPredictionCs(
-        int i // Index of input layer to get predictions for
-    ) const {
-        return _pLayers.front()[i]->getHiddenCs();
     }
 
     // Get layer ticks per update, relative to previous layer

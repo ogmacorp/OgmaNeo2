@@ -119,7 +119,6 @@ void Hierarchy::initRandom(
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
 
-    
     _historySizes.resize(layerDescs.size());
     
     _ticksPerUpdate.resize(layerDescs.size());

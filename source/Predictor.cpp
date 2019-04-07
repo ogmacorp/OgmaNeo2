@@ -53,33 +53,31 @@ void Predictor::learn(
 
     // --- Delta Rule ---
 
-    if (_hiddenCs[hiddenColumnIndex] != targetC) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+    for (int hc = 0; hc < _hiddenSize.z; hc++) {
+        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            float sum = 0.0f;
+        float sum = 0.0f;
 
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-            }
+            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+        }
 
-            sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
 
-            float target = (hc == targetC ? 1.0f : 0.0f);
+        float target = (hc == targetC ? 1.0f : 0.0f);
 
-            float delta = _alpha * (target - sigmoid(sum)); // Delta
+        float delta = _alpha * (target - sigmoid(sum)); // Delta
 
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        // For each visible layer
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z); // Apply delta rule
-            }
+            vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z); // Apply delta rule
         }
     }
 }
@@ -128,9 +126,6 @@ void Predictor::activate(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
-    int numHidden = numHiddenColumns * _hiddenSize.z;
-
     // Forward kernel
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)

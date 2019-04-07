@@ -97,14 +97,14 @@ public:
     // Activate the predictor (predict values)
     void activate(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     // Learning predictions (update weights)
     void learn(
         ComputeSystem &cs,
         const IntBuffer* hiddenTargetCs,
-        const std::vector<const IntBuffer*> &inputCs // Hidden/output/prediction
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     // Write to stream
