@@ -148,11 +148,6 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get input dimensions
-    const std::vector<Int3> &getInputSizes() const {
-        return _inputSizes;
-    }
-
     // Get the number of layers (scLayers)
     int getNumLayers() const {
         return _scLayers.size();
