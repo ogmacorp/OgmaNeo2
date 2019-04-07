@@ -42,8 +42,6 @@ void State::initZero(
                 _predictions[l][v].clear();
         }
     }
-
-    _predictionsPrev = _predictions;
 }
 
 void State::writeToStream(
@@ -70,7 +68,6 @@ void State::writeToStream(
 
         for (int i = 0; i < numPredictions; i++) {
             writeBufferToStream(os, &_predictions[l][i]);
-            writeBufferToStream(os, &_predictionsPrev[l][i]);
         }
     }
 }
@@ -108,7 +105,6 @@ void State::readFromStream(
 
         for (int i = 0; i < numPredictions; i++) {
             readBufferFromStream(is, &_predictions[l][i]);
-            readBufferFromStream(is, &_predictionsPrev[l][i]);
         }
     }
 }
@@ -262,7 +258,7 @@ void Hierarchy::step(
 
     std::vector<int> ticksPrev = state._ticks;
 
-    state._predictionsPrev = state._predictions;
+    std::vector<std::vector<IntBuffer>> predictionsPrev = state._predictions;
 
     // First tick is always 0
     state._ticks[0] = 0;
@@ -337,7 +333,7 @@ void Hierarchy::step(
                 assert(_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - state._ticks[l + 1]] != nullptr);
 
                 feedBackCs[1] = &state._predictions[l + 1][_ticksPerUpdate[l + 1] - 1 - state._ticks[l + 1]];
-                feedBackCsPrev[1] = &state._predictionsPrev[l + 1][_ticksPerUpdate[l + 1] - 1 - ticksPrev[l + 1]];
+                feedBackCsPrev[1] = &predictionsPrev[l + 1][_ticksPerUpdate[l + 1] - 1 - ticksPrev[l + 1]];
             }
 
             // Step actor layers
