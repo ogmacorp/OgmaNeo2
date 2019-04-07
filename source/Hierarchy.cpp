@@ -271,11 +271,6 @@ void Hierarchy::step(
     {
         int temporalHorizon = state._histories.front().size() / _inputSizes.size();
 
-        std::vector<IntBuffer> lasts(_inputSizes.size());
-        
-        for (int i = 0; i < _inputSizes.size(); i++)
-            lasts[i] = state._histories.front()[temporalHorizon - 1 + temporalHorizon * i];
-  
         for (int t = temporalHorizon - 1; t > 0; t--) {
             for (int i = 0; i < _inputSizes.size(); i++) {
                 // Shift
@@ -286,15 +281,7 @@ void Hierarchy::step(
         for (int i = 0; i < _inputSizes.size(); i++) {
             assert(_inputSizes[i].x * _inputSizes[i].y == inputCs[i]->size());
             
-            // Copy
-#ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < inputCs[i]->size(); x++)
-                copyInt(x, cs._rng, inputCs[i], &lasts[i]);
-#else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], &lasts[i]), inputCs[i]->size(), cs._rng, cs._batchSize1);
-#endif
-
-            state._histories.front()[0 + temporalHorizon * i] = lasts[i];
+            state._histories.front()[0 + temporalHorizon * i] = *inputCs[i];
         }
     }
 
@@ -325,20 +312,10 @@ void Hierarchy::step(
 
                 int temporalHorizon = state._histories[lNext].size();
 
-                IntBuffer last = state._histories[lNext].back();
-
                 for (int t = temporalHorizon - 1; t > 0; t--)
                     state._histories[lNext][t] = state._histories[lNext][t - 1];
 
-                // Copy
-#ifdef KERNEL_NOTHREAD
-                for (int x = 0; x < _scLayers[l].getHiddenCs().size(); x++)
-                    copyInt(x, cs._rng, &_scLayers[l].getHiddenCs(), &last);
-#else
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), &last), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
-#endif
-
-                state._histories[lNext].front() = last;
+                state._histories[lNext].front() = _scLayers[l].getHiddenCs();
 
                 state._ticks[lNext]++;
             }
@@ -371,13 +348,7 @@ void Hierarchy::step(
 
                     _pLayers[l][p]->activate(cs, feedBackCs);
 
-                    // Copy
-#ifdef KERNEL_NOTHREAD
-                    for (int x = 0; x < _pLayers[l][p]->getHiddenCs().size(); x++)
-                        copyInt(x, cs._rng, &_pLayers[l][p]->getHiddenCs(), &state._predictions[l][p]);
-#else
-                    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_pLayers[l][p]->getHiddenCs(), &state._predictions[l][p]), _pLayers[l][p]->getHiddenCs().size(), cs._rng, cs._batchSize1);
-#endif
+                    state._predictions[l][p] = _pLayers[l][p]->getHiddenCs();
                 }
             }
         }
