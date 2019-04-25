@@ -105,8 +105,10 @@ void SparseCoder::step(
             {
                 int argIndex = 0;
 
+                _backwardKernel.setArg(argIndex++, visibleCs[vli]);
                 _backwardKernel.setArg(argIndex++, _hiddenCs);
                 _backwardKernel.setArg(argIndex++, vl._visibleErrors);
+                _backwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
                 _backwardKernel.setArg(argIndex++, vl._weights._nonZeroValueIndices);
                 _backwardKernel.setArg(argIndex++, vl._weights._columnRanges);
                 _backwardKernel.setArg(argIndex++, vl._weights._rowIndices);

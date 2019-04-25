@@ -190,7 +190,11 @@ void kernel scBackward(
     visibleErrors[visibleIndex] = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum));
 }
 
-void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
+void kernel scInhibit(
+    global const float* hiddenActivations,
+    global int* hiddenCs,
+    int3 hiddenSize
+) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int maxIndex = 0;
