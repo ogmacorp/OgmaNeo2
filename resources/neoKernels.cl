@@ -128,6 +128,24 @@ void hebbErrors(
         nonZeroValues[j] += errors[columnIndices[j]];
 }
 
+void deltaOHVs(
+    float* nonZeroValues,
+    const int* rowRanges,
+    const int* columnIndices,
+    const int* nonZeroIndices,
+    float delta,
+    int row,
+    int oneHotSize
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+		nonZeroValues[j] += delta;
+	}
+}
+
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
 void kernel scForward(
@@ -208,13 +226,6 @@ void kernel scLearn(
 }
 
 // ------------------------------------------- Actor -------------------------------------------
-
-// Initialize weights
-void kernel aInitWeights(global float* weights, uint2 seed) {
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
-
-    weights[get_global_id(0)] = (randFloat(&stateValue) * 2.0f - 1.0f) * 0.001f;
-}
 
 void kernel aForward(global const int* visibleCs, global float* hiddenValues, global float* hiddenActivations,
     global const float* valueWeights, global const float* actionWeights,
