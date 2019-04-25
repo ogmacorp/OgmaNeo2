@@ -36,6 +36,8 @@ private:
 
     cl::Buffer _hiddenCs;
 
+    cl::Buffer _refractoryTimers;
+
     cl::Buffer _hiddenActivations;
 
     std::vector<VisibleLayer> _visibleLayers;
@@ -48,10 +50,12 @@ private:
 
 public:
     cl_float _alpha;
+    cl_int _refractoryTicks;
 
     SparseCoder()
     :
-    _alpha(0.1f)
+    _alpha(0.01f),
+    _refractoryTicks(3)
     {}
 
     void init(

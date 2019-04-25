@@ -192,26 +192,36 @@ void kernel scBackward(
 
 void kernel scInhibit(
     global const float* hiddenActivations,
+    global int* refractoryTimers,
     global int* hiddenCs,
-    int3 hiddenSize
+    int3 hiddenSize,
+    int refractoryTicks
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int maxIndex = 0;
-    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    float maxValue = -999999.0f;
     
     // Find max
-    for (int c = 1; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-        if (value > maxValue) {
-            maxValue = value;
-            maxIndex = c;
+        if (refractoryTimers[hiddenIndex] == 0) {
+            float value = hiddenActivations[hiddenIndex];
+
+            if (value > maxValue) {
+                maxValue = value;
+                maxIndex = c;
+            }
         }
+        else
+            refractoryTimers[hiddenIndex]--;
     }
 
     // Set states
     hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
+
+    _refractoryTimers[address3((int3)(hiddenColumnPosition, maxIndex), hiddenSize)] = refractoryTicks;
 }
 
 void kernel scLearn(

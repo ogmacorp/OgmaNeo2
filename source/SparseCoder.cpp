@@ -45,6 +45,10 @@ void SparseCoder::init(
     _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
 
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
+
+    _refractoryTimers = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_int));
+
+    cs.getQueue().enqueueFillBuffer(_refractoryTimers, static_cast<cl_int>(0), 0, numHidden * sizeof(cl_int));
  
     // Hidden activations
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
@@ -90,8 +94,10 @@ void SparseCoder::step(
         int argIndex = 0;
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations);
+        _inhibitKernel.setArg(argIndex++, _refractoryTimers);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
+        _inhibitKernel.setArg(argIndex++, _refractoryTicks);
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
