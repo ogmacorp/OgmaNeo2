@@ -179,9 +179,8 @@ void kernel scBackward(
     float alpha
 ) {
     int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
-    int2 visibleColumnPosition = visiblePosition.xy;
 
-    int visibleC = visibleCs[address2(visibleColumnPosition, visibleSize.xy)];
+    int visibleC = visibleCs[address2(visiblePosition.xy, visibleSize.xy)];
     
     int visibleIndex = address3(visiblePosition, visibleSize);
 
@@ -299,7 +298,7 @@ void kernel aInhibit(
     }
 
     // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.x)] = selectIndex;
+    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = selectIndex;
 }
 
 void kernel aLearn(
