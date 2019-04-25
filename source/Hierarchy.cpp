@@ -96,7 +96,7 @@ void Hierarchy::init(
                 if (inputTypes[p] == InputType::_act) {
                     _aLayers[l][p] = std::make_unique<Actor>();
 
-                    _aLayers[l][p]->createRandom(cs, prog, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs, rng);
+                    _aLayers[l][p]->init(cs, prog, inputSizes[p], layerDescs[l]._historyCapacity, aVisibleLayerDescs, rng);
                 }
             }
         }
@@ -141,7 +141,7 @@ void Hierarchy::init(
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 _aLayers[l][p] = std::make_unique<Actor>();
 
-                _aLayers[l][p]->createRandom(cs, prog, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs, rng);
+                _aLayers[l][p]->init(cs, prog, layerDescs[l - 1]._hiddenSize, layerDescs[l]._historyCapacity, aVisibleLayerDescs, rng);
             }
         }
 		
