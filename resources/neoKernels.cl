@@ -220,7 +220,7 @@ void kernel scInhibit(
     // Set states
     hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
 
-    _refractoryTimers[address3((int3)(hiddenColumnPosition, maxIndex), hiddenSize)] = refractoryTicks;
+    refractoryTimers[address3((int3)(hiddenColumnPosition, maxIndex), hiddenSize)] = refractoryTicks;
 }
 
 void kernel scLearn(
