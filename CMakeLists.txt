@@ -34,6 +34,7 @@ set(SOURCES
     "${SOURCE_PATH}/ComputeSystem.cpp"
     "${SOURCE_PATH}/ComputeProgram.cpp"
     "${SOURCE_PATH}/Helpers.cpp"
+    "${SOURCE_PATH}/SparseMatrix.cpp"
     "${SOURCE_PATH}/SparseCoder.cpp"
     "${SOURCE_PATH}/Actor.cpp"
     "${SOURCE_PATH}/Hierarchy.cpp"

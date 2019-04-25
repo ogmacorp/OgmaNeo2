@@ -73,10 +73,10 @@ inline float sigmoid(
 }
 
 float multiplyOHVs(
-    const float* nonZeroValues,
-    const int* rowRanges,
-    const int* columnIndices,
-    const int* nonZeroIndices,
+    global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const int* nonZeroIndices,
     int row,
     int oneHotSize
 ) {
@@ -94,11 +94,11 @@ float multiplyOHVs(
 }
 
 float multiplyOHVsT(
-    const float* nonZeroValues,
-    const int* columnRanges,
-    const int* rowIndices,
-    const int* nonZeroValueIndices,
-    const int* nonZeroIndices,
+    global const float* nonZeroValues,
+    global const int* columnRanges,
+    global const int* rowIndices,
+    global const int* nonZeroValueIndices,
+    global const int* nonZeroIndices,
     int column,
     int oneHotSize
 ) {
@@ -116,10 +116,10 @@ float multiplyOHVsT(
 }
 
 void hebbErrors(
-    float* nonZeroValues,
-    const int* rowRanges,
-    const int* columnIndices,
-    const float* errors,
+    global float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const float* errors,
     int row
 ) {
     int nextIndex = row + 1;
@@ -129,10 +129,10 @@ void hebbErrors(
 }
 
 void deltaOHVs(
-    float* nonZeroValues,
-    const int* rowRanges,
-    const int* columnIndices,
-    const int* nonZeroIndices,
+    global float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const int* nonZeroIndices,
     float delta,
     int row,
     int oneHotSize
@@ -270,11 +270,11 @@ void kernel aInhibit(
     if (randFloat(&stateValue) < epsilon)
         selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
     else {
-        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize.xy)];
+        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
         // Find max
         for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize.xy)];
+            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
             if (value > maxValue) {
                 maxValue = value;
