@@ -227,70 +227,41 @@ void kernel scLearn(
 
 // ------------------------------------------- Actor -------------------------------------------
 
-void kernel aForward(global const int* visibleCs, global float* hiddenValues, global float* hiddenActivations,
-    global const float* valueWeights, global const float* actionWeights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
-{
-    int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
-	        
-    int2 visiblePositionCenter = project(hiddenPosition.xy, hiddenToVisible);
+void kernel aForward(
+    global const int* visibleCs,
+    global float* hiddenValues,
+    global float* hiddenActivations,
+    global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    int3 visibleSize,
+    int3 hiddenSize
+) {
+    int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+	      
+    int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-    int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
+    // If is value
+    if (hiddenPosition.z == hiddenSize.z) {
+        float sum = multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex1, visibleSize.z);
 
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
+        hiddenValues[address2(hiddenPosition.xy, hiddenSize.xy)] += sum;
+    }
+    else {
+        float sum = multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex1, visibleSize.z);
 
-    int3 wPosValue;
-    wPosValue.xy = hiddenPosition;
-
-    float value = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
-
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                wPosValue.z = offset.x + offset.y * diam + visibleC * diam2;
-
-                value += valueWeights[address3(wPosValue, hiddenSize.xy)];
-                count += 1.0f;
-            }
-        }
-
-    hiddenValues[address2(hiddenPosition, hiddenSize.x)] += value / fmax(1.0f, count);
-
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int4 wPosAction;
-        wPosAction.xyz = (int3)(hiddenPosition.xy, c);
-
-        float sum = 0.0f;
-
-        for (int dx = -radius; dx <= radius; dx++)
-            for (int dy = -radius; dy <= radius; dy++) {
-                int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-                if (inBounds0(visiblePosition, visibleSize.xy)) {
-                    int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
-
-                    int2 offset = visiblePosition - fieldLowerBound;
-
-                    wPosAction.w = offset.x + offset.y * diam + visibleC * diam2;
-
-                    sum += actionWeights[address4(wPosAction, hiddenSize)];
-                }
-            }
-
-        hiddenActivations[address3((int3)(hiddenPosition.xy, c), hiddenSize.xy)] += sum / fmax(1.0f, count);
+        hiddenActivations[address3(hiddenPosition, hiddenSize)] += sum;
     }
 }
 
-void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize, float epsilon, uint2 seed) {
-    int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
+void kernel aInhibit(
+    global const float* hiddenActivations,
+    global int* hiddenCs,
+    int3 hiddenSize,
+    float epsilon,
+    uint2 seed
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
 
@@ -299,11 +270,11 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
     if (randFloat(&stateValue) < epsilon)
         selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
     else {
-        float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize.xy)];
     
         // Find max
         for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
+            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize.xy)];
 
             if (value > maxValue) {
                 maxValue = value;
@@ -313,280 +284,49 @@ void kernel aInhibit(global const float* hiddenActivations, global int* hiddenCs
     }
 
     // Set states
-    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = selectIndex;
+    hiddenCs[address2(hiddenColumnPosition, hiddenSize.x)] = selectIndex;
 }
 
-void kernel aLearn(global const int* visibleCsPrev,
-    global const float* hiddenValues, global const float* hiddenValuesPrev, global const float* hiddenValuesPrevPrev,
+void kernel aLearn(
+    global const int* visibleCsPrev,
+    global const float* hiddenValues,
+    global const float* hiddenValuesPrev,
+    global const float* hiddenValuesPrevPrev,
     global const float* hiddenActivationsPrev,
     global const int* hiddenCsPrev,
-    global float* valueWeights, global float* actionWeights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius,
-    float alpha, float beta, float gamma, float qTarget)
-{
-    int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
+    global float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    int3 visibleSize,
+    int3 hiddenSize,
+    float2 hiddenToVisible,
+    int radius,
+    float alpha,
+    float beta,
+    float gamma,
+    float qTarget
+) {
+    int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 	
-    int hiddenColumnIndex = address2(hiddenPosition, hiddenSize.x);
+    int hiddenColumnIndex = address2(hiddenPosition.xy, hiddenSize.xy);
 
     int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
     float qUpdate = qTarget + gamma * hiddenValues[hiddenColumnIndex];
 
-    float deltaValue = alpha * (qUpdate - hiddenValuesPrev[hiddenColumnIndex]);
-    float deltaAction = beta * (qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex]);
+    float deltaValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex];
     
-    int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
+    int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
+        
+    if (hiddenPosition.z == hiddenSize.z)
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * deltaValue, hiddenIndex1, visibleSize.z);
+    else {
+        float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex];
 
-    int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
+        if (deltaAction > 0.0f) {
+            float delta = beta * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)]));
 
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    int3 wPosValue;
-    wPosValue.xy = hiddenPosition;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
-
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                wPosValue.z = offset.x + offset.y * diam + visibleCPrev * diam2;
-
-                valueWeights[address3(wPosValue, hiddenSize.xy)] += deltaValue;
-            }
-        }
-    
-    for (int c = 0; c < hiddenSize.z; c++) {
-        int4 wPosAction;
-        wPosAction.xyz = (int3)(hiddenPosition, c);
-
-        float delta = deltaAction * ((c == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3((int3)(hiddenPosition, c), hiddenSize.xy)]));
-
-        for (int dx = -radius; dx <= radius; dx++)
-            for (int dy = -radius; dy <= radius; dy++) {
-                int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-                if (inBounds0(visiblePosition, visibleSize.xy)) {
-                    int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
-
-                    int2 offset = visiblePosition - fieldLowerBound;
-
-                    wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
-
-                    actionWeights[address4(wPosAction, hiddenSize)] += delta;
-                }
-            }
-    }
-
-    // int4 wPosAction;
-    // wPosAction.xyz = (int3)(hiddenPosition, hiddenCPrev);
-
-    // for (int dx = -radius; dx <= radius; dx++)
-    //     for (int dy = -radius; dy <= radius; dy++) {
-    //         int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-    //         if (inBounds0(visiblePosition, visibleSize.xy)) {
-    //             int visibleCPrev = visibleCsPrev[address2(visiblePosition, visibleSize.x)];
-
-    //             int2 offset = visiblePosition - fieldLowerBound;
-
-    //             wPosAction.w = offset.x + offset.y * diam + visibleCPrev * diam2;
-
-    //             actionWeights[address4(wPosAction, hiddenSize)] += deltaAction;
-    //         }
-    //     }
-}
-
-// ------------------------------------------- Image Encoder -------------------------------------------
-
-// Initialize weights
-void kernel imInitWeights(global float* weights, uint2 seed) {
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
-
-    weights[get_global_id(0)] = randFloat(&stateValue) * 2.0f - 1.0f;
-}
-
-void kernel imForward(global const float* visibleAs, global const float* visibleAsPrev,
-    global float* hiddenActivations,
-    global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
-{
-    int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
-
-    int2 visiblePositionCenter = project(hiddenPosition.xy, hiddenToVisible);
-
-    int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
-
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    float center = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                for (int c = 0; c < visibleSize.z; c++) {
-                    int visibleIndex = address3((int3)(visiblePosition, c), visibleSize.xy);
-
-                    float act = visibleAs[visibleIndex] - visibleAsPrev[visibleIndex];
-
-                    center += act;
-                    count += 1.0f;
-                }
-            }
-        }
-
-    center /= fmax(1.0f, count);
-
-    float sum = 0.0f;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                for (int c = 0; c < visibleSize.z; c++) {
-                    int visibleIndex = address3((int3)(visiblePosition, c), visibleSize.xy);
-
-                    float act = visibleAs[visibleIndex] - visibleAsPrev[visibleIndex];
-
-                    int4 wPos;
-                    wPos.xyz = hiddenPosition;
-                    wPos.w = offset.x + offset.y * diam + c * diam2;
-
-                    float d = act - center;
-
-                    sum += weights[address4(wPos, hiddenSize)] * d;
-                }
-            }
-        }
-
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
-}
-
-void kernel imInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
-    int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
-
-    int maxIndex = 0;
-    float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
-    
-    // Find max
-    for (int c = 1; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
-
-        if (value > maxValue) {
-            maxValue = value;
-            maxIndex = c;
+            deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
         }
     }
-
-    // Set states
-    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
-}
-
-void kernel imLearn(global const float* visibleAs, global const float* visibleAsPrev, global const int* hiddenCs,
-    global float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float alpha)
-{
-    int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
-
-    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
-
-    int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
-
-    int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
-
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    float center = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                for (int c = 0; c < visibleSize.z; c++) {
-                    int visibleIndex = address3((int3)(visiblePosition, c), visibleSize.xy);
-
-                    float act = visibleAs[visibleIndex] - visibleAsPrev[visibleIndex];
-
-                    center += act;
-                    count += 1.0f;
-                }
-            }
-        }
-
-    center /= fmax(1.0f, count);
-
-    int4 wPos;
-    wPos.xyz = (int3)(hiddenPosition, hiddenC);
-
-    float weightSum = 0.0f;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                for (int c = 0; c < visibleSize.z; c++) {
-                    int visibleIndex = address3((int3)(visiblePosition, c), visibleSize.xy);
-
-                    float act = visibleAs[visibleIndex] - visibleAsPrev[visibleIndex];
-
-                    wPos.w = offset.x + offset.y * diam + c * diam2;
-
-                    int wi = address4(wPos, hiddenSize);
-
-                    float delta = act - center - weights[wi];
-
-                    float w = weights[wi] + alpha * delta;
-
-                    weightSum += w * w;
-                }
-            }
-        }
-
-    float scale = 1.0f / fmax(0.0001f, sqrt(weightSum));
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                for (int c = 0; c < visibleSize.z; c++) {
-                    int visibleIndex = address3((int3)(visiblePosition, c), visibleSize.xy);
-
-                    float act = visibleAs[visibleIndex] - visibleAsPrev[visibleIndex];
-
-                    wPos.w = offset.x + offset.y * diam + c * diam2;
-
-                    int wi = address4(wPos, hiddenSize);
-
-                    float delta = act - center - weights[wi];
-
-                    float w = weights[wi] + alpha * delta;
-
-                    weights[wi] = w * scale;
-                }
-            }
-        }
 }

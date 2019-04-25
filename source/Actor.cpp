@@ -183,7 +183,7 @@ void Actor::step(
             _forwardKernel.setArg(argIndex++, vld._size);
             _forwardKernel.setArg(argIndex++, _hiddenSize);
 
-            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
         }
 
         cl_float g = std::pow(_gamma, _historySize - 1);
@@ -210,7 +210,7 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, g);
             _learnKernel.setArg(argIndex++, q);
 
-            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
         }
     }
 }
