@@ -314,8 +314,6 @@ void kernel aLearn(
     global const int* columnIndices,
     int3 visibleSize,
     int3 hiddenSize,
-    float2 hiddenToVisible,
-    int radius,
     float alpha,
     float beta,
     float gamma,
@@ -339,7 +337,7 @@ void kernel aLearn(
         float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex];
 
         if (deltaAction > 0.0f) {
-            float delta = beta * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)]));
+            float delta = beta * deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)]));
 
             deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
         }
