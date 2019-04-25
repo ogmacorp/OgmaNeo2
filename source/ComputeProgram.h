@@ -13,23 +13,23 @@
 #include <assert.h>
 
 namespace ogmaneo {
-    class ComputeProgram {
-    private:
-        cl::Program _program;
+class ComputeProgram {
+private:
+    cl::Program _program;
 
-        bool loadFromString(
-            ComputeSystem &cs,
-            const std::string& prog
-        );
+    bool loadFromString(
+        ComputeSystem &cs,
+        const std::string& prog
+    );
 
-    public:
-        bool loadFromFile(
-            ComputeSystem &cs,
-            const std::string &name
-        );
+public:
+    bool loadFromFile(
+        ComputeSystem &cs,
+        const std::string &name
+    );
 
-        cl::Program &getProgram() {
-            return _program;
-        }
-    };
-}
+    cl::Program &getProgram() {
+        return _program;
+    }
+};
+} // namespace ogmaneo

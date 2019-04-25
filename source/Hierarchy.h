@@ -14,137 +14,137 @@
 #include <memory>
 
 namespace ogmaneo {
-    enum InputType {
-        _none,
-        _act
+enum InputType {
+    _none,
+    _act
+};
+
+class Hierarchy {
+public:
+    struct LayerDesc {
+        Int3 _hiddenSize;
+
+        cl_int _scRadius;
+        cl_int _aRadius;
+
+        int _ticksPerUpdate;
+
+        int _temporalHorizon;
+
+        int _historyCapacity;
+
+        LayerDesc()
+        :
+        _hiddenSize(4, 4, 16),
+        _scRadius(2),
+        _aRadius(2),
+        _ticksPerUpdate(2),
+        _temporalHorizon(2),
+        _historyCapacity(8)
+        {}
     };
-    
-    class Hierarchy {
-    public:
-        struct LayerDesc {
-            Int3 _hiddenSize;
+private:
+    std::vector<SparseCoder> _scLayers;
+    std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
-            cl_int _scRadius;
-            cl_int _aRadius;
+    std::vector<std::vector<cl::Buffer>> _histories;
+    std::vector<std::vector<int>> _historySizes;
 
-            int _ticksPerUpdate;
+    std::vector<unsigned char> _updates;
 
-            int _temporalHorizon;
+    std::vector<int> _ticks;
+    std::vector<int> _ticksPerUpdate;
 
-            int _historyCapacity;
+    std::vector<float> _rewards;
+    std::vector<float> _rewardCounts;
 
-            LayerDesc()
-            :
-            _hiddenSize(4, 4, 16),
-            _scRadius(2),
-            _aRadius(2),
-            _ticksPerUpdate(2),
-            _temporalHorizon(2),
-            _historyCapacity(8)
-            {}
-        };
-    private:
-        std::vector<SparseCoder> _scLayers;
-        std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
+    std::vector<Int3> _inputSizes;
 
-        std::vector<std::vector<cl::Buffer>> _histories;
-        std::vector<std::vector<int>> _historySizes;
+public:
+    void init(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        const std::vector<Int3> &inputSizes,
+        const std::vector<InputType> &inputTypes,
+        const std::vector<LayerDesc> &layerDescs,
+        std::mt19937 &rng
+    );
 
-        std::vector<unsigned char> _updates;
+    void step(
+        ComputeSystem &cs,
+        const std::vector<cl::Buffer> &inputCs,
+        std::mt19937 &rng,
+        float reward,
+        bool learn = true
+    );
 
-        std::vector<int> _ticks;
-        std::vector<int> _ticksPerUpdate;
+    void writeToStream(
+        ComputeSystem &cs,
+        std::ostream &os
+    );
 
-        std::vector<float> _rewards;
-        std::vector<float> _rewardCounts;
+    void readFromStream(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        std::istream &is
+    );
 
-        std::vector<Int3> _inputSizes;
+    int getNumLayers() const {
+        return _scLayers.size();
+    }
 
-    public:
-        void init(
-            ComputeSystem &cs,
-            ComputeProgram &prog,
-            const std::vector<Int3> &inputSizes,
-            const std::vector<InputType> &inputTypes,
-            const std::vector<LayerDesc> &layerDescs,
-            std::mt19937 &rng
-        );
+    const cl::Buffer &getActionCs(
+        int i
+    ) const {
+        assert(_aLayers.front()[i] != nullptr);
 
-        void step(
-            ComputeSystem &cs,
-            const std::vector<cl::Buffer> &inputCs,
-            std::mt19937 &rng,
-            float reward,
-            bool learn = true
-        );
+        return _aLayers.front()[i]->getHiddenCs();
+    }
 
-        void writeToStream(
-            ComputeSystem &cs,
-            std::ostream &os
-        );
+    bool getUpdate(
+        int l
+    ) const {
+        return _updates[l];
+    }
 
-        void readFromStream(
-            ComputeSystem &cs,
-            ComputeProgram &prog,
-            std::istream &is
-        );
+    int getTicks(
+        int l
+    ) const {
+        return _ticks[l];
+    }
 
-        int getNumLayers() const {
-            return _scLayers.size();
-        }
+    int getTicksPerUpdate(
+        int l
+    ) const {
+        return _ticksPerUpdate[l];
+    }
 
-        const cl::Buffer &getActionCs(
-            int i
-        ) const {
-            assert(_aLayers.front()[i] != nullptr);
+    const std::vector<Int3> &getInputSizes() const {
+        return _inputSizes;
+    }
 
-            return _aLayers.front()[i]->getHiddenCs();
-        }
+    SparseCoder &getSCLayer(
+        int l
+    ) {
+        return _scLayers[l];
+    }
 
-        bool getUpdate(
-            int l
-        ) const {
-            return _updates[l];
-        }
+    const SparseCoder &getSCLayer(
+        int l
+    ) const {
+        return _scLayers[l];
+    }
 
-        int getTicks(
-            int l
-        ) const {
-            return _ticks[l];
-        }
+    std::vector<std::unique_ptr<Actor>> &getALayers(
+        int l
+    ) {
+        return _aLayers[l];
+    }
 
-        int getTicksPerUpdate(
-            int l
-        ) const {
-            return _ticksPerUpdate[l];
-        }
-
-        const std::vector<Int3> &getInputSizes() const {
-            return _inputSizes;
-        }
-
-        SparseCoder &getSCLayer(
-            int l
-        ) {
-            return _scLayers[l];
-        }
-
-        const SparseCoder &getSCLayer(
-            int l
-        ) const {
-            return _scLayers[l];
-        }
-
-        std::vector<std::unique_ptr<Actor>> &getALayers(
-            int l
-        ) {
-            return _aLayers[l];
-        }
-
-        const std::vector<std::unique_ptr<Actor>> &getALayers(
-            int l
-        ) const {
-            return _aLayers[l];
-        }
-    };
-}
+    const std::vector<std::unique_ptr<Actor>> &getALayers(
+        int l
+    ) const {
+        return _aLayers[l];
+    }
+};
+} // namespace ogmaneo
