@@ -32,7 +32,7 @@ void Actor::init(
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.001f, 0.001f, rng);
+        vl._weights.initLocalRF(cs, vld._size, Int3(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1), vld._radius, -0.001f, 0.001f, rng); // +1 for value
     }
 
     // Hidden Cs

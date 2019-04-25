@@ -32,10 +32,12 @@ void SparseMatrix::initLocalRF(
     int weightsSize = numOut * numWeightsPerOutput;
 
     std::vector<cl_float> nonZeroValues;
+	nonZeroValues.reserve(weightsSize);
 
     std::vector<cl_int> rowRanges(numOut + 1);
 
     std::vector<cl_int> columnIndices;
+	columnIndices.reserve(weightsSize);
 
 	std::uniform_real_distribution<float> valueDist(valueLower, valueUpper);
 
