@@ -335,10 +335,8 @@ void kernel aLearn(
     else {
         float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex];
 
-        if (deltaAction > 0.0f) {
-            float delta = beta * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)]));
+        float delta = beta * deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)]));
 
-            deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
-        }
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
     }
 }
