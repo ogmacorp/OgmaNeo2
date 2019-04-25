@@ -31,13 +31,12 @@ include_directories(${OpenCL_INCLUDE_DIR})
 
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
-    "${SOURCE_PATH}/system/ComputeSystem.cpp"
-    "${SOURCE_PATH}/system/ComputeProgram.cpp"
-    "${SOURCE_PATH}/neo/Helpers.cpp"
-    "${SOURCE_PATH}/neo/SparseCoder.cpp"
-    "${SOURCE_PATH}/neo/Actor.cpp"
-    "${SOURCE_PATH}/neo/Hierarchy.cpp"
-    "${SOURCE_PATH}/neo/ImageEncoder.cpp"
+    "${SOURCE_PATH}/ComputeSystem.cpp"
+    "${SOURCE_PATH}/ComputeProgram.cpp"
+    "${SOURCE_PATH}/Helpers.cpp"
+    "${SOURCE_PATH}/SparseCoder.cpp"
+    "${SOURCE_PATH}/Actor.cpp"
+    "${SOURCE_PATH}/Hierarchy.cpp"
 )
 
 add_library(OgmaNeo ${SOURCES})
@@ -49,10 +48,6 @@ install(TARGETS OgmaNeo
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-install(DIRECTORY "${SOURCE_PATH}/system"
-        DESTINATION include/ogmaneo
-        FILES_MATCHING PATTERN "*.h*")
-
-install(DIRECTORY "${SOURCE_PATH}/neo"
+install(DIRECTORY "${SOURCE_PATH}/"
         DESTINATION include/ogmaneo
         FILES_MATCHING PATTERN "*.h*")

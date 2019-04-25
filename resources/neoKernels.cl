@@ -8,7 +8,9 @@
 
 // ------------------------------------------- Common -------------------------------------------
 
-float randFloat(uint2* state) {
+float randFloat(
+    uint2* state
+) {
     const float invMaxInt = 1.0f / 4294967296.0f;
     uint x = (*state).x * 17 + (*state).y * 13123;
     (*state).x = (x << 13) ^ x;
@@ -19,197 +21,166 @@ float randFloat(uint2* state) {
     return convert_float(tmp) * invMaxInt;
 }
 
-float randNormal(uint2* state) {
+float randNormal(
+    uint2* state
+) {
     float u1 = randFloat(state);
     float u2 = randFloat(state);
 
     return sqrt(-2.0f * log(u1)) * cos(6.28318f * u2);
 }
 
-bool inBounds0(int2 position, int2 upperBound) {
+bool inBounds0(
+    int2 position,
+    int2 upperBound
+) {
     return position.x >= 0 && position.x < upperBound.x && position.y >= 0 && position.y < upperBound.y;
 }
 
-bool inBounds(int2 position, int2 lowerBound, int2 upperBound) {
+bool inBounds(
+    int2 position,
+    int2 lowerBound,
+    int2 upperBound
+) {
     return position.x >= lowerBound.x && position.x < upperBound.x && position.y >= lowerBound.y && position.y < upperBound.y;
 }
 
-int2 project(int2 position, float2 toScalars) {
-    return (int2)(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
+int address2(
+    int2 pos,
+    int2 dim
+) {
+    return pos.y + pos.x * dim.y;
 }
 
-int2 projectf(float2 position, float2 toScalars) {
-    return (int2)(position.x * toScalars.x + 0.5f, position.y * toScalars.y + 0.5f);
+int address3(
+    int3 pos,
+    int3 dims
+) {
+    return pos.z + pos.y * dims.z + pos.x * dims.y * dims.z;
 }
 
-int address2(int2 pos, int dim) {
-    return pos.x + pos.y * dim;
+int address4(
+    int4 pos,
+    int4 dims
+) {
+    return pos.w + pos.z * dims.w + pos.y * dims.z * dims.w + pos.x * dims.y * dims.z * dims.w;
 }
 
-int address3(int3 pos, int2 dims) {
-    return pos.x + pos.y * dims.x + pos.z * dims.x * dims.y;
-}
-
-int address4(int4 pos, int3 dims) {
-    int dxy = dims.x * dims.y;
-    int dxyz = dxy * dims.z;
-
-    return pos.x + pos.y * dims.x + pos.z * dxy + pos.w * dxyz;
-}
-
-inline float sigmoid(float x) {
+inline float sigmoid(
+    float x
+) {
     return 1.0f / (1.0f + exp(-x));
+}
+
+float multiplyOHVs(
+    const float* nonZeroValues,
+    const int* rowRanges,
+    const int* columnIndices,
+    const int* nonZeroIndices,
+    int row,
+    int oneHotSize
+) {
+    float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+		sum += nonZeroValues[j];
+	}
+
+    return sum;
+}
+
+float multiplyOHVsT(
+    const float* nonZeroValues,
+    const int* columnRanges,
+    const int* rowIndices,
+    const int* nonZeroValueIndices,
+    const int* nonZeroIndices,
+    int column,
+    int oneHotSize
+) {
+    float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
+
+		sum += nonZeroValues[nonZeroValueIndices[j]];
+	}
+
+    return sum;
+}
+
+void hebbErrors(
+    float* nonZeroValues,
+    const int* rowRanges,
+    const int* columnIndices,
+    const float* errors,
+    int row
+) {
+    int nextIndex = row + 1;
+	
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+        nonZeroValues[j] += errors[columnIndices[j]];
 }
 
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
-// Initialize weights
-void kernel scInitWeights(global float* weights, uint2 seed) {
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 29 + 12, get_global_id(0) * 16 + 23) * 36;
-
-    weights[get_global_id(0)] = randFloat(&stateValue);
-}
-
-void kernel scForward(global const int* visibleCs, global const float* visibleActivations,
+void kernel scForward(
+    global const int* visibleCs,
     global float* hiddenActivations,
-    global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius)
-{
+    global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    int3 visibleSize,
+    int3 hiddenSize
+) {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
-    int2 visiblePositionCenter = project(hiddenPosition.xy, hiddenToVisible);
+    int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
+    float sum = multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    int4 wPos;
-    wPos.xyz = hiddenPosition;
-
-    float sum = 0.0f;
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleIndex = address2(visiblePosition, visibleSize.x);
-
-                int visibleC = visibleCs[visibleIndex];
-
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                wPos.w = offset.x + offset.y * diam + visibleC * diam2;
-
-                sum += weights[address4(wPos, hiddenSize)] * (1.0f - visibleActivations[visibleIndex]);
-            }
-        }
-
-    hiddenActivations[address3(hiddenPosition, hiddenSize.xy)] += sum;
+    hiddenActivations[hiddenIndex] += sum;
 }
 
-void kernel scBackwardPartial(global const int* visibleCs, global const int* hiddenCs, global float* visibleActivations,
-    global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
-{
-    int2 visiblePosition = (int2)(get_global_id(0), get_global_id(1));
-
-    int visibleIndex = address2(visiblePosition, visibleSize.x);
-
-    int visibleC = visibleCs[visibleIndex];
-
-    int2 hiddenPositionCenter = project(visiblePosition, visibleToHidden);
-
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    float sum = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -reverseRadii.x; dx <= reverseRadii.x; dx++)
-        for (int dy = -reverseRadii.y; dy <= reverseRadii.y; dy++) {
-            int2 hiddenPosition = hiddenPositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(hiddenPosition, hiddenSize.xy)) {
-                // Next layer node's receptive field
-                int2 visibleFieldCenter = project(hiddenPosition, hiddenToVisible);
-
-                int2 fieldLowerBound = visibleFieldCenter - (int2)(radius);
-                int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
-
-                // Check for containment
-                if (inBounds(visiblePosition, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
-
-                    int2 offset = visiblePosition - fieldLowerBound;
-
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                    wPos.w = offset.x + offset.y * diam + visibleC * diam2;
-
-                    sum += weights[address4(wPos, hiddenSize)];
-                    count += 1.0f;
-                }
-            }
-        }
-
-    visibleActivations[visibleIndex] = sigmoid(sum / fmax(1.0f, count));
-}
-
-void kernel scBackward(global const int* hiddenCs, global float* visibleActivations,
-    global const float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 visibleToHidden, float2 hiddenToVisible, int radius, int2 reverseRadii)
-{
+void kernel scBackward(
+    global const int* visibleCs,
+    global const int* hiddenCs,
+    global float* visibleErrors,
+    global const float* nonZeroValues,
+    global const int* nonZeroValueIndices,
+    global const int* columnRanges,
+    global const int* rowIndices,
+    int3 visibleSize,
+    int3 hiddenSize,
+    float alpha
+) {
     int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+    int2 visibleColumnPosition = visiblePosition.xy;
 
-    int2 hiddenPositionCenter = project(visiblePosition.xy, visibleToHidden);
+    int visibleC = visibleCs[address2(visibleColumnPosition, visibleSize.xy)];
+    
+    int visibleIndex = address3(visiblePosition, visibleSize);
 
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
+    float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    float sum = 0.0f;
-    float count = 0.0f;
-
-    for (int dx = -reverseRadii.x; dx <= reverseRadii.x; dx++)
-        for (int dy = -reverseRadii.y; dy <= reverseRadii.y; dy++) {
-            int2 hiddenPosition = hiddenPositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(hiddenPosition, hiddenSize.xy)) {
-                // Next layer node's receptive field
-                int2 visibleFieldCenter = project(hiddenPosition, hiddenToVisible);
-
-                int2 fieldLowerBound = visibleFieldCenter - (int2)(radius);
-                int2 fieldUpperBound = visibleFieldCenter + (int2)(radius + 1); // So is included in inBounds
-
-                // Check for containment
-                if (inBounds(visiblePosition.xy, fieldLowerBound, fieldUpperBound)) {
-                    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
-
-                    int2 offset = visiblePosition.xy - fieldLowerBound;
-
-                    int4 wPos;
-                    wPos.xyz = (int3)(hiddenPosition, hiddenC);
-                    wPos.w = offset.x + offset.y * diam + visiblePosition.z * diam2;
-
-                    sum += weights[address4(wPos, hiddenSize)];
-                    count += 1.0f;
-                }
-            }
-        }
-
-    visibleActivations[address3(visiblePosition, visibleSize.xy)] = sigmoid(sum / fmax(1.0f, count));
+    visibleErrors[visibleIndex] = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum));
 }
 
 void kernel scInhibit(global const float* hiddenActivations, global int* hiddenCs, int3 hiddenSize) {
-    int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int maxIndex = 0;
-    float maxValue = hiddenActivations[address3((int3)(hiddenPosition, 0), hiddenSize.xy)];
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
     // Find max
     for (int c = 1; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenPosition, c), hiddenSize.xy)];
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
         if (value > maxValue) {
             maxValue = value;
@@ -218,49 +189,22 @@ void kernel scInhibit(global const float* hiddenActivations, global int* hiddenC
     }
 
     // Set states
-    hiddenCs[address2(hiddenPosition, hiddenSize.x)] = maxIndex;
+    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
 }
 
-void kernel scLearn(global const int* visibleCs, global const float* visibleActivations, global const int* hiddenCs,
-    global float* weights,
-    int3 visibleSize, int3 hiddenSize, float2 hiddenToVisible, int radius, float alpha)
-{
-    int2 hiddenPosition = (int2)(get_global_id(0), get_global_id(1));
+void kernel scLearn(
+    global const float* visibleErrors,
+    global const int* hiddenCs,
+    global float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    int hiddenC = hiddenCs[address2(hiddenPosition, hiddenSize.x)];
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)]), hiddenSize);
 
-    int2 visiblePositionCenter = project(hiddenPosition, hiddenToVisible);
-
-    int2 fieldLowerBound = visiblePositionCenter - (int2)(radius);
-
-    int diam = radius * 2 + 1;
-    int diam2 = diam * diam;
-
-    int4 wPos;
-    wPos.xyz = (int3)(hiddenPosition, hiddenC);
-
-    for (int dx = -radius; dx <= radius; dx++)
-        for (int dy = -radius; dy <= radius; dy++) {
-            int2 visiblePosition = visiblePositionCenter + (int2)(dx, dy);
-
-            if (inBounds0(visiblePosition, visibleSize.xy)) {
-                int visibleC = visibleCs[address2(visiblePosition, visibleSize.x)];
-
-                int2 offset = visiblePosition - fieldLowerBound;
-
-                for (int c = 0; c < visibleSize.z; c++) {
-                    wPos.w = offset.x + offset.y * diam + c * diam2;
-
-                    int wi = address4(wPos, hiddenSize);
-
-                    float target = (c == visibleC ? 1.0f : 0.0f);
-
-                    float delta = target - visibleActivations[address3((int3)(visiblePosition, c), visibleSize.xy)];
- 
-                    weights[wi] += alpha * delta;
-                }
-            }
-        }
+    hebbErrors(nonZeroValues, rowRanges, columnIndices, visibleErrors, hiddenIndex);
 }
 
 // ------------------------------------------- Actor -------------------------------------------

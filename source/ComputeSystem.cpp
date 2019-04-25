@@ -12,7 +12,12 @@
 
 using namespace ogmaneo;
 
-bool ComputeSystem::create(DeviceType type, int platformIndex, int deviceIndex, bool createFromGLContext) {
+bool ComputeSystem::init(
+    DeviceType type,
+    int platformIndex,
+    int deviceIndex,
+    bool createFromGLContext
+) {
     int index;
 
     std::vector<cl::Platform> allPlatforms;

@@ -10,7 +10,10 @@
 
 using namespace ogmaneo;
 
-DoubleBuffer ogmaneo::createDoubleBuffer(ComputeSystem &cs, cl_int size) {
+DoubleBuffer ogmaneo::createDoubleBuffer(
+    ComputeSystem &cs,
+    cl_int size
+) {
     DoubleBuffer db;
 
     db[_front] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, size);
