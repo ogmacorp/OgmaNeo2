@@ -37,8 +37,6 @@ void SparseCoder::init(
         vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.001f, 0.0f, rng);
 
         vl._weights.initT(cs);
-
-        vl._visibleErrors = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
     }
 
     // Hidden Cs
@@ -46,17 +44,12 @@ void SparseCoder::init(
 
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
 
-    _refractoryTimers = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_int));
-
-    cs.getQueue().enqueueFillBuffer(_refractoryTimers, static_cast<cl_int>(0), 0, numHidden * sizeof(cl_int));
- 
     // Hidden activations
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
-    _backwardKernel = cl::Kernel(prog.getProgram(), "scBackward");
     _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
 }
 
@@ -95,9 +88,7 @@ void SparseCoder::step(
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
-        _inhibitKernel.setArg(argIndex++, _refractoryTimers);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
-        _inhibitKernel.setArg(argIndex++, _refractoryTicks);
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -108,35 +99,19 @@ void SparseCoder::step(
             VisibleLayer &vl = _visibleLayers[vli];
             VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            {
-                int argIndex = 0;
+            int argIndex = 0;
 
-                _backwardKernel.setArg(argIndex++, visibleCs[vli]);
-                _backwardKernel.setArg(argIndex++, _hiddenCs);
-                _backwardKernel.setArg(argIndex++, vl._visibleErrors);
-                _backwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
-                _backwardKernel.setArg(argIndex++, vl._weights._nonZeroValueIndices);
-                _backwardKernel.setArg(argIndex++, vl._weights._columnRanges);
-                _backwardKernel.setArg(argIndex++, vl._weights._rowIndices);
-                _backwardKernel.setArg(argIndex++, vld._size);
-                _backwardKernel.setArg(argIndex++, _hiddenSize);
-                _backwardKernel.setArg(argIndex++, _alpha);
+            _learnKernel.setArg(argIndex++, visibleCs[vli]);
+            _learnKernel.setArg(argIndex++, _hiddenCs);
+            _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+            _learnKernel.setArg(argIndex++, vl._weights._nonZeroValueIndices);
+            _learnKernel.setArg(argIndex++, vl._weights._columnRanges);
+            _learnKernel.setArg(argIndex++, vl._weights._rowIndices);
+            _learnKernel.setArg(argIndex++, vld._size);
+            _learnKernel.setArg(argIndex++, _hiddenSize);
+            _learnKernel.setArg(argIndex++, _alpha);
 
-                cs.getQueue().enqueueNDRangeKernel(_backwardKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
-            }
-
-            {
-                int argIndex = 0;
-
-                _learnKernel.setArg(argIndex++, vl._visibleErrors);
-                _learnKernel.setArg(argIndex++, _hiddenCs);
-                _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
-                _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
-                _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
-                _learnKernel.setArg(argIndex++, _hiddenSize);
-
-                cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
-            }
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
         }
     }
 }
@@ -209,13 +184,10 @@ void SparseCoder::readFromStream(
         int numVisible = numVisibleColumns * vld._size.z;
 
         vl._weights.readFromStream(cs, is);
-
-        vl._visibleErrors = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
     }
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
-    _backwardKernel = cl::Kernel(prog.getProgram(), "scBackward");
     _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
 }

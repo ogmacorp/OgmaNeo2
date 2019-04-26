@@ -27,16 +27,12 @@ public:
 
     struct VisibleLayer {
         SparseMatrix _weights;
-
-        cl::Buffer _visibleErrors;
     };
 
 private:
     Int3 _hiddenSize;
 
     cl::Buffer _hiddenCs;
-
-    cl::Buffer _refractoryTimers;
 
     cl::Buffer _hiddenActivations;
 
@@ -45,17 +41,14 @@ private:
 
     cl::Kernel _forwardKernel;
     cl::Kernel _inhibitKernel;
-    cl::Kernel _backwardKernel;
     cl::Kernel _learnKernel;
 
 public:
     cl_float _alpha;
-    cl_int _refractoryTicks;
 
     SparseCoder()
     :
-    _alpha(0.01f),
-    _refractoryTicks(3)
+    _alpha(0.01f)
     {}
 
     void init(

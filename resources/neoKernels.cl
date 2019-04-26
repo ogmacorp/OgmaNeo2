@@ -115,19 +115,6 @@ float multiplyOHVsT(
     return sum;
 }
 
-void hebbErrors(
-    global float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
-    global const float* errors,
-    int row
-) {
-    int nextIndex = row + 1;
-	
-	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
-        nonZeroValues[j] += errors[columnIndices[j]];
-}
-
 void deltaOHVs(
     global float* nonZeroValues,
     global const int* rowRanges,
@@ -144,6 +131,25 @@ void deltaOHVs(
 
 		nonZeroValues[j] += delta;
 	}
+}
+
+void deltaOHVsT(
+    global float* nonZeroValues,
+    global const int* columnRanges,
+    global const int* rowIndices,
+    global const int* nonZeroValueIndices,
+    global const int* nonZeroIndices,
+    float delta,
+    int column,
+    int oneHotSize
+) {
+    int nextIndex = column + 1;
+
+	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
+
+		nonZeroValues[nonZeroValueIndices[j]] += delta;
+    }
 }
 
 // ------------------------------------------- Sparse Coder -------------------------------------------
@@ -166,11 +172,10 @@ void kernel scForward(
     hiddenActivations[hiddenIndex] += sum;
 }
 
-void kernel scBackward(
+void kernel scLearn(
     global const int* visibleCs,
     global const int* hiddenCs,
-    global float* visibleErrors,
-    global const float* nonZeroValues,
+    global float* nonZeroValues,
     global const int* nonZeroValueIndices,
     global const int* columnRanges,
     global const int* rowIndices,
@@ -186,15 +191,15 @@ void kernel scBackward(
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    visibleErrors[visibleIndex] = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum));
+    float delta = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum));
+
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
 }
 
 void kernel scInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    global int* refractoryTimers,
-    int3 hiddenSize,
-    int refractoryTicks
+    int3 hiddenSize
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
@@ -205,37 +210,16 @@ void kernel scInhibit(
     for (int c = 0; c < hiddenSize.z; c++) {
         int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-        if (refractoryTimers[hiddenIndex] > 0)
-            refractoryTimers[hiddenIndex]--;
-        else {
-            float value = hiddenActivations[hiddenIndex];
+        float value = hiddenActivations[hiddenIndex];
 
-            if (value > maxValue) {
-                maxValue = value;
-                maxIndex = c;
-            }
+        if (value > maxValue) {
+            maxValue = value;
+            maxIndex = c;
         }
     }
 
     // Set states
     hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
-
-    refractoryTimers[address3((int3)(hiddenColumnPosition, maxIndex), hiddenSize)] = refractoryTicks;
-}
-
-void kernel scLearn(
-    global const float* visibleErrors,
-    global const int* hiddenCs,
-    global float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
-    int3 hiddenSize
-) {
-    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
-
-    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)]), hiddenSize);
-
-    hebbErrors(nonZeroValues, rowRanges, columnIndices, visibleErrors, hiddenIndex);
 }
 
 // ------------------------------------------- Actor -------------------------------------------
