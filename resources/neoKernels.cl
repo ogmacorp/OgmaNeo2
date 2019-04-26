@@ -193,7 +193,8 @@ void kernel scInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
     global int* refractoryTimers,
-    int3 hiddenSize
+    int3 hiddenSize,
+    int refractoryTicks
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
@@ -206,37 +207,35 @@ void kernel scInhibit(
 
         if (refractoryTimers[hiddenIndex] > 0)
             refractoryTimers[hiddenIndex]--;
+        else {
+            float value = hiddenActivations[hiddenIndex];
 
-        float value = hiddenActivations[hiddenIndex];
-
-        if (value > maxValue) {
-            maxValue = value;
-            maxIndex = c;
+            if (value > maxValue) {
+                maxValue = value;
+                maxIndex = c;
+            }
         }
     }
 
     // Set states
     hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
+
+    refractoryTimers[address3((int3)(hiddenColumnPosition, maxIndex), hiddenSize)] = refractoryTicks;
 }
 
 void kernel scLearn(
     global const float* visibleErrors,
     global const int* hiddenCs,
-    global int* refractoryTimers,
     global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
-    int3 hiddenSize,
-    int refractoryTicks
+    int3 hiddenSize
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
     int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)]), hiddenSize);
 
-    if (refractoryTimers[hiddenIndex] == 0)
-        hebbErrors(nonZeroValues, rowRanges, columnIndices, visibleErrors, hiddenIndex);
-
-    refractoryTimers[hiddenIndex] = refractoryTicks;
+    hebbErrors(nonZeroValues, rowRanges, columnIndices, visibleErrors, hiddenIndex);
 }
 
 // ------------------------------------------- Actor -------------------------------------------

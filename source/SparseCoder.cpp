@@ -97,6 +97,7 @@ void SparseCoder::step(
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
         _inhibitKernel.setArg(argIndex++, _refractoryTimers);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
+        _inhibitKernel.setArg(argIndex++, _refractoryTicks);
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -129,12 +130,10 @@ void SparseCoder::step(
 
                 _learnKernel.setArg(argIndex++, vl._visibleErrors);
                 _learnKernel.setArg(argIndex++, _hiddenCs);
-                _learnKernel.setArg(argIndex++, _refractoryTimers);
                 _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
                 _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
                 _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
                 _learnKernel.setArg(argIndex++, _hiddenSize);
-                _learnKernel.setArg(argIndex++, _refractoryTicks);
 
                 cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
             }

@@ -71,7 +71,7 @@ public:
     _alpha(0.005f),
     _beta(0.05f),
     _gamma(0.95f),
-    _epsilon(0.02f)
+    _epsilon(0.01f)
     {}
 
     void init(
