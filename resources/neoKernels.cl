@@ -172,30 +172,6 @@ void kernel scForward(
     hiddenActivations[hiddenIndex] += sum;
 }
 
-void kernel scLearn(
-    global const int* visibleCs,
-    global const int* hiddenCs,
-    global float* nonZeroValues,
-    global const int* nonZeroValueIndices,
-    global const int* columnRanges,
-    global const int* rowIndices,
-    int3 visibleSize,
-    int3 hiddenSize,
-    float alpha
-) {
-    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
-
-    int visibleC = visibleCs[address2(visiblePosition.xy, visibleSize.xy)];
-    
-    int visibleIndex = address3(visiblePosition, visibleSize);
-
-    float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
-
-    float delta = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum));
-
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
-}
-
 void kernel scInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
@@ -220,6 +196,30 @@ void kernel scInhibit(
 
     // Set states
     hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
+}
+
+void kernel scLearn(
+    global const int* visibleCs,
+    global const int* hiddenCs,
+    global float* nonZeroValues,
+    global const int* nonZeroValueIndices,
+    global const int* columnRanges,
+    global const int* rowIndices,
+    int3 visibleSize,
+    int3 hiddenSize,
+    float alpha
+) {
+    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int visibleC = visibleCs[address2(visiblePosition.xy, visibleSize.xy)];
+    
+    int visibleIndex = address3(visiblePosition, visibleSize);
+
+    float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+
+    float delta = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum));
+
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
 }
 
 // ------------------------------------------- Actor -------------------------------------------
