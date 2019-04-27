@@ -69,6 +69,12 @@ int address4(
 inline float sigmoid(
     float x
 ) {
+    if (x < 0.0f) {
+        x = exp(x);
+
+        return x / (1.0f + x);
+    }
+    
     return 1.0f / (1.0f + exp(-x));
 }
 
