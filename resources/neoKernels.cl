@@ -173,9 +173,7 @@ void kernel scForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    float sum = multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
-
-    hiddenActivations[hiddenIndex] += sum;
+    hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 }
 
 void kernel scInhibit(
@@ -245,16 +243,10 @@ void kernel aForward(
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
     // If is value
-    if (hiddenPosition.z == hiddenSize.z) {
-        float sum = multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex1, visibleSize.z);
-
-        hiddenValues[address2(hiddenPosition.xy, hiddenSize.xy)] += sum;
-    }
-    else {
-        float sum = multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex1, visibleSize.z);
-
-        hiddenActivations[address3(hiddenPosition, hiddenSize)] += sum;
-    }
+    if (hiddenPosition.z == hiddenSize.z)
+        hiddenValues[address2(hiddenPosition.xy, hiddenSize.xy)] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex1, visibleSize.z);
+    else
+        hiddenActivations[address3(hiddenPosition, hiddenSize)] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex1, visibleSize.z);
 }
 
 void kernel aInhibit(
