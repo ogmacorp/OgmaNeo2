@@ -219,20 +219,20 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    os.write(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
+    os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
-    os.write(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
-    os.write(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
-    os.write(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
-    os.write(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(cl_float));
 
     std::vector<cl_int> hiddenCs(numHiddenColumns);
     cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
-    os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
+    os.write(reinterpret_cast<const char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
     int numVisibleLayers = _visibleLayers.size();
 
-    os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&numVisibleLayers), sizeof(int));
     
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -241,15 +241,15 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        os.write(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
+        os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         vl._weights.writeToStream(cs, os);
     }
 
     int historyCapacity = _historySamples.size();
 
-    os.write(reinterpret_cast<char*>(&historyCapacity), sizeof(int));
-    os.write(reinterpret_cast<char*>(&_historySize), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&historyCapacity), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
     for (int i = 0; i < _historySize; i++) {
         HistorySample &s = _historySamples[i];
@@ -263,14 +263,14 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
 
             std::vector<cl_int> visibleCs(numVisibleColumns);
             cs.getQueue().enqueueReadBuffer(s._visibleCs[vli], CL_TRUE, 0, numVisibleColumns * sizeof(cl_int), visibleCs.data());
-            os.write(reinterpret_cast<char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
+            os.write(reinterpret_cast<const char*>(visibleCs.data()), numVisibleColumns * sizeof(cl_int));
         }
 
         std::vector<cl_int> hiddenCs(numHiddenColumns);
         cs.getQueue().enqueueReadBuffer(s._hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
-        os.write(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
+        os.write(reinterpret_cast<const char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
-        os.write(reinterpret_cast<char*>(&s._reward), sizeof(cl_float));
+        os.write(reinterpret_cast<const char*>(&s._reward), sizeof(cl_float));
     }
 }
 

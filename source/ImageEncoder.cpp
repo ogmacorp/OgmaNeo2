@@ -6,11 +6,11 @@
 //  in the OGMANEO_LICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
-#include "SparseCoder.h"
+#include "ImageEncoder.h"
 
 using namespace ogmaneo;
 
-void SparseCoder::init(
+void ImageEncoder::init(
     ComputeSystem &cs,
     ComputeProgram &prog,
     Int3 hiddenSize,
@@ -36,26 +36,28 @@ void SparseCoder::init(
 
         vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.001f, 0.0f, rng);
 
-        vl._weights.initT(cs);
+        vl._visibleRecons = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
+
+        cs.getQueue().enqueueFillBuffer(vl._visibleRecons, static_cast<cl_float>(0.0f), 0, numVisible * sizeof(cl_float));
     }
 
     // Hidden Cs
     _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
 
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
-
+ 
     // Hidden activations
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
 
     // Create kernels
-    _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
-    _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
-    _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
+    _forwardKernel = cl::Kernel(prog.getProgram(), "imForward");
+    _inhibitKernel = cl::Kernel(prog.getProgram(), "imInhibit");
+    _learnKernel = cl::Kernel(prog.getProgram(), "imLearn");
 }
 
-void SparseCoder::step(
+void ImageEncoder::step(
     ComputeSystem &cs,
-    const std::vector<cl::Buffer> &visibleCs,
+    const std::vector<cl::Buffer> &visibleActivations,
     bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
@@ -71,12 +73,11 @@ void SparseCoder::step(
 
         int argIndex = 0;
 
-        _forwardKernel.setArg(argIndex++, visibleCs[vli]);
+        _forwardKernel.setArg(argIndex++, visibleActivations[vli]);
         _forwardKernel.setArg(argIndex++, _hiddenActivations);
         _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
         _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
         _forwardKernel.setArg(argIndex++, vl._weights._columnIndices);
-        _forwardKernel.setArg(argIndex++, vld._size);
         _forwardKernel.setArg(argIndex++, _hiddenSize);
 
         cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
@@ -101,7 +102,7 @@ void SparseCoder::step(
 
             int argIndex = 0;
 
-            _learnKernel.setArg(argIndex++, visibleCs[vli]);
+            _learnKernel.setArg(argIndex++, visibleActivations[vli]);
             _learnKernel.setArg(argIndex++, _hiddenCs);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValueIndices);
@@ -116,9 +117,8 @@ void SparseCoder::step(
     }
 }
 
-void SparseCoder::writeToStream(
-    ComputeSystem &cs,
-    std::ostream &os
+void ImageEncoder::writeToStream(
+    ComputeSystem &cs, std::ostream &os
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -148,7 +148,7 @@ void SparseCoder::writeToStream(
     }
 }
 
-void SparseCoder::readFromStream(
+void ImageEncoder::readFromStream(
     ComputeSystem &cs,
     ComputeProgram &prog,
     std::istream &is

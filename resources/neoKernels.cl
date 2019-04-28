@@ -158,6 +158,38 @@ void deltaOHVsT(
     }
 }
 
+float multiply(
+	global float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const float* inputs,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += nonZeroValues[j] * inputs[columnIndices[j]];
+
+	return sum;
+}
+
+// void deltasT(
+//     global float* nonZeroValues,
+//     global const int* columnRanges,
+//     global const int* rowIndices,
+//     global const int* nonZeroValueIndices,
+//     global const float* inputs,
+//     float delta,
+//     int column
+// ) {
+//     int nextIndex = column + 1;
+	
+// 	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
+//         nonZeroValues[nonZeroValueIndices[j]] += delta * inputs[rowIndices[j]];
+// }
+
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
 void kernel scForward(
@@ -320,4 +352,71 @@ void kernel aLearn(
 
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
     }
+}
+
+// ------------------------------------------- Image Encoder -------------------------------------------
+
+void kernel imForward(
+    global const float* visibleActivations,
+    global float* hiddenActivations,
+    global float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    int3 hiddenSize
+) {
+    int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int hiddenIndex = address3(hiddenPosition, hiddenSize);
+
+    hiddenActivations[hiddenIndex] += multiply(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+}
+
+void kernel imInhibit(
+    global const float* hiddenActivations,
+    global int* hiddenCs,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+
+    int maxIndex = 0;
+    float maxValue = -999999.0f;
+    
+    // Find max
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        float value = hiddenActivations[hiddenIndex];
+
+        if (value > maxValue) {
+            maxValue = value;
+            maxIndex = c;
+        }
+    }
+
+    // Set states
+    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
+}
+
+void kernel imLearn(
+    global const float* visibleActivations,
+    global const int* hiddenCs,
+    global float* nonZeroValues,
+    global const int* nonZeroValueIndices,
+    global const int* columnRanges,
+    global const int* rowIndices,
+    int3 visibleSize,
+    int3 hiddenSize,
+    float alpha
+) {
+    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int visibleC = visibleCs[address2(visiblePosition.xy, visibleSize.xy)];
+    
+    int visibleIndex = address3(visiblePosition, visibleSize);
+
+    float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+
+    float delta = alpha * (visibleActivations[visibleIndex] - exp(sum));
+
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
 }
