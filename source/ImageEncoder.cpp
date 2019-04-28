@@ -36,6 +36,8 @@ void ImageEncoder::init(
 
         vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.001f, 0.0f, rng);
 
+        vl._weights.initT(cs);
+
         vl._visibleRecons = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisible * sizeof(cl_float));
 
         cs.getQueue().enqueueFillBuffer(vl._visibleRecons, static_cast<cl_float>(0.0f), 0, numVisible * sizeof(cl_float));
