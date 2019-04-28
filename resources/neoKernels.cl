@@ -410,8 +410,6 @@ void kernel imLearn(
 ) {
     int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
-    int visibleC = visibleCs[address2(visiblePosition.xy, visibleSize.xy)];
-    
     int visibleIndex = address3(visiblePosition, visibleSize);
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
