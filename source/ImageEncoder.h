@@ -92,7 +92,7 @@ public:
     ImageEncoder()
     :
     _alpha(1.0f),
-    _beta(0.99f),
+    _beta(0.98f),
     _gamma(0.2f)
     {}
 

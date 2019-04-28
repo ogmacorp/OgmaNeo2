@@ -297,7 +297,7 @@ void ogmaneo::initSMLocalRF(
                         for (int iz = 0; iz < inSize.z; iz++) {
                             Int3 inPos(ix, iy, iz);
 
-                            int inIndex = address3C(inPos, inSize);
+                            int inIndex = address3(inPos, inSize);
 
                             mat._nonZeroValues.push_back(0.0f);
                             mat._columnIndices.push_back(inIndex);
@@ -306,7 +306,7 @@ void ogmaneo::initSMLocalRF(
                         }
                     }
 
-                mat._rowRanges[address3C(outPos, outSize)] = nonZeroInRow;
+                mat._rowRanges[address3(outPos, outSize)] = nonZeroInRow;
             }
         }
 

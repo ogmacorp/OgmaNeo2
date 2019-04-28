@@ -20,7 +20,7 @@ void Predictor::forward(
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         _hiddenActivations[hiddenIndex] = 0.0f;
 
@@ -38,7 +38,7 @@ void Predictor::forward(
         }
     }
 
-    _hiddenCs[address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
+    _hiddenCs[address2(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
 }
 
 void Predictor::learn(
@@ -46,7 +46,7 @@ void Predictor::learn(
     std::mt19937 &rng,
     const IntBuffer* hiddenTargetCs
 ) {
-    int hiddenColumnIndex = address2C(pos, Int2(_hiddenSize.x, _hiddenSize.y));
+    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
@@ -54,7 +54,7 @@ void Predictor::learn(
 
     if (_hiddenCs[hiddenColumnIndex] != targetC) {
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3C(Int3(pos.x, pos.y, hc), _hiddenSize);
+            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
             float target = (hc == targetC ? 1.0f : 0.0f);
 
