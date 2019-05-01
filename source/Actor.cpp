@@ -32,7 +32,7 @@ void Actor::init(
 
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
 
-    cl::Kernel countKernel = cl::Kernel(cs.getProgram(), "aCount");
+    cl::Kernel countKernel = cl::Kernel(prog.getProgram(), "aCount");
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
