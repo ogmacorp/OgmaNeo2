@@ -42,6 +42,8 @@ private:
 
     int _historySize;
 
+    cl::Buffer _hiddenCounts;
+
     cl::Buffer _hiddenCs;
 
     cl::Buffer _hiddenActivations;

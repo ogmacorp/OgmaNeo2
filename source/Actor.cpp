@@ -27,12 +27,28 @@ void Actor::init(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
+    // Counts
+    _hiddenCounts = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+
+    cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
+
+    cl::Kernel countKernel = cl::Kernel(cs.getProgram(), "aCount");
+
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
         vl._weights.initLocalRF(cs, vld._size, Int3(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1), vld._radius, -0.001f, 0.001f, rng); // +1 for value
+
+        int argIndex = 0;
+
+        countKernel.setArg(argIndex++, vl._weights._rowRanges);
+        countKernel.setArg(argIndex++, _hiddenCounts);
+        countKernel.setArg(argIndex++, vld._size);
+        countKernel.setArg(argIndex++, _hiddenSize);
+
+        cs.getQueue().enqueueNDRangeKernel(countKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 
     // Hidden Cs
@@ -200,6 +216,7 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, sPrev._hiddenValues);
             _learnKernel.setArg(argIndex++, _hiddenActivations);
             _learnKernel.setArg(argIndex++, sPrev._hiddenCs);
+            _learnKernel.setArg(argIndex++, _hiddenCounts);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
             _learnKernel.setArg(argIndex++, vl._weights._columnIndices);

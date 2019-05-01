@@ -190,6 +190,24 @@ float multiply(
 //         nonZeroValues[nonZeroValueIndices[j]] += delta * inputs[rowIndices[j]];
 // }
 
+int counts(
+    global const int* rowRanges,
+	int row
+) {
+	int nextIndex = row + 1;
+	
+	return rowRanges[nextIndex] - rowRanges[row];
+}
+
+int countsT(
+    global const int* columnRanges,
+	int column
+) {
+	int nextIndex = column + 1;
+	
+	return columnRanges[nextIndex] - columnRanges[column];
+}
+
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
 void kernel scForward(
@@ -247,11 +265,15 @@ void kernel scLearn(
 ) {
     int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
-    int visibleC = visibleCs[address2(visiblePosition.xy, visibleSize.xy)];
+    int visibleColumnIndex = address2(visiblePosition.xy, visibleSize.xy);
+
+    int visibleC = visibleCs[visibleColumnIndex];
     
     int visibleIndex = address3(visiblePosition, visibleSize);
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+
+    sum /= (countsT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
     float delta = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum));
 
@@ -259,6 +281,19 @@ void kernel scLearn(
 }
 
 // ------------------------------------------- Actor -------------------------------------------
+
+void kernel aCount(
+    global const int* rowRanges,
+    global int* hiddenCounts,
+    int3 visibleSize,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+	      
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    hiddenCounts[hiddenColumnIndex] += counts(rowRanges, hiddenColumnIndex * hiddenSize.z) / visibleSize.z;
+}
 
 void kernel aForward(
     global const int* visibleCs,
@@ -321,6 +356,7 @@ void kernel aLearn(
     global const float* hiddenValuesPrevPrev,
     global const float* hiddenActivationsPrev,
     global const int* hiddenCsPrev,
+    global const int* hiddenCounts,
     global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -337,18 +373,20 @@ void kernel aLearn(
 
     int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
-    float qUpdate = qTarget + gamma * hiddenValues[hiddenColumnIndex];
+    float rescale = 1.0f / hiddenCounts[hiddenColumnIndex];
 
-    float deltaValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex];
+    float qUpdate = qTarget + gamma * hiddenValues[hiddenColumnIndex] * rescale;
+
+    float deltaValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
         
     if (hiddenPosition.z == hiddenSize.z)
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * deltaValue, hiddenIndex1, visibleSize.z);
     else {
-        float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex];
+        float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float delta = beta * deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)]));
+        float delta = beta * deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
 
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
     }
