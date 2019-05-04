@@ -8,15 +8,33 @@
 
 // ------------------------------------------- Common -------------------------------------------
 
+// MWC64X
+uint rand(
+    uint2 *state
+) {
+    enum { A = 4294883355U };
+
+    uint x = (*state).x, c = (*state).y;
+    
+    uint res = x ^ c;
+
+    uint hi = mul_hi(x, A);
+
+    x = x * A + c;
+
+    c = hi + (x < c);
+
+    *state = (uint2)(x, c);
+
+    return res;
+}
+
 float randFloat(
     uint2* state
 ) {
     const float invMaxInt = 1.0f / 4294967296.0f;
-    uint x = (*state).x * 17 + (*state).y * 13123;
-    (*state).x = (x << 13) ^ x;
-    (*state).y ^= (x << 7);
-
-    uint tmp = x * (x * x * 15731 + 74323) + 871483;
+    
+    uint tmp = rand(state);
 
     return convert_float(tmp) * invMaxInt;
 }
@@ -330,7 +348,7 @@ void kernel aInhibit(
     int selectIndex = 0;
 
     if (randFloat(&stateValue) < epsilon)
-        selectIndex = (int)(randFloat(&stateValue) * (hiddenSize.z - 1) + 0.5f);
+        selectIndex = (int)(rand(&stateValue) % hiddenSize.z);
     else {
         float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
