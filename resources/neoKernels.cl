@@ -32,11 +32,9 @@ uint rand(
 float randFloat(
     uint2* state
 ) {
-    const float invMaxInt = 1.0f / 4294967296.0f;
-    
     uint tmp = rand(state);
 
-    return convert_float(tmp) * invMaxInt;
+    return (tmp % 99999) / 99999.0f;
 }
 
 float randNormal(
