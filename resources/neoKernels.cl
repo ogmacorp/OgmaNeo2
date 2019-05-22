@@ -291,9 +291,9 @@ void kernel scLearn(
 
     sum /= (countsT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float delta = alpha * ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - sum);
+    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sum;
 
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
 
 // ------------------------------------------- Actor -------------------------------------------
@@ -402,9 +402,9 @@ void kernel aLearn(
     else {
         float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float delta = beta * deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
+        float delta = deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
         
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, delta, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * delta, hiddenIndex1, visibleSize.z);
     }
 }
 
