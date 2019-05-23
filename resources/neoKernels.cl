@@ -191,21 +191,6 @@ float multiply(
 	return sum;
 }
 
-// void deltasT(
-//     global float* nonZeroValues,
-//     global const int* columnRanges,
-//     global const int* rowIndices,
-//     global const int* nonZeroValueIndices,
-//     global const float* inputs,
-//     float delta,
-//     int column
-// ) {
-//     int nextIndex = column + 1;
-	
-// 	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)
-//         nonZeroValues[nonZeroValueIndices[j]] += delta * inputs[rowIndices[j]];
-// }
-
 int counts(
     global const int* rowRanges,
 	int row
@@ -470,7 +455,7 @@ void kernel imLearn(
 
     sum /= (countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
-    float delta = alpha * (visibleActivations[visibleIndex] - sum);
+    float delta = visibleActivations[visibleIndex] - sum;
 
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
