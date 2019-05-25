@@ -175,7 +175,7 @@ void deltaOHVsT(
 }
 
 float multiply(
-	global float* nonZeroValues,
+	global const float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
     global const float* inputs,
@@ -187,6 +187,26 @@ float multiply(
 	
 	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
 		sum += nonZeroValues[j] * inputs[columnIndices[j]];
+
+	return sum;
+}
+
+float distance2(
+	global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const float* inputs,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++) {
+        float delta = nonZeroValues[j] - inputs[columnIndices[j]];
+
+		sum += delta * delta;
+    }
 
 	return sum;
 }
@@ -274,9 +294,9 @@ void kernel scLearn(
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    sum /= (countsT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
+    sum /= max(1, countsT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum);
+    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sum;
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
@@ -374,7 +394,7 @@ void kernel aLearn(
 
     int hiddenCPrev = hiddenCsPrev[hiddenColumnIndex];
 
-    float rescale = 1.0f / hiddenCounts[hiddenColumnIndex];
+    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
     float qUpdate = qTarget + gamma * hiddenValues[hiddenColumnIndex] * rescale;
 
@@ -398,7 +418,7 @@ void kernel aLearn(
 void kernel imForward(
     global const float* visibleActivations,
     global float* hiddenActivations,
-    global float* nonZeroValues,
+    global const float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
     int3 hiddenSize
@@ -453,9 +473,9 @@ void kernel imLearn(
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    sum /= (countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
+    sum /= max(1, countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
-    float delta = visibleActivations[visibleIndex] - exp(sum);
+    float delta = visibleActivations[visibleIndex] - sum;
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
