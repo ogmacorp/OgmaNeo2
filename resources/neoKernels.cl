@@ -401,13 +401,23 @@ void kernel aLearn(
     float deltaValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
-        
+
     if (hiddenPosition.z == hiddenSize.z)
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * deltaValue, hiddenIndex1, visibleSize.z);
     else {
         float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float delta = deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
+        float maxValue = -999999.0f;
+
+        for (int c = 0; c < hiddenSize.z; c++)
+            maxValue = fmax(maxValue, hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale);
+
+        float total = 0.0f;
+        
+        for (int c = 0; c < hiddenSize.z; c++)
+            total += exp(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale - maxValue);
+
+        float delta = deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - exp(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale - maxValue) / fmax(0.0001f, total));
         
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * delta, hiddenIndex1, visibleSize.z);
     }
