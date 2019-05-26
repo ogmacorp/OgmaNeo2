@@ -296,7 +296,7 @@ void kernel scLearn(
 
     sum /= max(1, countsT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum);
+    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sum;
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
@@ -475,7 +475,7 @@ void kernel imLearn(
 
     sum /= max(1, countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
-    float delta = visibleActivations[visibleIndex] - exp(sum);
+    float delta = visibleActivations[visibleIndex] - sum;
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
