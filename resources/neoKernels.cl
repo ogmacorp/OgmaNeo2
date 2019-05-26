@@ -407,17 +407,7 @@ void kernel aLearn(
     else {
         float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float maxValue = -999999.0f;
-
-        for (int c = 0; c < hiddenSize.z; c++)
-            maxValue = fmax(maxValue, hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale);
-
-        float total = 0.0f;
-        
-        for (int c = 0; c < hiddenSize.z; c++)
-            total += exp(hiddenActivationsPrev[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
-
-        float delta = deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - exp(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale - maxValue) / fmax(0.0001f, total));
+        float delta = deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : 0.0f) - 1.0f);
         
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * delta, hiddenIndex1, visibleSize.z);
     }
