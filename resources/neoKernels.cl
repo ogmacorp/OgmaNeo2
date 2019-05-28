@@ -407,8 +407,8 @@ void kernel aLearn(
     else {
         float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float delta = deltaAction * (hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f / hiddenSize.z);
-        
+        float delta = deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f) - tanh(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
+
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * delta, hiddenIndex1, visibleSize.z);
     }
 }
