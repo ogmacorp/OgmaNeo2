@@ -296,9 +296,9 @@ void kernel scLearn(
 
     sum /= max(1, countsT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sum;
+    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sum;
 
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
 
 // ------------------------------------------- Actor -------------------------------------------
@@ -385,8 +385,9 @@ void kernel aLearn(
     int3 hiddenSize,
     float alpha,
     float beta,
-    float gamma,
-    float qTarget
+    float delta,
+    float g,
+    float q
 ) {
     int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 	
@@ -396,20 +397,22 @@ void kernel aLearn(
 
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
-    float qUpdate = qTarget + gamma * hiddenValues[hiddenColumnIndex] * rescale;
+    float qUpdate = q + g * hiddenValues[hiddenColumnIndex] * rescale;
 
-    float deltaValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
+    float errorValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
     if (hiddenPosition.z == hiddenSize.z)
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * deltaValue, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, hiddenIndex1, visibleSize.z);
     else {
-        float deltaAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
+        float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float delta = deltaAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f) - tanh(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
+        float error = errorAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f) - tanh(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
 
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * delta, hiddenIndex1, visibleSize.z);
+        error += -delta * hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale;
+
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * error, hiddenIndex1, visibleSize.z);
     }
 }
 
@@ -475,7 +478,7 @@ void kernel imLearn(
 
     sum /= max(1, countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
-    float delta = visibleActivations[visibleIndex] - sum;
+    float error = visibleActivations[visibleIndex] - sum;
 
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
