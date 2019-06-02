@@ -66,16 +66,13 @@ public:
 
     cl_float _gamma;
 
-    cl_float _delta;
-
     cl_float _epsilon;
 
     Actor()
     :
-    _alpha(0.1f),
+    _alpha(0.2f),
     _beta(0.5f),
-    _gamma(0.99f),
-    _delta(0.1f),
+    _gamma(0.95f),
     _epsilon(0.02f)
     {}
 

@@ -39,7 +39,7 @@ void Actor::init(
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.initLocalRF(cs, vld._size, Int3(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1), vld._radius, -0.001f, 0.001f, rng); // +1 for value
+        vl._weights.initLocalRF(cs, vld._size, Int3(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1), vld._radius, -0.01f, 0.01f, rng); // +1 for value
 
         int argIndex = 0;
 
@@ -224,7 +224,6 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
             _learnKernel.setArg(argIndex++, _beta);
-            _learnKernel.setArg(argIndex++, _delta);
             _learnKernel.setArg(argIndex++, g);
             _learnKernel.setArg(argIndex++, q);
 

@@ -385,7 +385,6 @@ void kernel aLearn(
     int3 hiddenSize,
     float alpha,
     float beta,
-    float delta,
     float g,
     float q
 ) {
@@ -408,9 +407,7 @@ void kernel aLearn(
     else {
         float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float error = errorAction * ((hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f) - tanh(hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale));
-
-        error += -delta * hiddenActivationsPrev[address3(hiddenPosition, hiddenSize)] * rescale;
+        float error = errorAction * (hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f / hiddenSize.z);
 
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * error, hiddenIndex1, visibleSize.z);
     }
