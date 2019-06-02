@@ -107,7 +107,7 @@ void SparseCoder::initRandom(
         vl._visibleCounts = IntBuffer(numVisibleColumns);
 
         for (int i = 0; i < numVisibleColumns; i++)
-            vl._visibleCounts[i] = std::max(1, vl._weights.countsT(i * vld._size.z) / _hiddenSize.z);
+            vl._visibleCounts[i] = vl._weights.countsT(i * vld._size.z) / _hiddenSize.z;
     }
 
     // Hidden Cs
