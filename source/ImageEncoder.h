@@ -50,7 +50,7 @@ public:
 
     ImageEncoder()
     :
-    _alpha(0.01f)
+    _alpha(0.5f)
     {}
 
     void init(
