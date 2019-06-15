@@ -259,9 +259,7 @@ void kernel scInhibit(
     
     // Find max
     for (int c = 0; c < hiddenSize.z; c++) {
-        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
-
-        float value = hiddenActivations[hiddenIndex];
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
         if (value > maxValue) {
             maxValue = value;
@@ -364,7 +362,6 @@ void kernel aActivate(
     }
 }
 
-
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
@@ -423,12 +420,13 @@ void kernel aLearn(
 
     float qUpdate = q + g * hiddenValues[hiddenColumnIndex] * rescale;
 
-    float errorValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
-    
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-    if (hiddenPosition.z == hiddenSize.z)
+    if (hiddenPosition.z == hiddenSize.z) {
+        float errorValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
+    
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, hiddenIndex1, visibleSize.z);
+    }
     else {
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
