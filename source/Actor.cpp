@@ -126,6 +126,7 @@ void Actor::step(
         int argIndex = 0;
 
         _activateKernel.setArg(argIndex++, _hiddenActivations);
+        _activateKernel.setArg(argIndex++, _hiddenCounts);
         _activateKernel.setArg(argIndex++, _hiddenSize);
 
         cs.getQueue().enqueueNDRangeKernel(_activateKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
@@ -217,6 +218,7 @@ void Actor::step(
             int argIndex = 0;
 
             _activateKernel.setArg(argIndex++, _hiddenActivations);
+            _activateKernel.setArg(argIndex++, _hiddenCounts);
             _activateKernel.setArg(argIndex++, _hiddenSize);
 
             cs.getQueue().enqueueNDRangeKernel(_activateKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));

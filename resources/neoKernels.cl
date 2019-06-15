@@ -339,25 +339,28 @@ void kernel aForward(
 
 void kernel aActivate(
     global float* hiddenActivations,
+    global const int* hiddenCounts,
     int3 hiddenSize
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    float rescale = 1.0f / max(1, hiddenCounts[address2(hiddenColumnPosition, hiddenSize.xy)]);
+
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)] * rescale;
     
     // Find max
     for (int c = 1; c < hiddenSize.z; c++)
-        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
+        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale);
 
     float total = 0.0f;
 
     for (int c = 0; c < hiddenSize.z; c++)
-        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] - maxValue);
+        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
 
     for (int c = 0; c < hiddenSize.z; c++) {
         int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-        hiddenActivations[hiddenIndex] = exp(hiddenActivations[hiddenIndex] - maxValue) / fmax(0.0001f, total);
+        hiddenActivations[hiddenIndex] = exp(hiddenActivations[hiddenIndex] * rescale - maxValue) / fmax(0.0001f, total);
     }
 }
 
