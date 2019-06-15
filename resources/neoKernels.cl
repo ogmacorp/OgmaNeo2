@@ -337,11 +337,35 @@ void kernel aForward(
         hiddenActivations[address3(hiddenPosition, hiddenSize)] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex1, visibleSize.z);
 }
 
+void kernel aActivate(
+    global float* hiddenActivations,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+    
+    // Find max
+    for (int c = 1; c < hiddenSize.z; c++)
+        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)]);
+
+    float total = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++)
+        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] - maxValue);
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        hiddenActivations[hiddenIndex] = exp(hiddenActivations[hiddenIndex] - maxValue) / fmax(0.0001f, total);
+    }
+}
+
+
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
     int3 hiddenSize,
-    float epsilon,
     uint2 seed
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
@@ -350,19 +374,17 @@ void kernel aInhibit(
 
     int selectIndex = 0;
 
-    if (randFloat(&stateValue) < epsilon)
-        selectIndex = (int)(rand(&stateValue) % hiddenSize.z);
-    else {
-        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
-    
-        // Find max
-        for (int c = 1; c < hiddenSize.z; c++) {
-            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+    float cusp = randFloat(&stateValue);
 
-            if (value > maxValue) {
-                maxValue = value;
-                selectIndex = c;
-            }
+    float sumSoFar = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        sumSoFar += hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = c;
+
+            break;
         }
     }
 
@@ -405,9 +427,11 @@ void kernel aLearn(
     if (hiddenPosition.z == hiddenSize.z)
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, hiddenIndex1, visibleSize.z);
     else {
+        int hiddenIndex = address3(hiddenPosition, hiddenSize);
+
         float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        float error = errorAction * (hiddenPosition.z == hiddenCPrev ? 1.0f : -1.0f / hiddenSize.z);
+        float error = (errorAction > 0.0f ? 1.0f : -1.0f) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
 
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * error, hiddenIndex1, visibleSize.z);
     }
