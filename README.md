@@ -8,13 +8,13 @@
 
 # OgmaNeo, V2
 
-[![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby) [![Build Status](https://travis-ci.org/ogmacorp/OgmaNeo.svg?branch=master)](https://travis-ci.org/ogmacorp/OgmaNeo)
+[![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby)
 
 ## Introduction 
 
 Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that contains an implementation of Sparse Predictive Hierarchies.
 
-For an introduction to how the algorithm works, see [the presentation](./OgmaNeo_Presentation.pdf).
+For an introduction to how the algorithm works, see [the presentation](./SPH_Presentation.pdf).
 
 Python bindings are available [here](https://github.com/ogmacorp/PyOgmaNeo2) (use the matching branch name).
 
