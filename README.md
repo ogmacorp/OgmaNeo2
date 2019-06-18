@@ -16,9 +16,9 @@ Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that c
 
 For an introduction to how the algorithm works, see [the presentation](./OgmaNeo_Presentation.pdf).
 
-Note that there are two libraries implementing SPH: This one (OgmaNeo V2), and an embedded (CPU only) version [EOgmaNeo](https://github.com/ogmacorp/EOgmaNeo).
+Python bindings are available [here](https://github.com/ogmacorp/PyOgmaNeo2) (use the matching branch name).
 
-There is also a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of this repository that contains an outdated implementation of SPH. Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
+There are also two depcrecated versions, [OgmaNeo1](https://github.com/ogmacorp/OgmaNeo) and [EOgmaNeo](https://github.com/ogmacorp/EOgmaNeo). Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
 
 ## Installation
 
@@ -44,13 +44,13 @@ The following commands can be used to build the OgmaNeo library:
 > cd OgmaNeo2
 > mkdir build  
 > cd build  
-> cmake -DCMAKE_INSTALL_PREFIX=../install ..  
+> cmake ..  
 > make  
 > make install
 
 The `cmake` command can be passed a `CMAKE_INSTALL_PREFIX` to determine where to install the library and header files.  
 
-The `BUILD_SHARED_LIBS` boolean cmake option can be used to create dynamic/shared object library (default is to create a _static_ library). On Linux it's recommended to add `-DBUILD_SHARED_LIBS=ON`
+The `BUILD_SHARED_LIBS` boolean cmake option can be used to create dynamic/shared object library (default is to create a _static_ library). If on Linux or when using the bindings, it's recommended to add `-DBUILD_SHARED_LIBS=ON`.
 
 `make install` can be run to install the library. `make uninstall` can be used to uninstall the library.
 

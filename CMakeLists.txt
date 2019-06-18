@@ -6,7 +6,7 @@
 #  in the OGMANEO_LICENSE.md file included in this distribution.
 # ----------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
