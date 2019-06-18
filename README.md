@@ -41,7 +41,7 @@ The Khronos Group's [cl2.hpp](http://github.khronos.org/OpenCL-CLHPP/) header fi
 The following commands can be used to build the OgmaNeo library:
 
 > git clone https://github.com/ogmacorp/OgmaNeo2.git  
-> cd OgmaNeo2
+> cd OgmaNeo2  
 > mkdir build  
 > cd build  
 > cmake ..  
