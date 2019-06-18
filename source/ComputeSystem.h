@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -8,27 +8,69 @@
 
 #pragma once
 
-#include "Helpers.h"
+//#define CL_HPP_MINIMUM_OPENCL_VERSION 200
+//#define CL_HPP_TARGET_OPENCL_VERSION 200
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 120
 
-#include <random>
+#ifdef __APPLE__
+#include <OpenCL/cl.hpp>
+#else
+#include <CL/cl.hpp>
+#endif
+
+#define SYS_DEBUG
+
+#define SYS_ALLOW_CL_GL_CONTEXT 0
 
 namespace ogmaneo {
 class ComputeSystem {
 public:
-	ctpl::thread_pool _pool;
+    enum DeviceType {
+        _cpu,
+        _gpu,
+        _all
+    };
 
-	// Default batch sizes for dimensions 1-3
-	int _batchSize1;
-	Int2 _batchSize2;
-	Int3 _batchSize3;
+private:
+    cl::Platform _platform;
+    cl::Device _device;
+    cl::Context _context;
+    cl::CommandQueue _queue;
 
-	// Default RNG
-	std::mt19937 _rng;
+public:
+    ComputeSystem() {}
 
-	ComputeSystem(
-		int numWorkers
-	)
-	: _pool(numWorkers), _batchSize1(1024), _batchSize2(1, 1), _batchSize3(2, 2, 2)
-	{}
+    // Non-copyable
+    ComputeSystem(
+        const ComputeSystem &
+    ) = delete;
+    
+    ComputeSystem &operator=(
+        const ComputeSystem &
+    ) = delete;
+
+    bool init(
+        DeviceType type,
+        int platformIndex = -1,
+        int deviceIndex = -1,
+        bool createFromGLContext = false
+    );
+
+    cl::Platform &getPlatform() {
+        return _platform;
+    }
+
+    cl::Device &getDevice() {
+        return _device;
+    }
+
+    cl::Context &getContext() {
+        return _context;
+    }
+
+    cl::CommandQueue &getQueue() {
+        return _queue;
+    }
 };
 } // namespace ogmaneo

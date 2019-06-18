@@ -1,6 +1,6 @@
 # ----------------------------------------------------------------------------
 #  OgmaNeo
-#  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+#  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
 #
 #  This copy of OgmaNeo is licensed to you under the terms described
 #  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -18,37 +18,32 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if(DISABLE_THREADING)
-    message("Disabling threading")
-    add_compile_definitions(KERNEL_NOTHREAD)
-endif()
-
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include_directories("${PROJECT_SOURCE_DIR}/source")
 
+# This is only required for the script to work in the version control
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
+find_package(OpenCL REQUIRED)
+ 
+include_directories(${OpenCL_INCLUDE_DIR})
+
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
+    "${SOURCE_PATH}/ComputeSystem.cpp"
+    "${SOURCE_PATH}/ComputeProgram.cpp"
     "${SOURCE_PATH}/Helpers.cpp"
+    "${SOURCE_PATH}/SparseMatrix.cpp"
     "${SOURCE_PATH}/SparseCoder.cpp"
-    "${SOURCE_PATH}/Predictor.cpp"
+    "${SOURCE_PATH}/Actor.cpp"
     "${SOURCE_PATH}/Hierarchy.cpp"
     "${SOURCE_PATH}/ImageEncoder.cpp"
-	"${SOURCE_PATH}/SparseMatrix.cpp"
 )
 
-set(HEADERS
-	"${SOURCE_PATH}/Helpers.h"
-    "${SOURCE_PATH}/SparseCoder.h"
-    "${SOURCE_PATH}/Predictor.h"
-    "${SOURCE_PATH}/Hierarchy.h"
-    "${SOURCE_PATH}/ImageEncoder.h"
-	"${SOURCE_PATH}/SparseMatrix.h"
-)
+add_library(OgmaNeo ${SOURCES})
 
-add_library(OgmaNeo ${SOURCES} ${HEADERS})
+target_link_libraries(OgmaNeo ${OpenCL_LIBRARIES})
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin

@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2017-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -9,163 +9,142 @@
 #pragma once
 
 #include "SparseCoder.h"
-#include "Predictor.h"
+#include "Actor.h"
 
 #include <memory>
 
 namespace ogmaneo {
-// Type of hierarchy input layer
 enum InputType {
-    _none = 0,
-    _predict = 1
+    _none,
+    _act
 };
 
-// A SPH
 class Hierarchy {
 public:
-    // Describes a layer for construction
     struct LayerDesc {
-        Int3 _hiddenSize; // Size of hidden layer
+        Int3 _hiddenSize;
 
-        int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction Radius
+        cl_int _scRadius;
+        cl_int _aRadius;
 
-        int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
+        int _ticksPerUpdate;
 
-        int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
+        int _temporalHorizon;
+
+        int _historyCapacity;
 
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
         _scRadius(2),
-        _pRadius(2),
+        _aRadius(2),
         _ticksPerUpdate(2),
-        _temporalHorizon(2)
+        _temporalHorizon(2),
+        _historyCapacity(16)
         {}
     };
 private:
-    // Layers
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+    std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
 
-    // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
+    std::vector<std::vector<cl::Buffer>> _histories;
     std::vector<std::vector<int>> _historySizes;
 
-    // Per-layer values
-    std::vector<char> _updates;
+    std::vector<unsigned char> _updates;
 
     std::vector<int> _ticks;
     std::vector<int> _ticksPerUpdate;
 
-    // Input dimensions
+    std::vector<float> _rewards;
+    std::vector<float> _rewardCounts;
+
     std::vector<Int3> _inputSizes;
 
 public:
-    // Default
-    Hierarchy() {}
-
-    // Copy
-    Hierarchy(
-        const Hierarchy &other // Hierarchy to copy from
-    ) {
-        *this = other;
-    }
-
-    // Assignment
-    const Hierarchy &operator=(
-        const Hierarchy &other // Hierarchy to assign from
-    );
-    
-    // Create a randomly initialized hierarchy
-    void initRandom(
-        ComputeSystem &cs, // Compute system
-        const std::vector<Int3> &inputSizes, // Sizes of input layers
-        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
-        const std::vector<LayerDesc> &layerDescs // Descriptors for layers
+    void init(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        const std::vector<Int3> &inputSizes,
+        const std::vector<InputType> &inputTypes,
+        const std::vector<LayerDesc> &layerDescs,
+        std::mt19937 &rng
     );
 
-    // Simulation step/tick
     void step(
-        ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        bool learnEnabled = true // Whether learning is enabled
+        ComputeSystem &cs,
+        const std::vector<cl::Buffer> &inputCs,
+        std::mt19937 &rng,
+        float reward,
+        bool learn = true
     );
 
-    // Write to stream
     void writeToStream(
-        std::ostream &os // Stream to write to
-    ) const;
-
-    // Read from stream
-    void readFromStream(
-        std::istream &is // Stream to read from
+        ComputeSystem &cs,
+        std::ostream &os
     );
 
-    // Get the number of layers (scLayers)
+    void readFromStream(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        std::istream &is
+    );
+
     int getNumLayers() const {
         return _scLayers.size();
     }
 
-    // Retrieve predictions
-    const IntBuffer &getPredictionCs(
-        int i // Index of input layer to get predictions for
+    const cl::Buffer &getActionCs(
+        int i
     ) const {
-        return _pLayers.front()[i]->getHiddenCs();
+        assert(_aLayers.front()[i] != nullptr);
+
+        return _aLayers.front()[i]->getHiddenCs();
     }
 
-    // Whether this layer received on update this timestep
     bool getUpdate(
-        int l // Layer index
+        int l
     ) const {
         return _updates[l];
     }
 
-    // Get current layer ticks, relative to previous layer
     int getTicks(
-        int l // Layer Index
+        int l
     ) const {
         return _ticks[l];
     }
 
-    // Get layer ticks per update, relative to previous layer
     int getTicksPerUpdate(
-        int l // Layer Index
+        int l
     ) const {
         return _ticksPerUpdate[l];
     }
 
-    // Get input sizes
     const std::vector<Int3> &getInputSizes() const {
         return _inputSizes;
     }
 
-    // Retrieve a sparse coding layer
     SparseCoder &getSCLayer(
-        int l // Layer index
+        int l
     ) {
         return _scLayers[l];
     }
 
-    // Retrieve a sparse coding layer, const version
     const SparseCoder &getSCLayer(
-        int l // Layer index
+        int l
     ) const {
         return _scLayers[l];
     }
 
-    // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
+    std::vector<std::unique_ptr<Actor>> &getALayers(
+        int l
     ) {
-        return _pLayers[l];
+        return _aLayers[l];
     }
 
-    // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
-        int l // Layer index
+    const std::vector<std::unique_ptr<Actor>> &getALayers(
+        int l
     ) const {
-        return _pLayers[l];
+        return _aLayers[l];
     }
 };
 } // namespace ogmaneo
