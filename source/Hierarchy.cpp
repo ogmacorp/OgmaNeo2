@@ -267,6 +267,9 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
     os.write(reinterpret_cast<const char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
 
+    os.write(reinterpret_cast<const char*>(_rewards.data()), _rewards.size() * sizeof(float));
+    os.write(reinterpret_cast<const char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
+
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes = _historySizes[l].size();
 
@@ -318,9 +321,15 @@ void Hierarchy::readFromStream(
 
     _updates.resize(numLayers);
 
+    _rewards.resize(numLayers);
+    _rewardCounts.resize(numLayers);
+
     is.read(reinterpret_cast<char*>(_updates.data()), _updates.size() * sizeof(unsigned char));
     is.read(reinterpret_cast<char*>(_ticks.data()), _ticks.size() * sizeof(int));
     is.read(reinterpret_cast<char*>(_ticksPerUpdate.data()), _ticksPerUpdate.size() * sizeof(int));
+
+    is.read(reinterpret_cast<char*>(_rewards.data()), _rewards.size() * sizeof(float));
+    is.read(reinterpret_cast<char*>(_rewardCounts.data()), _rewardCounts.size() * sizeof(float));
 
     for (int l = 0; l < numLayers; l++) {
         int numHistorySizes;

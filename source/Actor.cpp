@@ -308,6 +308,10 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
         cs.getQueue().enqueueReadBuffer(s._hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
         os.write(reinterpret_cast<const char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
 
+        std::vector<cl_float> hiddenValues(numHiddenColumns);
+        cs.getQueue().enqueueReadBuffer(s._hiddenValues, CL_TRUE, 0, numHiddenColumns * sizeof(cl_float), hiddenValues.data());
+        os.write(reinterpret_cast<const char*>(hiddenValues.data()), numHiddenColumns * sizeof(cl_float));
+
         os.write(reinterpret_cast<const char*>(&s._reward), sizeof(cl_float));
     }
 }
@@ -349,14 +353,14 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         vl._weights.readFromStream(cs, is);
     }
 
-    int historyCapacity, historySize;
+    int historyCapacity;
 
     is.read(reinterpret_cast<char*>(&historyCapacity), sizeof(int));
-    is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
     _historySamples.resize(historyCapacity);
 
-    for (int i = 0; i < _historySamples.size(); i++) {
+    for (int i = 0; i < _historySize; i++) {
         _historySamples[i]._visibleCs.resize(_visibleLayers.size());
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -375,6 +379,11 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
         _historySamples[i]._hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
         cs.getQueue().enqueueWriteBuffer(_historySamples[i]._hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
 
+        std::vector<cl_float> hiddenValues(numHiddenColumns);
+        is.read(reinterpret_cast<char*>(hiddenValues.data()), numHiddenColumns * sizeof(cl_float));
+        _historySamples[i]._hiddenValues = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_float));
+        cs.getQueue().enqueueWriteBuffer(_historySamples[i]._hiddenValues, CL_TRUE, 0, numHiddenColumns * sizeof(cl_float), hiddenValues.data());
+
         is.read(reinterpret_cast<char*>(&_historySamples[i]._reward), sizeof(cl_float));
     }
 
@@ -383,4 +392,25 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     _activateKernel = cl::Kernel(prog.getProgram(), "aActivate");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
+
+    _hiddenCounts = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+
+    cs.getQueue().enqueueFillBuffer(_hiddenCounts, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
+
+    cl::Kernel countKernel = cl::Kernel(prog.getProgram(), "aCount");
+
+    // Create layers
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int argIndex = 0;
+
+        countKernel.setArg(argIndex++, vl._weights._rowRanges);
+        countKernel.setArg(argIndex++, _hiddenCounts);
+        countKernel.setArg(argIndex++, vld._size);
+        countKernel.setArg(argIndex++, _hiddenSize);
+
+        cs.getQueue().enqueueNDRangeKernel(countKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+    }
 }
