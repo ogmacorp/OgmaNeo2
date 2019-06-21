@@ -289,7 +289,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&historyCapacity), sizeof(int));
     os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
-    for (int i = 0; i < _historySize; i++) {
+    for (int i = 0; i < _historySamples.size(); i++) {
         HistorySample &s = _historySamples[i];
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -360,7 +360,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     _historySamples.resize(historyCapacity);
 
-    for (int i = 0; i < _historySize; i++) {
+    for (int i = 0; i < _historySamples.size(); i++) {
         _historySamples[i]._visibleCs.resize(_visibleLayers.size());
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
