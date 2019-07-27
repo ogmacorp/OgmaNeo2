@@ -22,13 +22,13 @@ DoubleBuffer ogmaneo::createDoubleBuffer(
     return db;
 }
 
-void ogmaneo::writeBufferToStream(ComputeSystem &cs, std::ostream &os, cl::Buffer &buf, cl::size_t size) {
+void ogmaneo::writeBufferToStream(ComputeSystem &cs, std::ostream &os, cl::Buffer &buf, cl_size_t size) {
     std::vector<unsigned char> data(size);
     cs.getQueue().enqueueReadBuffer(buf, CL_TRUE, 0, size, data.data());
     os.write(reinterpret_cast<const char*>(data.data()), size);
 }
 
-void ogmaneo::readBufferFromStream(ComputeSystem &cs, std::istream &is, cl::Buffer &buf, cl::size_t size) {
+void ogmaneo::readBufferFromStream(ComputeSystem &cs, std::istream &is, cl::Buffer &buf, cl_size_t size) {
     std::vector<unsigned char> data(size);
     is.read(reinterpret_cast<char*>(data.data()), size);
     buf = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, size);
