@@ -128,4 +128,7 @@ inline int address4(
 ) {
     return pos.w + pos.z * dims.w + pos.y * dims.w * dims.z + pos.x * dims.w * dims.z * dims.y;
 }
+
+void writeBufferToStream(ComputeSystem &cs, std::ostream &os, cl::Buffer &buf, cl::size_t size);
+void readBufferFromStream(ComputeSystem &cs, std::istream &is, cl::Buffer &buf, cl::size_t size);
 } // namespace ogmaneo

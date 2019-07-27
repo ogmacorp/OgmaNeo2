@@ -129,9 +129,7 @@ void ImageEncoder::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
 
-    std::vector<cl_int> hiddenCs(numHiddenColumns);
-    cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
-    os.write(reinterpret_cast<const char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
+    writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -162,10 +160,7 @@ void ImageEncoder::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
 
-    std::vector<cl_int> hiddenCs(numHiddenColumns);
-    is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
-    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-    cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+    readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
 
