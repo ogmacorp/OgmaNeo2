@@ -182,7 +182,7 @@ void Actor::step(
     }
 
     // Learn
-    if (learnEnabled && _historySize > 1) {
+    if (learnEnabled && _historySize == _historySamples.size()) {
         const HistorySample &sPrev = _historySamples[0];
 
         cl_float q = 0.0f;
