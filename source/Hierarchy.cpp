@@ -277,11 +277,8 @@ void Hierarchy::writeToStream(
 
         os.write(reinterpret_cast<const char*>(_historySizes[l].data()), numHistorySizes * sizeof(int));
 
-        for (int i = 0; i < _historySizes[l].size(); i++) {
-            std::vector<cl_int> historyCs(_historySizes[l][i]);
-            cs.getQueue().enqueueReadBuffer(_histories[l][i], CL_TRUE, 0, _historySizes[l][i] * sizeof(cl_int), historyCs.data());
-            os.write(reinterpret_cast<const char*>(historyCs.data()), _historySizes[l][i] * sizeof(cl_int));
-        }
+        for (int i = 0; i < _historySizes[l].size(); i++)
+            writeBufferToStream(cs, os, _histories[l][i], _historySizes[l][i] * sizeof(cl_int));
 
         _scLayers[l].writeToStream(cs, os);
 
@@ -340,12 +337,8 @@ void Hierarchy::readFromStream(
 
         _histories[l].resize(numHistorySizes);
 
-        for (int i = 0; i < _historySizes[l].size(); i++) {
-            std::vector<cl_int> historyCs(_historySizes[l][i]);
-            is.read(reinterpret_cast<char*>(historyCs.data()), _historySizes[l][i] * sizeof(cl_int));
-            _histories[l][i] = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, _historySizes[l][i] * sizeof(cl_int));
-            cs.getQueue().enqueueWriteBuffer(_histories[l][i], CL_TRUE, 0, _historySizes[l][i] * sizeof(cl_int), historyCs.data());   
-        }
+        for (int i = 0; i < _historySizes[l].size(); i++)
+            readBufferFromStream(cs, is, _histories[l][i], _historySizes[l][i] * sizeof(cl_int));
 
         _scLayers[l].readFromStream(cs, prog, is);
 
