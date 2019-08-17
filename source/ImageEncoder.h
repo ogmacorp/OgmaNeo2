@@ -42,8 +42,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden state
 
-    FloatBuffer _hiddenRates; // Rates
-    
     std::vector<VisibleLayer> _visibleLayers; // Layers
     std::vector<VisibleLayerDesc> _visibleLayerDescs; // Descs
 
