@@ -60,7 +60,7 @@ void SparseCoder::inhibit(
 
         float sum = _laterals.multiplyOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.counts(hiddenIndex) / _hiddenSize.z);
 
-        _hiddenActivations[hiddenIndex] += (1.0f - sigmoid(sum)) * _hiddenStimuli[hiddenIndex];
+        _hiddenActivations[hiddenIndex] += (1.0f - sum) * _hiddenStimuli[hiddenIndex];
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -86,18 +86,10 @@ void SparseCoder::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
+            vl._weights.hebbDecOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
         }
-    }
-    
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float sum = _laterals.multiplyOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.counts(hiddenIndex) / _hiddenSize.z);
-
-        float delta = _beta * ((hc == _hiddenCs[hiddenColumnIndex] ? 1.0f : 0.0f) - sigmoid(sum));
-
-        _laterals.deltaOHVs(_hiddenCs, delta, hiddenIndex, _hiddenSize.z);
+        _laterals.hebbIncOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta);
     }
 }
 
@@ -148,7 +140,7 @@ void SparseCoder::initRandom(
     _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
     _hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 
-    std::uniform_real_distribution<float> lateralWeightDist(-0.01f, 0.01f);
+    std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
     initSMLocalRF(_hiddenSize, _hiddenSize, _lateralRadius, _laterals);
 
