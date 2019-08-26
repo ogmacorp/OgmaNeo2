@@ -316,5 +316,13 @@ struct SparseMatrix {
 		const std::vector<float> &errors,
 		int column
 	);
+
+	// --- Special ---
+
+	float multiplyNoDiagonalOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
 };
 } // namespace ogmaneo

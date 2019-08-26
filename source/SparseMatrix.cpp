@@ -726,3 +726,24 @@ void SparseMatrix::hebbErrorsT(
 	for (int j = _columnRanges[column]; j < _columnRanges[nextIndex]; j++)
 		_nonZeroValues[_nonZeroValueIndices[j]] += errors[_rowIndices[j]];
 }
+
+float SparseMatrix::multiplyNoDiagonalOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		if (_columnIndices[j] == row)
+			continue;
+			
+		sum += _nonZeroValues[j];
+	}
+
+	return sum;
+}
