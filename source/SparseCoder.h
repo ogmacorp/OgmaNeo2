@@ -23,7 +23,7 @@ public:
         // Defaults
         VisibleLayerDesc()
         :
-        _size({ 4, 4, 16 }),
+        _size(4, 4, 16),
         _radius(2)
         {}
     };
@@ -31,14 +31,22 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-
-        IntBuffer _visibleCounts; // Number touching
     };
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
+    int _lateralRadius;
+
+    FloatBuffer _hiddenStimuli;
+    FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
+    IntBuffer _hiddenCsPrev; // Previous tick hidden states
+
+    SparseMatrix _laterals;
+
+    IntBuffer _hiddenCounts; // Number of units touching
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -52,11 +60,15 @@ private:
         const std::vector<const IntBuffer*> &inputCs
     );
 
+    void inhibit(
+        const Int2 &pos,
+        std::mt19937 &rng
+    );
+
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     static void forwardKernel(
@@ -68,29 +80,41 @@ private:
         sc->forward(pos, rng, inputCs);
     }
 
+    static void inhibitKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc
+    ) {
+        sc->inhibit(pos, rng);
+    }
+
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        sc->learn(pos, rng, inputCs);
     }
 
 public:
-    float _alpha; // Weight learning rate
+    float _alpha; // Forward learning rate
+    float _beta; // Lateral learning rate
+    int _explainIters; // Explaining-away iterations
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.1f)
+    _alpha(0.1f),
+    _beta(0.1f),
+    _explainIters(8)
     {}
 
     // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
+        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
@@ -133,6 +157,11 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
+    }
+
+    // Get the hidden states
+    const IntBuffer &getHiddenCsPrev() const {
+        return _hiddenCsPrev;
     }
 
     // Get the hidden size

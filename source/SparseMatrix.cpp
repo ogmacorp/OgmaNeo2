@@ -639,7 +639,7 @@ void SparseMatrix::hebbOHVs(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[j] += alpha * (target - _nonZeroValues[j]);
+			_nonZeroValues[j] += alpha * std::min(0.0f, target - _nonZeroValues[j]);
 		}
 	}
 }
@@ -660,7 +660,7 @@ void SparseMatrix::hebbOHVsT(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * std::min(0.0f, target - _nonZeroValues[_nonZeroValueIndices[j]]);
 		}
 	}
 }
