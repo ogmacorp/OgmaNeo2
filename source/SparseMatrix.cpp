@@ -665,7 +665,7 @@ void SparseMatrix::hebbDecOHVsT(
 	}
 }
 
-void SparseMatrix::hebbIncOHVs(
+void SparseMatrix::hebbOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
 	int oneHotSize,
@@ -681,12 +681,12 @@ void SparseMatrix::hebbIncOHVs(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[j] += alpha * std::max(0.0f, target - _nonZeroValues[j]);
+			_nonZeroValues[j] += alpha * (target - _nonZeroValues[j]);
 		}
 	}
 }
 
-void SparseMatrix::hebbIncOHVsT(
+void SparseMatrix::hebbOHVsT(
 	const std::vector<int> &nonZeroIndices,
 	int column,
 	int oneHotSize,
@@ -702,7 +702,7 @@ void SparseMatrix::hebbIncOHVsT(
 
 			float target = (dj == targetDJ ? 1.0f : 0.0f);
 
-			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * std::max(0.0f, target - _nonZeroValues[_nonZeroValueIndices[j]]);
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (target - _nonZeroValues[_nonZeroValueIndices[j]]);
 		}
 	}
 }
@@ -741,7 +741,7 @@ float SparseMatrix::multiplyNoDiagonalOHVs(
 
 		if (_columnIndices[j] == row)
 			continue;
-			
+
 		sum += _nonZeroValues[j];
 	}
 

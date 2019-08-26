@@ -293,14 +293,14 @@ struct SparseMatrix {
 		float alpha
 	);
 
-	void hebbIncOHVs(
+	void hebbOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize,
 		float alpha
 	);
 
-	void hebbIncOHVsT(
+	void hebbOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize,

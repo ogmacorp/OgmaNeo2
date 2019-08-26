@@ -89,7 +89,7 @@ void SparseCoder::learn(
             vl._weights.hebbDecOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
         }
 
-        _laterals.hebbIncOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta);
+        _laterals.hebbOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta);
     }
 }
 
