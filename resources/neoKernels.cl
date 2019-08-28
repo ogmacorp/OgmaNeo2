@@ -425,7 +425,7 @@ void kernel aLearn(
     if (hiddenPosition.z == hiddenSize.z) {
         float errorValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * clamp(errorValue, -1.0f, 1.0f), hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, hiddenIndex1, visibleSize.z);
     }
     else {
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
