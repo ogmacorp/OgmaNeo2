@@ -112,7 +112,7 @@ void ImageEncoder::initRandom(
 
     _hiddenCounts = IntBuffer(numHiddenColumns, 0);
 
-    std::uniform_real_distribution<float> forwardWeightDist(0.99f, 1.0f);
+    std::uniform_real_distribution<float> forwardWeightDist(1.0f, 1.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
