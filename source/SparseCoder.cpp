@@ -86,7 +86,7 @@ void SparseCoder::learn(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.hebbDecOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
+            vl._weights.hebbOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _alpha);
         }
 
         _laterals.hebbOHVs(_hiddenCs, hiddenIndex, _hiddenSize.z, _beta);

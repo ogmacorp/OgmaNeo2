@@ -56,9 +56,9 @@ void Predictor::learn(
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            float target = (hc == targetC ? 1.0f : 0.0f);
+            float target = (hc == targetC ? 1.0f : -1.0f);
 
-            float delta = _alpha * (target - sigmoid(_hiddenActivations[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]))); // Delta
+            float delta = _alpha * (target - std::tanh(_hiddenActivations[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]))); // Delta
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
