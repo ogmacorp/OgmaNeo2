@@ -24,6 +24,7 @@ void ImageEncoder::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -31,9 +32,10 @@ void ImageEncoder::forward(
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiply(*inputActivations[vli], hiddenIndex);
+            count += vl._weights.counts(hiddenIndex);
         }
 
-        sum /= std::max(1, _hiddenCounts[hiddenColumnIndex]);
+        sum /= std::max(1, count);
 
         _hiddenActivations[hiddenIndex] = _hiddenStimuli[hiddenIndex] = sum;
 
@@ -78,7 +80,7 @@ void ImageEncoder::learn(
 ) {
     int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
 
-    {
+    if (_hiddenCs[hiddenColumnIndex] != _hiddenCsPrev[hiddenColumnIndex]) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
         // For each visible layer
@@ -110,8 +112,6 @@ void ImageEncoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    _hiddenCounts = IntBuffer(numHiddenColumns, 0);
-
     std::uniform_real_distribution<float> forwardWeightDist(1.0f, 1.01f);
 
     // Create layers
@@ -127,9 +127,6 @@ void ImageEncoder::initRandom(
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = forwardWeightDist(cs._rng);
-
-        for (int i = 0; i < numHiddenColumns; i++)
-            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z);
     }
 
     _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
@@ -138,6 +135,7 @@ void ImageEncoder::initRandom(
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
     _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
+    _hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
@@ -154,6 +152,14 @@ void ImageEncoder::step(
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
+
+    // Copy to prev
+#ifdef KERNEL_NOTHREAD
+    for (int x = 0; x < numHiddenColumns; x++)
+        copyInt(x, cs._rng, &_hiddenCs, &_hiddenCsPrev);
+#else
+    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &_hiddenCsPrev), numHiddenColumns, cs._rng, cs._batchSize1);
+#endif
 
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
@@ -205,9 +211,8 @@ void ImageEncoder::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
-    writeBufferToStream(os, &_hiddenCounts);
-
     writeBufferToStream(os, &_hiddenCs);
+    writeBufferToStream(os, &_hiddenCsPrev);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -233,9 +238,11 @@ void ImageEncoder::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
-    readBufferFromStream(is, &_hiddenCounts);
-
     readBufferFromStream(is, &_hiddenCs);
+    readBufferFromStream(is, &_hiddenCsPrev);
+
+    _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
+    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
     _hiddenCsTemp = IntBuffer(_hiddenCs.size());
 

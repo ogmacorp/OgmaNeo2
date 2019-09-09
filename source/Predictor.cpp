@@ -58,7 +58,16 @@ void Predictor::learn(
 
             float target = (hc == targetC ? 1.0f : -1.0f);
 
-            float delta = _alpha * (target - std::tanh(_hiddenActivations[hiddenIndex] / std::max(1, _hiddenCounts[hiddenColumnIndex]))); // Delta
+            int count = 0;
+
+            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+                VisibleLayer &vl = _visibleLayers[vli];
+                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+                count += vl._weights.counts(hiddenIndex) / vld._size.z;
+            }
+
+            float delta = _alpha * (target - std::tanh(_hiddenActivations[hiddenIndex] / std::max(1, count))); // Delta
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -86,8 +95,6 @@ void Predictor::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    _hiddenCounts = IntBuffer(numHiddenColumns, 0);
-
     std::uniform_real_distribution<float> weightDist(-0.0001f, 0.0001f);
 
     // Create layers
@@ -104,9 +111,6 @@ void Predictor::initRandom(
             vl._weights._nonZeroValues[i] = weightDist(cs._rng);
 
         vl._inputCsPrev = IntBuffer(numVisibleColumns, 0);
-
-        for (int i = 0; i < numHiddenColumns; i++)
-            _hiddenCounts[i] += vl._weights.counts(i * _hiddenSize.z) / vld._size.z;
     }
 
     // Hidden Cs
@@ -178,8 +182,6 @@ void Predictor::writeToStream(
 
     writeBufferToStream(os, &_hiddenActivations);
 
-    writeBufferToStream(os, &_hiddenCounts);
-
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -209,8 +211,6 @@ void Predictor::readFromStream(
     readBufferFromStream(is, &_hiddenCs);
 
     readBufferFromStream(is, &_hiddenActivations);
-
-    readBufferFromStream(is, &_hiddenCounts);
 
     int numVisibleLayers;
     

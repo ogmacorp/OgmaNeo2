@@ -46,8 +46,6 @@ private:
 
     SparseMatrix _laterals;
 
-    IntBuffer _hiddenCounts; // Number of units touching
-
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;

@@ -41,6 +41,7 @@ private:
     FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCsPrev; // Hidden states from previous tick
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
 
     SparseMatrix _laterals;

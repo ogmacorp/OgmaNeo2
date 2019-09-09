@@ -90,8 +90,7 @@ void Hierarchy::initRandom(
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            if (l < _scLayers.size() - 1)
-                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
+            pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
@@ -133,8 +132,7 @@ void Hierarchy::initRandom(
             pVisibleLayerDescs[0]._size = layerDescs[l]._hiddenSize;
             pVisibleLayerDescs[0]._radius = layerDescs[l]._pRadius;
 
-            if (l < _scLayers.size() - 1)
-                pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
+            pVisibleLayerDescs.push_back(pVisibleLayerDescs[0]);
 
             // Create actors
             for (int p = 0; p < _pLayers[l].size(); p++) {
@@ -142,15 +140,6 @@ void Hierarchy::initRandom(
 
                 _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDescs);
             }
-        }
-
-        if (layerDescs[l]._rRadius != -1) {
-            SparseCoder::VisibleLayerDesc vld;
-
-            vld._size = layerDescs[l]._hiddenSize;
-            vld._radius = layerDescs[l]._rRadius;
-
-            scVisibleLayerDescs.push_back(vld);
         }
 		
         // Create the sparse coding layer
@@ -201,6 +190,7 @@ const Hierarchy &Hierarchy::operator=(
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
+    const IntBuffer* topFeedBackCs,
     bool learnEnabled
 ) {
     assert(inputCs.size() == _inputSizes.size());
@@ -253,13 +243,8 @@ void Hierarchy::step(
             // Updated
             _updates[l] = true;
 
-            std::vector<const IntBuffer*> layerInputCs = constGet(_histories[l]);
-
-            if (layerInputCs.size() < _scLayers[l].getNumVisibleLayers())
-                layerInputCs.push_back(&_scLayers[l].getHiddenCsPrev());
-            
             // Activate sparse coder
-            _scLayers[l].step(cs, layerInputCs, learnEnabled);
+            _scLayers[l].step(cs,  constGet(_histories[l]), learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
@@ -291,7 +276,7 @@ void Hierarchy::step(
     for (int l = _scLayers.size() - 1; l >= 0; l--) {
         if (_updates[l]) {
             // Feed back is current layer state and next higher layer prediction
-            std::vector<const IntBuffer*> feedBackCs(l < _scLayers.size() - 1 ? 2 : 1);
+            std::vector<const IntBuffer*> feedBackCs(2);
 
             feedBackCs[0] = &_scLayers[l].getHiddenCs();
 
@@ -300,6 +285,8 @@ void Hierarchy::step(
 
                 feedBackCs[1] = &_pLayers[l + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]]->getHiddenCs();
             }
+            else
+                feedBackCs[1] = topFeedBackCs;
 
             // Step actor layers
             for (int p = 0; p < _pLayers[l].size(); p++) {

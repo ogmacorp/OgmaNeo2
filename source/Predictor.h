@@ -42,8 +42,6 @@ private:
 
     FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
 
-    IntBuffer _hiddenCounts; // Number of units touching
-
     // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;

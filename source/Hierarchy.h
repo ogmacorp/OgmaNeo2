@@ -30,7 +30,6 @@ public:
         int _scRadius; // Sparse coder radius
         int _pRadius; // Prediction radius
         int _lRadius; // Lateral radius
-        int _rRadius; // Recurrent radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -42,7 +41,6 @@ public:
         _scRadius(2),
         _pRadius(2),
         _lRadius(2),
-        _rRadius(-1),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}
@@ -93,6 +91,7 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        const IntBuffer* topFeedBackCs,
         bool learnEnabled = true // Whether learning is enabled
     );
 
