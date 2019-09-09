@@ -311,7 +311,9 @@ void kernel aCount(
 	      
     int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
-    hiddenCounts[hiddenColumnIndex] += counts(rowRanges, hiddenColumnIndex * (hiddenSize.z + 1)) / visibleSize.z;
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, 0), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+
+    hiddenCounts[hiddenColumnIndex] += counts(rowRanges, hiddenIndex) / visibleSize.z;
 }
 
 void kernel aForward(
