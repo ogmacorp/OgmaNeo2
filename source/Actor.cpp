@@ -247,7 +247,7 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, _alpha);
             _learnKernel.setArg(argIndex++, _beta);
             _learnKernel.setArg(argIndex++, g);
-            _learnKernel.setArg(argIndex++, (1.0f - _gamma) * q);
+            _learnKernel.setArg(argIndex++, q);
 
             cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
         }
