@@ -131,4 +131,6 @@ inline int address4(
 
 void writeBufferToStream(ComputeSystem &cs, std::ostream &os, cl::Buffer &buf, int size);
 void readBufferFromStream(ComputeSystem &cs, std::istream &is, cl::Buffer &buf, int size);
+void writeDoubleBufferToStream(ComputeSystem &cs, std::ostream &os, DoubleBuffer &buf, int size);
+void readDoubleBufferFromStream(ComputeSystem &cs, std::istream &is, DoubleBuffer &buf, int size);
 } // namespace ogmaneo
