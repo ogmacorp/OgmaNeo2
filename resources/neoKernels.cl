@@ -211,7 +211,7 @@ float distance2(
 	return sum;
 }
 
-int counts(
+int count(
     global const int* rowRanges,
 	int row
 ) {
@@ -220,7 +220,7 @@ int counts(
 	return rowRanges[nextIndex] - rowRanges[row];
 }
 
-int countsT(
+int countT(
     global const int* columnRanges,
 	int column
 ) {
@@ -292,7 +292,7 @@ void kernel scLearn(
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    sum /= max(1, countsT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
+    sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
     float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? sum + 1.0f : exp(sum));
 
@@ -313,7 +313,7 @@ void kernel aCount(
 
     int hiddenIndex = address3((int3)(hiddenColumnPosition, 0), (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
-    hiddenCounts[hiddenColumnIndex] += counts(rowRanges, hiddenIndex) / visibleSize.z;
+    hiddenCounts[hiddenColumnIndex] += count(rowRanges, hiddenIndex) / visibleSize.z;
 }
 
 void kernel aForward(
@@ -500,7 +500,7 @@ void kernel imLearn(
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    sum /= max(1, countsT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
+    sum /= max(1, countT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
     float error = visibleActivations[visibleIndex] - (sum > 0.0f ? sum + 1.0f : exp(sum));
 
