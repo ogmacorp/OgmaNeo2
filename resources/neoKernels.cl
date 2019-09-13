@@ -313,7 +313,7 @@ void kernel scLearn(
 
     sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum);
+    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f : exp(sum));
 
     deltaMax0OHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
@@ -521,7 +521,7 @@ void kernel imLearn(
 
     sum /= max(1, countT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
 
-    float error = visibleActivations[visibleIndex] - exp(sum);
+    float error = visibleActivations[visibleIndex] - (sum > 0.0f ? 1.0f : exp(sum));
 
     deltaMax0OHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
