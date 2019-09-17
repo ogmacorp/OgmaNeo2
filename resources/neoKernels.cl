@@ -365,10 +365,21 @@ void kernel aActivate(
 
     float rescale = 1.0f / max(1, hiddenCounts[address2(hiddenColumnPosition, hiddenSize.xy)]);
 
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)] * rescale;
+    
+    // Find max
+    for (int c = 1; c < hiddenSize.z; c++)
+        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale);
+
+    float total = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++)
+        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
+
     for (int c = 0; c < hiddenSize.z; c++) {
         int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-        hiddenActivations[hiddenIndex] = sigmoid(hiddenActivations[hiddenIndex] * rescale);
+        hiddenActivations[hiddenIndex] = exp(hiddenActivations[hiddenIndex] * rescale - maxValue) / fmax(0.0001f, total);
     }
 }
 
@@ -382,14 +393,9 @@ void kernel aInhibit(
 
     uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
 
-    float total = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++)
-        total += hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
-
     int selectIndex = 0;
 
-    float cusp = randFloat(&stateValue) * total;
+    float cusp = randFloat(&stateValue);
 
     float sumSoFar = 0.0f;
 
@@ -422,6 +428,7 @@ void kernel aLearn(
     int3 hiddenSize,
     float alpha,
     float beta,
+    float delta,
     float g,
     float q
 ) {
@@ -447,9 +454,11 @@ void kernel aLearn(
 
         float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
         
-        float update = (errorAction > 0.0f ? beta : 0.0f) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
-        
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
+        if (fabs(errorAction) < delta) {
+            float update = (errorAction > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+            
+            deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
+        }
     }
 }
 
