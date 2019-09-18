@@ -390,13 +390,5 @@ struct SparseMatrix {
 		int row,
 		int oneHotSize
 	);
-
-	void cmOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float alpha,
-		float activeRatio
-	);
 };
 } // namespace ogmaneo

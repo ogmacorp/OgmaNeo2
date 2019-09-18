@@ -891,25 +891,3 @@ float SparseMatrix::multiplyNoDiagonalOHVs(
 
 	return sum;
 }
-
-void SparseMatrix::cmOHVs(
-	const std::vector<int> &nonZeroIndices,
-	int row,
-	int oneHotSize,
-	float alpha,
-	float activeRatio
-) {
-	int nextIndex = row + 1;
-	
-	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
-		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
-
-		for (int dj = 0; dj < oneHotSize; dj++) {
-			int j = jj + dj;
-
-			float target = (dj == targetDJ ? 1.0f : 0.0f);
-
-			_nonZeroValues[j] = std::max(0.0f, _nonZeroValues[j] + alpha * (target - activeRatio));
-		}
-	}
-}
