@@ -64,7 +64,7 @@ void Predictor::learn(
                 VisibleLayer &vl = _visibleLayers[vli];
                 const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                count += vl._weights.counts(hiddenIndex) / vld._size.z;
+                count += vl._weights.count(hiddenIndex) / vld._size.z;
             }
 
             float delta = _alpha * (target - std::tanh(_hiddenActivations[hiddenIndex] / std::max(1, count))); // Delta

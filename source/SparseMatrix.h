@@ -81,15 +81,23 @@ struct SparseMatrix {
 		int row
 	);
 
-	// Count number of elements in each row
-	int counts(
+	int count(
 		int row
 	);
 
-	float counts(
+	float count(
 		const std::vector<float> &in,
 		int row
 	);
+
+    void fill(
+        int row,
+        float value
+    );
+
+    float total(
+        int row
+    );
 
 	// --- Transpose ---
 
@@ -103,15 +111,23 @@ struct SparseMatrix {
 		int column
 	);
 
-	// Count number of elements in each column
-	int countsT(
+	int countT(
 		int column
 	);
 
-	float countsT(
+	float countT(
 		const std::vector<float> &in,
 		int column
 	);
+
+    void fillT(
+        int column,
+        float value
+    );
+
+    float totalT(
+        int column
+    );
 
 	// --- One-Hot Vectors Operations ---
 
@@ -221,6 +237,24 @@ struct SparseMatrix {
 
 	void deltaOHVs(
 		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int row,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		float delta,
+		int column,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &nonZeroScalars,
 		float delta,
 		int row,
@@ -233,6 +267,26 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void deltaOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int row,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
+	);
+
+	void deltaOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize,
+		float lowerBound,
+		float upperBound
 	);
 
 	// --- Normalization ---
@@ -279,17 +333,15 @@ struct SparseMatrix {
 		float alpha
 	);
 
-	void hebbDecOHVs(
-		const std::vector<int> &nonZeroIndices,
+	void hebbDecreasing(
+		const std::vector<float> &in,
 		int row,
-		int oneHotSize,
 		float alpha
 	);
 
-	void hebbDecOHVsT(
-		const std::vector<int> &nonZeroIndices,
+	void hebbDecreasingT(
+		const std::vector<float> &in,
 		int column,
-		int oneHotSize,
 		float alpha
 	);
 
@@ -317,12 +369,34 @@ struct SparseMatrix {
 		int column
 	);
 
-	// --- Special ---
+    void hebbDecreasingOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
 
+    void hebbDecreasingOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+		float alpha
+	);
+
+	// --- Special ---
+	
 	float multiplyNoDiagonalOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize
+	);
+
+	void cmOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha,
+		float activeRatio
 	);
 };
 } // namespace ogmaneo
