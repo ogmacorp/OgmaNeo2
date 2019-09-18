@@ -146,6 +146,8 @@ void ImageEncoder::initRandom(
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = forwardWeightDist(cs._rng);
 
+        vl._weights.initT();
+
         vl._reconActivations = FloatBuffer(numVisible, 0.0f);
     }
 
