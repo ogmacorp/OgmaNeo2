@@ -124,8 +124,8 @@ public:
     // Defaults
     ImageEncoder()
     :
-    _alpha(0.001f),
-    _beta(0.001f),
+    _alpha(0.01f),
+    _beta(0.01f),
     _explainIters(3)
     {}
 
