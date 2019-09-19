@@ -145,6 +145,10 @@ void ImageEncoder::initRandom(
 
         for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
             vl._weights._nonZeroValues[i] = forwardWeightDist(cs._rng);
+
+        vl._weights.initT();
+
+        vl._reconActivations = FloatBuffer(numVisible, 0.0f);
     }
 
     _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
@@ -253,6 +257,8 @@ void ImageEncoder::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl._weights);
+
+        writeBufferToStream(os, &vl._reconActivations);
     }
 }
 
@@ -291,5 +297,7 @@ void ImageEncoder::readFromStream(
         int numVisible = numVisibleColumns * vld._size.z;
 
         readSMFromStream(is, vl._weights);
+
+        readBufferFromStream(is, &vl._reconActivations);
     }
 }
