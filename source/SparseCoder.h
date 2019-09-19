@@ -42,6 +42,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
+    IntBuffer _hiddenUsages; // Number of times used
 
     SparseMatrix _laterals;
 
@@ -95,15 +96,11 @@ private:
     }
 
 public:
-    float _alpha; // Forward learning rate
-    float _beta; // Lateral learning rate
     int _explainIters; // Explaining-away iterations
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f),
-    _beta(0.01f),
     _explainIters(3)
     {}
 

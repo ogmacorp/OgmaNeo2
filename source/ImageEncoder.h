@@ -43,12 +43,10 @@ private:
     FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
-    IntBuffer _hiddenCsPrev; // Hidden states from previous tick
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
+    IntBuffer _hiddenUsages; // Number of times used
 
     SparseMatrix _laterals;
-
-    IntBuffer _hiddenCounts; // Number of units touching
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -117,15 +115,11 @@ private:
     }
 
 public:
-    float _alpha; // Forward learning rate
-    float _beta; // Lateral learning rate
     int _explainIters; // Explaining-away iterations
 
     // Defaults
     ImageEncoder()
     :
-    _alpha(0.01f),
-    _beta(0.01f),
     _explainIters(3)
     {}
 
