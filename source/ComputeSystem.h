@@ -28,7 +28,7 @@ public:
 	ComputeSystem(
 		int numWorkers
 	)
-	: _pool(numWorkers), _batchSize1(1024), _batchSize2(4, 4), _batchSize3(4, 4, 4)
+	: _pool(numWorkers), _batchSize1(1024), _batchSize2(1, 1), _batchSize3(1, 1, 1)
 	{}
 };
 } // namespace ogmaneo
