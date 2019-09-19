@@ -45,7 +45,7 @@ void ImageEncoder::forward(
         }
     }
 
-    _hiddenCsTemp[hiddenColumnIndex] = maxIndex;
+    _hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void ImageEncoder::inhibit(
@@ -93,6 +93,24 @@ void ImageEncoder::learn(
     _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 1.0f / (1.0f + _hiddenUsages[hiddenIndexMax]));
 
     _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1); 
+}
+
+void ImageEncoder::backward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    int vli
+) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+
+        vl._reconActivations[visibleIndex] = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
+    }
 }
 
 void ImageEncoder::initRandom(
@@ -163,14 +181,6 @@ void ImageEncoder::step(
 
     // Iterate
     for (int it = 0; it < _explainIters; it++) {
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < _hiddenSize.x; x++)
-            for (int y = 0; y < _hiddenSize.y; y++)
-                inhibit(Int2(x, y), cs._rng);
-#else
-        runKernel2(cs, std::bind(ImageEncoder::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-#endif
-
         if (it < _explainIters - 1) {
             // Update temps
 #ifdef KERNEL_NOTHREAD
@@ -180,6 +190,14 @@ void ImageEncoder::step(
             runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_hiddenCs, &_hiddenCsTemp), numHiddenColumns, cs._rng, cs._batchSize1);
 #endif
         }
+        
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < _hiddenSize.x; x++)
+            for (int y = 0; y < _hiddenSize.y; y++)
+                inhibit(Int2(x, y), cs._rng);
+#else
+        runKernel2(cs, std::bind(ImageEncoder::inhibitKernel, std::placeholders::_1, std::placeholders::_2, this), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
     }
 
     if (learnEnabled) {
@@ -189,6 +207,24 @@ void ImageEncoder::step(
                 learn(Int2(x, y), cs._rng, inputActivations);
 #else
         runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActivations), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+#endif
+    }
+}
+
+void ImageEncoder::reconstruct(
+    ComputeSystem &cs,
+    const IntBuffer* hiddenCs
+) {
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < vld._size.x; x++)
+            for (int y = 0; y < vld._size.y; y++)
+                backward(Int2(x, y), cs._rng, hiddenCs, vli);
+#else
+        runKernel2(cs, std::bind(ImageEncoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
     }
 }
