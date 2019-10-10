@@ -7,7 +7,7 @@
 // ----------------------------------------------------------------------------
 
 #include "SparseCoder.h"
-
+#include <iostream>
 using namespace ogmaneo;
 
 void SparseCoder::forward(
