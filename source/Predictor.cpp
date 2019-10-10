@@ -153,9 +153,6 @@ void Predictor::learn(
     ComputeSystem &cs,
     const IntBuffer* hiddenTargetCs
 ) {
-    if (_alpha == 0.0f)
-        return;
-
     // Learn kernel
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
