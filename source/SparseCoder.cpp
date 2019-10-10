@@ -82,17 +82,17 @@ void SparseCoder::learn(
 
     int hiddenIndexMax = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
-    _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1);
-    
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, 1.0f / _hiddenUsages[hiddenIndexMax]);
+        vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, 1.0f / (1.0f + _hiddenUsages[hiddenIndexMax]));
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 1.0f / _hiddenUsages[hiddenIndexMax]);
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 1.0f / (1.0f + _hiddenUsages[hiddenIndexMax]));
+
+    _hiddenUsages[hiddenIndexMax] = std::min(999999.0f, _hiddenUsages[hiddenIndexMax] + 1.0f);
 }
 
 void SparseCoder::initRandom(
@@ -136,7 +136,7 @@ void SparseCoder::initRandom(
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
     _hiddenCsTemp = IntBuffer(numHiddenColumns);
 
-    _hiddenUsages = IntBuffer(numHidden, 0);
+    _hiddenUsages = FloatBuffer(numHidden, 0.0f);
 
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
