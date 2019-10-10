@@ -62,7 +62,7 @@ void ImageEncoder::inhibit(
 
         float sum = _laterals.multiplyNoDiagonalOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.count(hiddenIndex) / _hiddenSize.z - 1); // -1 for missing diagonal
 
-        _hiddenActivations[hiddenIndex] += (1.0f - sum) * _hiddenStimuli[hiddenIndex];
+        _hiddenActivations[hiddenIndex] += _hiddenStimuli[hiddenIndex] - sum;
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -82,17 +82,17 @@ void ImageEncoder::learn(
 
     int hiddenIndexMax = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
+    _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1);
+
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, 0.5f / (1.0f + _hiddenUsages[hiddenIndexMax]));
+        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, 0.5f / _hiddenUsages[hiddenIndexMax]);
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 0.5f / (1.0f + _hiddenUsages[hiddenIndexMax]));
-
-    _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1);
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 0.5f / _hiddenUsages[hiddenIndexMax]);
 }
 
 void ImageEncoder::backward(
