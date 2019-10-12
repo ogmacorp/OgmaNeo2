@@ -59,7 +59,7 @@ void Hierarchy::initRandom(
                     int index = t + layerDescs[l]._temporalHorizon * i;
 
                     scVisibleLayerDescs[index]._size = inputSizes[i];
-                    scVisibleLayerDescs[index]._radius = layerDescs[l]._scRadius;
+                    scVisibleLayerDescs[index]._radius = layerDescs[l]._ffRadius;
                 }
             }
             
@@ -107,7 +107,7 @@ void Hierarchy::initRandom(
 
             for (int t = 0; t < layerDescs[l]._temporalHorizon; t++) {
                 scVisibleLayerDescs[t]._size = layerDescs[l - 1]._hiddenSize;
-                scVisibleLayerDescs[t]._radius = layerDescs[l]._scRadius;
+                scVisibleLayerDescs[t]._radius = layerDescs[l]._ffRadius;
             }
 
             int inSize = layerDescs[l - 1]._hiddenSize.x * layerDescs[l - 1]._hiddenSize.y;
@@ -245,7 +245,7 @@ void Hierarchy::step(
             _updates[l] = true;
 
             // Activate sparse coder
-            _scLayers[l].step(cs,  constGet(_histories[l]), learnEnabled);
+            _scLayers[l].step(cs, constGet(_histories[l]), learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {

@@ -27,7 +27,7 @@ public:
     struct LayerDesc {
         Int3 _hiddenSize; // Size of hidden layer
 
-        int _scRadius; // Sparse coder radius
+        int _ffRadius; // Feed forward radius
         int _lRadius; // Lateral radius
         int _pRadius; // Prediction radius
 
@@ -38,17 +38,18 @@ public:
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _scRadius(2),
+        _ffRadius(2),
         _lRadius(2),
         _pRadius(2),
-        _ticksPerUpdate(2),
-        _temporalHorizon(2)
+        _ticksPerUpdate(1),
+        _temporalHorizon(1)
         {}
     };
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+    std::vector<IntBuffer> _hiddenCsPrev;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
