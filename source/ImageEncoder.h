@@ -44,8 +44,7 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
     IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    FloatBuffer _hiddenUsages; // Number of times used
-    
+
     SparseMatrix _laterals;
 
     // Visible layers and associated descriptors
@@ -116,13 +115,15 @@ private:
 
 public:
     int _explainIters; // Explaining-away iterations
-    float _alpha;
+    float _alpha; // Forward learning rate
+    float _beta; // Lateral learning rate
 
     // Defaults
     ImageEncoder()
     :
     _explainIters(3),
-    _alpha(0.5f)
+    _alpha(0.01f),
+    _beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization

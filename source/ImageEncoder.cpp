@@ -37,8 +37,9 @@ void ImageEncoder::forward(
 
         sum /= std::max(1, count);
 
-        _hiddenActivations[hiddenIndex] = _hiddenStimuli[hiddenIndex] = sum;
-
+        _hiddenStimuli[hiddenIndex] = sum;
+        _hiddenActivations[hiddenIndex] = sum;
+        
         if (sum > maxActivation) {
             maxActivation = sum;
             maxIndex = hc;
@@ -62,7 +63,7 @@ void ImageEncoder::inhibit(
 
         float sum = _laterals.multiplyNoDiagonalOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.count(hiddenIndex) / _hiddenSize.z - 1); // -1 for missing diagonal
 
-        _hiddenActivations[hiddenIndex] += std::max(0.0f, _hiddenStimuli[hiddenIndex] - sum);
+        _hiddenActivations[hiddenIndex] += _hiddenStimuli[hiddenIndex] * (1.0f - sum);
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -87,12 +88,10 @@ void ImageEncoder::learn(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, 1.0f / (1.0f + _hiddenUsages[hiddenIndexMax]));
+        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, _alpha);
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 1.0f / (1.0f + _hiddenUsages[hiddenIndexMax]));
-
-    _hiddenUsages[hiddenIndexMax] = std::min(999999.0f, _hiddenUsages[hiddenIndexMax] + _alpha);
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, _beta);
 }
 
 void ImageEncoder::backward(
@@ -157,8 +156,6 @@ void ImageEncoder::initRandom(
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
     _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
-
-    _hiddenUsages = FloatBuffer(numHidden, 0.0f);
 
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
@@ -244,7 +241,6 @@ void ImageEncoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
-    writeBufferToStream(os, &_hiddenUsages);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -274,7 +270,6 @@ void ImageEncoder::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
-    readBufferFromStream(is, &_hiddenUsages);
 
     _hiddenStimuli = FloatBuffer(numHidden, 0.0f);
     _hiddenActivations = FloatBuffer(numHidden, 0.0f);
