@@ -82,17 +82,17 @@ void ImageEncoder::learn(
 
     int hiddenIndexMax = address3(Int3(pos.x, pos.y, _hiddenCs[hiddenColumnIndex]), _hiddenSize);
 
-    _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1);
-
     // For each visible layer
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, 1.0f / _hiddenUsages[hiddenIndexMax]);
+        vl._weights.hebb(*inputActivations[vli], hiddenIndexMax, 1.0f / (1.0f + _hiddenUsages[hiddenIndexMax]));
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 1.0f / _hiddenUsages[hiddenIndexMax]);
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 1.0f / (1.0f + _hiddenUsages[hiddenIndexMax]));
+
+    _hiddenUsages[hiddenIndexMax] = std::min(999999.0f, _hiddenUsages[hiddenIndexMax] + _alpha);
 }
 
 void ImageEncoder::backward(
@@ -158,7 +158,7 @@ void ImageEncoder::initRandom(
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
     _hiddenCsTemp = IntBuffer(numHiddenColumns, 0);
 
-    _hiddenUsages = IntBuffer(numHidden, 0);
+    _hiddenUsages = FloatBuffer(numHidden, 0.0f);
 
     std::uniform_real_distribution<float> lateralWeightDist(0.0f, 0.01f);
 
@@ -241,6 +241,7 @@ void ImageEncoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_explainIters), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
     writeBufferToStream(os, &_hiddenUsages);
@@ -270,6 +271,7 @@ void ImageEncoder::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_explainIters), sizeof(int));
+    is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
     readBufferFromStream(is, &_hiddenUsages);
