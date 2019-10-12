@@ -41,8 +41,8 @@ public:
         _ffRadius(2),
         _lRadius(2),
         _pRadius(2),
-        _ticksPerUpdate(1),
-        _temporalHorizon(1)
+        _ticksPerUpdate(2),
+        _temporalHorizon(2)
         {}
     };
 private:
