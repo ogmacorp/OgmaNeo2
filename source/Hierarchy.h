@@ -28,8 +28,8 @@ public:
         Int3 _hiddenSize; // Size of hidden layer
 
         int _scRadius; // Sparse coder radius
-        int _pRadius; // Prediction radius
         int _lRadius; // Lateral radius
+        int _pRadius; // Prediction radius
 
         int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
@@ -39,8 +39,8 @@ public:
         :
         _hiddenSize(4, 4, 16),
         _scRadius(2),
-        _pRadius(2),
         _lRadius(2),
+        _pRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
         {}

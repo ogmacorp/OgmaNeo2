@@ -97,11 +97,13 @@ private:
 
 public:
     int _explainIters; // Explaining-away iterations
+    float _alpha; // Decay rate
 
     // Defaults
     SparseCoder()
     :
-    _explainIters(3)
+    _explainIters(3),
+    _alpha(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
