@@ -62,7 +62,7 @@ void ImageEncoder::inhibit(
 
         float sum = _laterals.multiplyNoDiagonalOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.count(hiddenIndex) / _hiddenSize.z - 1); // -1 for missing diagonal
 
-        _hiddenActivations[hiddenIndex] += _hiddenStimuli[hiddenIndex] - sum;
+        _hiddenActivations[hiddenIndex] += std::max(0.0f, _hiddenStimuli[hiddenIndex] - sum);
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
