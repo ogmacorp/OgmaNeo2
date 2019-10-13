@@ -102,7 +102,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    _explainIters(3),
+    _explainIters(5),
     _alpha(0.1f),
     _beta(0.1f)
     {}
