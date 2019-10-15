@@ -27,8 +27,6 @@ public:
 
     struct VisibleLayer {
         SparseMatrix _weights;
-
-        cl::Buffer _visibleRecons;
     };
 
 private:
@@ -43,16 +41,8 @@ private:
 
     cl::Kernel _forwardKernel;
     cl::Kernel _inhibitKernel;
-    cl::Kernel _learnKernel;
 
 public:
-    cl_float _alpha;
-
-    ImageEncoder()
-    :
-    _alpha(0.5f)
-    {}
-
     void init(
         ComputeSystem &cs,
         ComputeProgram &prog,
@@ -63,8 +53,7 @@ public:
 
     void step(
         ComputeSystem &cs,
-        const std::vector<cl::Buffer> &visibleActivations,
-        bool learnEnabled
+        const std::vector<cl::Buffer> &visibleActivations
     );
 
     void writeToStream(

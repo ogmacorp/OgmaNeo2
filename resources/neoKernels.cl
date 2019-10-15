@@ -174,25 +174,6 @@ void deltaOHVsT(
     }
 }
 
-void deltaMax0OHVsT(
-    global float* nonZeroValues,
-    global const int* columnRanges,
-    global const int* rowIndices,
-    global const int* nonZeroValueIndices,
-    global const int* nonZeroIndices,
-    float delta,
-    int column,
-    int oneHotSize
-) {
-    int nextIndex = column + 1;
-
-	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
-		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
-
-		nonZeroValues[nonZeroValueIndices[j]] = fmin(0.0f, nonZeroValues[nonZeroValueIndices[j]] + delta);
-    }
-}
-
 float multiply(
 	global const float* nonZeroValues,
     global const int* rowRanges,
@@ -210,22 +191,20 @@ float multiply(
 	return sum;
 }
 
-float distance2(
+float multiplyBiased(
 	global const float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
     global const float* inputs,
-	int row
+	int row,
+    float bias
 ) {
 	float sum = 0.0f;
 
 	int nextIndex = row + 1;
 	
-	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++) {
-        float delta = nonZeroValues[j] - inputs[columnIndices[j]];
-
-		sum += delta * delta;
-    }
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += nonZeroValues[j] * (inputs[columnIndices[j]] + bias);
 
 	return sum;
 }
@@ -246,6 +225,22 @@ int countT(
 	int nextIndex = column + 1;
 	
 	return columnRanges[nextIndex] - columnRanges[column];
+}
+
+float total(
+	global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+	int row
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
+		sum += nonZeroValues[j];
+
+	return sum;
 }
 
 // ------------------------------------------- Sparse Coder -------------------------------------------
@@ -473,7 +468,10 @@ void kernel imForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += multiply(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+    // Find bias
+    float bias = -total(nonZeroValues, rowRanges, columnIndices, hiddenIndex) / max(1, count(rowRanges, hiddenIndex));
+
+    hiddenActivations[hiddenIndex] += multiply(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, bias);
 }
 
 void kernel imInhibit(
@@ -500,28 +498,4 @@ void kernel imInhibit(
 
     // Set states
     hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
-}
-
-void kernel imLearn(
-    global const float* visibleActivations,
-    global const int* hiddenCs,
-    global float* nonZeroValues,
-    global const int* nonZeroValueIndices,
-    global const int* columnRanges,
-    global const int* rowIndices,
-    int3 visibleSize,
-    int3 hiddenSize,
-    float alpha
-) {
-    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
-
-    int visibleIndex = address3(visiblePosition, visibleSize);
-
-    float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
-
-    sum /= max(1, countT(columnRanges, address2(visiblePosition.xy, visibleSize.xy) * visibleSize.z) / hiddenSize.z);
-
-    float error = visibleActivations[visibleIndex] - exp(sum);
-
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
