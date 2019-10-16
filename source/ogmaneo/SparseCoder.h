@@ -20,7 +20,7 @@ public:
 
         VisibleLayerDesc()
         :
-        _size(8, 8, 16),
+        _size(4, 4, 16),
         _radius(2)
         {}
     };
