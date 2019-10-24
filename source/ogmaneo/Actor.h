@@ -62,9 +62,7 @@ private:
 
 public:
     cl_float _alpha;
-
     cl_float _beta;
-
     cl_float _gamma;
 
     Actor()
