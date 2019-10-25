@@ -448,7 +448,7 @@ void kernel aLearn(
 
         float advantage = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
         
-        float update = fmin(1.0f, fmax(-1.0f, advantage)) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+        float update = (advantage > 0.0f ? 1.0f : -1.0f) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
         
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * update, hiddenIndex1, visibleSize.z);
     }
