@@ -446,11 +446,11 @@ void kernel aLearn(
     else {
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-        float errorAction = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
+        float advantage = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
         
-        float update = (errorAction > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+        float update = fmin(1.0f, fmax(-1.0f, advantage)) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
         
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * update, hiddenIndex1, visibleSize.z);
     }
 }
 
