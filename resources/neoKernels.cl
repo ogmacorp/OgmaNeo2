@@ -308,7 +308,7 @@ void kernel scLearn(
 
     sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum);
+    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum));
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
@@ -439,18 +439,18 @@ void kernel aLearn(
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
     if (hiddenPosition.z == hiddenSize.z) {
-        float errorValue = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
+        float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * errorValue, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndex1, visibleSize.z);
     }
     else {
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
         float advantage = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
         
-        float update = (advantage > 0.0f ? 1.0f : -1.0f) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+        float update = (advantage > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
         
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * update, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
 }
 
