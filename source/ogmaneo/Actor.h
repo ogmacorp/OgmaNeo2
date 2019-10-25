@@ -67,8 +67,8 @@ public:
 
     Actor()
     :
-    _alpha(0.01f),
-    _beta(0.1f),
+    _alpha(0.05f),
+    _beta(1.0f),
     _gamma(0.97f)
     {}
 
