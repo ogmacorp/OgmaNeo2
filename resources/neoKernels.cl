@@ -446,9 +446,9 @@ void kernel aLearn(
     else {
         int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-        float advantage = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
+        float tdErrorPrev = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
         
-        float update = (advantage > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+        float update = (tdErrorPrev > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
         
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
