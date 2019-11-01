@@ -36,6 +36,8 @@ private:
 
     cl::Buffer _hiddenActivations;
 
+    cl::Buffer _hiddenCounts;
+
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
@@ -50,8 +52,8 @@ public:
 
     SparseCoder()
     :
-    _alpha(0.1f),
-    _beta(0.1f)
+    _alpha(0.2f),
+    _beta(0.01f)
     {}
 
     void init(
