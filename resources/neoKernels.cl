@@ -322,9 +322,9 @@ void kernel scBoost(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    float error = rescale * (hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenC), hiddenSize)] - hiddenActivations[hiddenIndex]);
+    float delta = rescale * (hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenC), hiddenSize)] - hiddenActivations[hiddenIndex]);
 
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, beta * error, hiddenIndex, visibleSize.z);
+    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, beta * delta, hiddenIndex, visibleSize.z);
 }
 
 void kernel scLearn(
@@ -350,11 +350,9 @@ void kernel scLearn(
 
     sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float s = sigmoid(sum);
+    float delta = ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum));
 
-    float error = ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - s) * s * (1.0f - s);
-
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
+    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
 
 // ------------------------------------------- Actor -------------------------------------------
