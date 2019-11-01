@@ -34,7 +34,7 @@ void SparseCoder::init(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.01f, 0.0f, rng);
+        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.1f, 0.1f, rng);
 
         vl._weights.initT(cs);
     }
@@ -50,6 +50,7 @@ void SparseCoder::init(
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
+    _boostKernel = cl::Kernel(prog.getProgram(), "scBoost");
     _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
 }
 
@@ -94,6 +95,26 @@ void SparseCoder::step(
     }
 
     if (learnEnabled) {
+        // Boost
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            int argIndex = 0;
+
+            _boostKernel.setArg(argIndex++, visibleCs[vli]);
+            _boostKernel.setArg(argIndex++, _hiddenCs);
+            _boostKernel.setArg(argIndex++, _hiddenActivations);
+            _boostKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+            _boostKernel.setArg(argIndex++, vl._weights._rowRanges);
+            _boostKernel.setArg(argIndex++, vl._weights._columnIndices);
+            _boostKernel.setArg(argIndex++, vld._size);
+            _boostKernel.setArg(argIndex++, _hiddenSize);
+            _boostKernel.setArg(argIndex++, _beta);
+
+            cs.getQueue().enqueueNDRangeKernel(_boostKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+        }
+
         // Learn
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
@@ -126,6 +147,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_beta), sizeof(cl_float));
 
     writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
@@ -157,6 +179,7 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
 
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
@@ -184,5 +207,6 @@ void SparseCoder::readFromStream(
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
+    _boostKernel = cl::Kernel(prog.getProgram(), "scBoost");
     _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
 }
