@@ -332,7 +332,7 @@ void kernel scLearn(
 
     sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum));
+    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum);
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
 }
