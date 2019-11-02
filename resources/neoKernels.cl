@@ -322,7 +322,7 @@ void kernel scBoost(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    float delta = rescale * (hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenC), hiddenSize)] - hiddenActivations[hiddenIndex]);
+    float delta = rescale * (sigmoid(hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenC), hiddenSize)]) - sigmoid(hiddenActivations[hiddenIndex]));
 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, beta * delta, hiddenIndex, visibleSize.z);
 }
@@ -350,7 +350,7 @@ void kernel scLearn(
 
     sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
 
-    float delta = ((visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum));
+    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum);
 
     deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
 }
