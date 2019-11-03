@@ -246,6 +246,7 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
             _learnKernel.setArg(argIndex++, _beta);
+            _learnKernel.setArg(argIndex++, _epsilon);
             _learnKernel.setArg(argIndex++, g);
             _learnKernel.setArg(argIndex++, q);
 
@@ -263,6 +264,7 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
+    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(cl_float));
 
     writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
@@ -314,6 +316,7 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
+    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
 
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 

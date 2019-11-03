@@ -61,15 +61,17 @@ private:
     cl::Kernel _learnKernel;
 
 public:
-    cl_float _alpha;
-    cl_float _beta;
-    cl_float _gamma;
+    cl_float _alpha; // Value learning rate
+    cl_float _beta; // Actor learning rate
+    cl_float _gamma; // Discount factor
+    cl_float _epsilon; // Max TD error for update to occur
 
     Actor()
     :
     _alpha(0.05f),
     _beta(0.2f),
-    _gamma(0.97f)
+    _gamma(0.97f),
+    _epsilon(0.1f)
     {}
 
     void init(

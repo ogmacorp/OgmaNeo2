@@ -465,6 +465,7 @@ void kernel aLearn(
     int3 hiddenSize,
     float alpha,
     float beta,
+    float epsilon,
     float g,
     float q
 ) {
@@ -479,20 +480,22 @@ void kernel aLearn(
     float qUpdate = q + g * hiddenValues[hiddenColumnIndex] * rescale;
 
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
-
+   
     if (hiddenPosition.z == hiddenSize.z) {
         float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
     
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndex1, visibleSize.z);
     }
     else {
-        int hiddenIndex = address3(hiddenPosition, hiddenSize);
-
         float tdErrorPrev = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
-        
-        float update = (tdErrorPrev > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
-        
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
+    
+        if (fabs(tdErrorPrev) < epsilon) {
+            int hiddenIndex = address3(hiddenPosition, hiddenSize);
+
+            float update = (tdErrorPrev > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+            
+            deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
+        }
     }
 }
 
