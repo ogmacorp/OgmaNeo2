@@ -31,6 +31,8 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
+
+        FloatBuffer _reconActs;
     };
 
 private:
@@ -58,6 +60,13 @@ private:
         int vli
     );
 
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int vli
+    );
+
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -76,6 +85,16 @@ private:
         int vli
     ) {
         sc->learn(pos, rng, inputActs, vli);
+    }
+
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const IntBuffer* hiddenCs,
+        int vli
+    ) {
+        sc->backward(pos, rng, hiddenCs, vli);
     }
 
 public:
@@ -101,6 +120,11 @@ public:
         ComputeSystem &cs, // Compute system
         const std::vector<const FloatBuffer*> &inputActs, // Input states
         bool learnEnabled // Whether to learn
+    );
+
+    void reconstruct(
+        ComputeSystem &cs, // Compute system
+        const IntBuffer* hiddenCs
     );
 
     // Write to stream

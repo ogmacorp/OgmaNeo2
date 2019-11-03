@@ -93,6 +93,26 @@ void ImageEncoder::learn(
     }
 }
 
+void ImageEncoder::backward(
+    const Int2 &pos,
+    std::mt19937 &rng,
+    const IntBuffer* hiddenCs,
+    int vli
+) {
+    VisibleLayer &vl = _visibleLayers[vli];
+    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
+
+    for (int vc = 0; vc < vld._size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
+
+        float sum = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
+
+        vl._reconActs[visibleIndex] = sigmoid(sum);
+    }
+}
+
 void ImageEncoder::initRandom(
     ComputeSystem &cs,
     const Int3 &hiddenSize,
@@ -126,6 +146,8 @@ void ImageEncoder::initRandom(
 
         // Generate transpose (needed for reconstruction)
         vl._weights.initT();
+
+        vl._reconActs = FloatBuffer(numVisible, 0.0f);
     }
 
     // Hidden Cs
@@ -161,6 +183,24 @@ void ImageEncoder::step(
             runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
         }
+    }
+}
+
+void ImageEncoder::reconstruct(
+    ComputeSystem &cs,
+    const IntBuffer* hiddenCs
+) {
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+#ifdef KERNEL_NOTHREAD
+        for (int x = 0; x < vld._size.x; x++)
+            for (int y = 0; y < vld._size.y; y++)
+                backward(Int2(x, y), cs._rng, hiddenCs, vli);
+#else
+        runKernel2(cs, std::bind(ImageEncoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+#endif
     }
 }
 
@@ -219,5 +259,7 @@ void ImageEncoder::readFromStream(
         int numVisible = numVisibleColumns * vld._size.z;
 
         readSMFromStream(is, vl._weights);
+
+        vl._reconActs = FloatBuffer(numVisible, 0.0f);
     }
 }
