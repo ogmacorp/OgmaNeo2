@@ -54,7 +54,7 @@ void ImageEncoder::forward(
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            float delta = _beta * ((hc == maxIndex ? 0.0f : 1.0f) - sigmoid(activations[hc]));
+            float delta = _beta * (sigmoid(maxActivation) - sigmoid(activations[hc]));
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
