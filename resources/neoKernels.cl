@@ -487,14 +487,16 @@ void kernel aLearn(
     }
     else {
         float tdErrorPrev = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
-    
-        if (fabs(tdErrorPrev) < epsilon) {
-            int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-            float update = (tdErrorPrev > 0.0f ? beta : -beta) * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
-            
-            deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
-        }
+        float rate = tanh(tdErrorPrev * epsilon);
+
+        rate = 1.0f - rate * rate;
+        
+        int hiddenIndex = address3(hiddenPosition, hiddenSize);
+
+        float update = (tdErrorPrev > 0.0f ? beta : -beta) * rate * (hiddenPosition.z == hiddenCPrev ? 1.0f - hiddenActivationsPrev[hiddenIndex] : -hiddenActivationsPrev[hiddenIndex]);
+        
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
 }
 
