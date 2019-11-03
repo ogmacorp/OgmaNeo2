@@ -303,7 +303,6 @@ void kernel scInhibit(
 void kernel scBoost(
     global const int* visibleCs,
     global const int* hiddenCs,
-    global const float* hiddenActivations,
     global const int* hiddenCounts,
     global float* nonZeroValues,
     global const int* rowRanges,
@@ -322,7 +321,7 @@ void kernel scBoost(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    float delta = rescale * (sigmoid(hiddenActivations[address3((int3)(hiddenPosition.xy, hiddenC), hiddenSize)]) - sigmoid(hiddenActivations[hiddenIndex]));
+    float delta = rescale * (1.0f / hiddenSize.z - (hiddenPosition.z == hiddenC ? 1.0f : 0.0f));
 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, beta * delta, hiddenIndex, visibleSize.z);
 }

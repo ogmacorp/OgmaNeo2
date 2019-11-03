@@ -120,7 +120,6 @@ void SparseCoder::step(
 
             _boostKernel.setArg(argIndex++, visibleCs[vli]);
             _boostKernel.setArg(argIndex++, _hiddenCs);
-            _boostKernel.setArg(argIndex++, _hiddenActivations);
             _boostKernel.setArg(argIndex++, _hiddenCounts);
             _boostKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _boostKernel.setArg(argIndex++, vl._weights._rowRanges);
