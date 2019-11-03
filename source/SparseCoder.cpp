@@ -21,8 +21,6 @@ void SparseCoder::forward(
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
-    std::vector<float> activations(_hiddenSize.z);
-
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
@@ -40,8 +38,6 @@ void SparseCoder::forward(
 
         sum /= std::max(1, count);
 
-        activations[hc] = sum;
-
         if (sum > maxActivation) {
             maxActivation = sum;
             maxIndex = hc;
@@ -54,7 +50,7 @@ void SparseCoder::forward(
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            float delta = _beta * ((hc == maxIndex ? 0.0f : 1.0f) - sigmoid(activations[hc]));
+            float delta = _beta * (1.0f / _hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {

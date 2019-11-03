@@ -21,8 +21,6 @@ void ImageEncoder::forward(
     int maxIndex = 0;
     float maxActivation = -999999.0f;
 
-    std::vector<float> activations(_hiddenSize.z);
-
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
@@ -39,8 +37,6 @@ void ImageEncoder::forward(
         }
 
         sum /= std::max(1, count);
-
-        activations[hc] = sum;
 
         if (sum > maxActivation) {
             maxActivation = sum;
