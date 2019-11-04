@@ -406,7 +406,7 @@ void kernel aInhibit(
     int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
     if (randFloat(&stateValue) < epsilon)
-        hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = rand(%stateValue) % hiddenSize.z;
+        hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = rand(&stateValue) % hiddenSize.z;
     else {
         float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
         int maxIndex = 0;
