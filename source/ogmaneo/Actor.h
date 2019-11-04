@@ -63,12 +63,14 @@ public:
     cl_float _alpha; // Value learning rate
     cl_float _beta; // Actor learning rate
     cl_float _gamma; // Discount factor
+    cl_float _epsilon; // Exploration
 
     Actor()
     :
     _alpha(0.05f),
     _beta(0.1f),
-    _gamma(0.97f)
+    _gamma(0.97f),
+    _epsilon(0.01f)
     {}
 
     void init(
