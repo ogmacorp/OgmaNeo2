@@ -395,8 +395,8 @@ void kernel aForward(
 void kernel aInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    global const int* hiddenCounts,
     int3 hiddenSize,
+    float epsilon,
     uint2 seed
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
@@ -405,36 +405,24 @@ void kernel aInhibit(
 
     int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
-    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
+    if (randFloat(&stateValue) < epsilon)
+        hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = rand(%stateValue) % hiddenSize.z;
+    else {
+        float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
+        int maxIndex = 0;
 
-    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)] * rescale;
+        for (int c = 1; c < hiddenSize.z; c++) {
+            float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
-    for (int c = 1; c < hiddenSize.z; c++)
-        maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale);
+            if (value > maxValue) {
+                maxValue = value;
 
-    float total = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++)
-        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
-
-    int selectIndex = 0;
-
-    float cusp = randFloat(&stateValue) * total;
-
-    float sumSoFar = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++) {
-        sumSoFar += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
-
-        if (sumSoFar >= cusp) {
-            selectIndex = c;
-
-            break;
+                maxIndex = c;
+            }
         }
-    }
 
-    // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = selectIndex;
+        hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
+    }
 }
 
 void kernel aLearn(
