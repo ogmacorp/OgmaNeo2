@@ -83,7 +83,6 @@ void Actor::init(
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "aForward");
-    _activateKernel = cl::Kernel(prog.getProgram(), "aActivate");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 }
@@ -121,17 +120,6 @@ void Actor::step(
         cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
     }
 
-    // Activate
-    {
-        int argIndex = 0;
-
-        _activateKernel.setArg(argIndex++, _hiddenActivations);
-        _activateKernel.setArg(argIndex++, _hiddenCounts);
-        _activateKernel.setArg(argIndex++, _hiddenSize);
-
-        cs.getQueue().enqueueNDRangeKernel(_activateKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
-    }
-
     // Inhibit
     {
         std::uniform_int_distribution<int> seedDist(0, 9999999);
@@ -140,6 +128,7 @@ void Actor::step(
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
+        _inhibitKernel.setArg(argIndex++, _hiddenCounts);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
         _inhibitKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
 
@@ -213,17 +202,6 @@ void Actor::step(
             cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z + 1)); // +1 for value
         }
 
-        // Activate
-        {
-            int argIndex = 0;
-
-            _activateKernel.setArg(argIndex++, _hiddenActivations);
-            _activateKernel.setArg(argIndex++, _hiddenCounts);
-            _activateKernel.setArg(argIndex++, _hiddenSize);
-
-            cs.getQueue().enqueueNDRangeKernel(_activateKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
-        }
-
         cl_float g = std::pow(_gamma, _historySize - 1);
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -246,7 +224,6 @@ void Actor::step(
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
             _learnKernel.setArg(argIndex++, _beta);
-            _learnKernel.setArg(argIndex++, _epsilon);
             _learnKernel.setArg(argIndex++, g);
             _learnKernel.setArg(argIndex++, q);
 
@@ -264,7 +241,6 @@ void Actor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_beta), sizeof(cl_float));
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(cl_float));
-    os.write(reinterpret_cast<const char*>(&_epsilon), sizeof(cl_float));
 
     writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
@@ -316,7 +292,6 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_beta), sizeof(cl_float));
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(cl_float));
-    is.read(reinterpret_cast<char*>(&_epsilon), sizeof(cl_float));
 
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
@@ -369,7 +344,6 @@ void Actor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream
 
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "aForward");
-    _activateKernel = cl::Kernel(prog.getProgram(), "aActivate");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "aInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "aLearn");
 
