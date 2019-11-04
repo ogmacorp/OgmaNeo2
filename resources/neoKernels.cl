@@ -347,7 +347,7 @@ void kernel scLearn(
 
     float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
+    sum /= max(1, countT(columnRanges, address3(visiblePosition, visibleSize)) / hiddenSize.z);
 
     float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum);
 
@@ -467,9 +467,9 @@ void kernel aLearn(
         int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
         int hiddenIndex1 = address3((int3)(hiddenColumnPosition, hiddenCPrev), (int3)(hiddenSize.xy, hiddenSize.z + 1));
     
-        float update = beta * (qUpdate - hiddenActivationsPrev[hiddenIndex] * rescale);
+        float update = tdErrorPrev - hiddenActivationsPrev[hiddenIndex] * rescale;
         
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * update, hiddenIndex1, visibleSize.z);
     }
 }
 
