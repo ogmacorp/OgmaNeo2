@@ -337,21 +337,34 @@ void kernel scLearn(
     int3 hiddenSize,
     float alpha
 ) {
-    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+    int2 visibleColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    int visibleColumnIndex = address2(visiblePosition.xy, visibleSize.xy);
+    int visibleColumnIndex = address2(visibleColumnPosition, visibleSize.xy);
+
+    // Determine maximum
+    float maxValue = -999999.0f;
+    int maxIndex = 0;
+
+    for (int c = 0; c < visibleSize.z; c++) {
+        int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
+
+        float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+
+        sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
+
+        if (sum > maxValue) {
+            maxValue = sum;
+
+            maxIndex = c;
+        }
+    }
 
     int visibleC = visibleCs[visibleColumnIndex];
-    
-    int visibleIndex = address3(visiblePosition, visibleSize);
 
-    float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
-
-    sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
-
-    float delta = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - sigmoid(sum);
-
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * delta, visibleIndex, hiddenSize.z);
+    if (maxIndex != visibleC) {
+        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha, address3((int3)(visibleColumnPosition, visibleC), visibleSize), hiddenSize.z);
+        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, -alpha, address3((int3)(visibleColumnPosition, maxIndex), visibleSize), hiddenSize.z);
+    }
 }
 
 // ------------------------------------------- Actor -------------------------------------------
