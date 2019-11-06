@@ -46,21 +46,21 @@ void SparseCoder::forward(
 
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 
-    if (learnEnabled) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
+    // if (learnEnabled) {
+    //     for (int hc = 0; hc < _hiddenSize.z; hc++) {
+    //         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            float delta = _beta * (1.0f / _hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
+    //         float delta = _beta * (1.0f / _hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
 
-            // For each visible layer
-            for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-                VisibleLayer &vl = _visibleLayers[vli];
-                const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+    //         // For each visible layer
+    //         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+    //             VisibleLayer &vl = _visibleLayers[vli];
+    //             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z);
-            }
-        }
-    }
+    //             vl._weights.deltaOHVs(*inputCs[vli], delta, hiddenIndex, vld._size.z);
+    //         }
+    //     }
+    // }
 }
 
 void SparseCoder::learn(
@@ -83,7 +83,7 @@ void SparseCoder::learn(
 
         float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
 
-        float delta = _alpha * (target - sigmoid(sum));
+        float delta = _alpha * (target - (sum > 0.0f ? 1.0f + sum : std::exp(sum)));
 
         vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
@@ -104,7 +104,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::normal_distribution<float> weightDist(0.0f, 1.0f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
