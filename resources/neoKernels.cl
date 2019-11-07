@@ -468,15 +468,15 @@ void kernel aLearn(
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * tdError, hiddenIndex1, visibleSize.z);
     }
 
-    {
-        float tdErrorPrev = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
+    float tdErrorPrev = qUpdate - hiddenValuesPrevPrev[hiddenColumnIndex] * rescale;
 
-        int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCPrev), hiddenSize);
-        int hiddenIndex1 = address3((int3)(hiddenColumnPosition, hiddenCPrev), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+        int hiddenIndex1 = address3((int3)(hiddenColumnPosition, c), (int3)(hiddenSize.xy, hiddenSize.z + 1));
     
-        float update = tdErrorPrev - hiddenActivationsPrev[hiddenIndex] * rescale;
+        float update = (tdErrorPrev > 0.0f ? beta : -beta) * ((c == hiddenCPrev ? 1.0f : 0.0f) - sigmoid(hiddenActivationsPrev[hiddenIndex] * rescale));
         
-        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, beta * update, hiddenIndex1, visibleSize.z);
+        deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
 }
 
