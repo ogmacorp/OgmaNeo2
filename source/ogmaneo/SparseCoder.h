@@ -33,6 +33,7 @@ private:
     Int3 _hiddenSize;
 
     cl::Buffer _hiddenCs;
+    cl::Buffer _hiddenRandomCs;
 
     cl::Buffer _hiddenActivations;
 
@@ -43,17 +44,14 @@ private:
 
     cl::Kernel _forwardKernel;
     cl::Kernel _inhibitKernel;
-    cl::Kernel _boostKernel;
     cl::Kernel _learnKernel;
 
 public:
     cl_float _alpha;
-    cl_float _beta;
 
     SparseCoder()
     :
-    _alpha(1.0f),
-    _beta(0.01f)
+    _alpha(4.0f)
     {}
 
     void init(
@@ -67,6 +65,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
+        std::mt19937 &rng,
         bool learnEnabled
     );
 

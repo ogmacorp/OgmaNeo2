@@ -279,16 +279,25 @@ void kernel scForward(
 void kernel scInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    int3 hiddenSize
+    global int* hiddenRandomCs,
+    global const int* hiddenCounts,
+    int3 hiddenSize,
+    uint2 seed
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+
+    uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
+
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
     int maxIndex = 0;
     float maxValue = -999999.0f;
     
     // Find max
     for (int c = 0; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale;
 
         if (value > maxValue) {
             maxValue = value;
@@ -296,34 +305,30 @@ void kernel scInhibit(
         }
     }
 
+    float total = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++)
+        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
+
+    float cusp = randFloat(&stateValue) * total;
+
+    float sumSoFar = 0.0f;
+
+    int selectIndex = 0;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        sumSoFar += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
+
+        if (sumSoFar >= cusp) {
+            selectIndex = c;
+
+            break;
+        }
+    }
+
     // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
-}
-
-void kernel scBoost(
-    global const int* visibleCs,
-    global const int* hiddenCs,
-    global const int* hiddenCounts,
-    global float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
-    int3 visibleSize,
-    int3 hiddenSize,
-    float beta
-) {
-    int3 hiddenPosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
-
-    int hiddenColumnIndex = address2(hiddenPosition.xy, hiddenSize.xy);
-
-    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
-
-    int hiddenC = hiddenCs[hiddenColumnIndex];
-
-    int hiddenIndex = address3(hiddenPosition, hiddenSize);
-
-    float delta = rescale * (1.0f / hiddenSize.z - (hiddenPosition.z == hiddenC ? 1.0f : 0.0f));
-
-    deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, beta * delta, hiddenIndex, visibleSize.z);
+    hiddenCs[hiddenColumnIndex] = maxIndex;
+    hiddenRandomCs[hiddenColumnIndex] = selectIndex;
 }
 
 void kernel scLearn(
@@ -341,9 +346,7 @@ void kernel scLearn(
 
     int visibleColumnIndex = address2(visibleColumnPosition, visibleSize.xy);
 
-    // Determine maximum
-    float maxValue = -999999.0f;
-    int maxIndex = 0;
+    int visibleC = visibleCs[visibleColumnIndex];
 
     for (int c = 0; c < visibleSize.z; c++) {
         int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
@@ -352,18 +355,9 @@ void kernel scLearn(
 
         sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
 
-        if (sum > maxValue) {
-            maxValue = sum;
+        float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - sigmoid(sum));
 
-            maxIndex = c;
-        }
-    }
-
-    int visibleC = visibleCs[visibleColumnIndex];
-
-    if (maxIndex != visibleC) {
-        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha, address3((int3)(visibleColumnPosition, visibleC), visibleSize), hiddenSize.z);
-        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, -alpha, address3((int3)(visibleColumnPosition, maxIndex), visibleSize), hiddenSize.z);
+        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
     }
 }
 
