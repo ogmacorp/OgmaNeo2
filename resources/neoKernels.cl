@@ -245,6 +245,21 @@ float total(
 
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
+void kernel scCount(
+    global const int* rowRanges,
+    global int* hiddenCounts,
+    int3 visibleSize,
+    int3 hiddenSize
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+	      
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, 0), (int3)(hiddenSize.xy, hiddenSize.z + 1));
+
+    hiddenCounts[hiddenColumnIndex] += count(rowRanges, hiddenIndex) / visibleSize.z;
+}
+
 void kernel scForward(
     global const int* visibleCs,
     global float* hiddenActivations,
@@ -264,16 +279,25 @@ void kernel scForward(
 void kernel scInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    int3 hiddenSize
+    global int* hiddenRandomCs,
+    global const int* hiddenCounts,
+    int3 hiddenSize,
+    uint2 seed
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+
+    uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
+
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
     int maxIndex = 0;
     float maxValue = -999999.0f;
     
     // Find max
     for (int c = 0; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale;
 
         if (value > maxValue) {
             maxValue = value;
@@ -281,8 +305,30 @@ void kernel scInhibit(
         }
     }
 
+    float total = 0.0f;
+
+    for (int c = 0; c < hiddenSize.z; c++)
+        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
+
+    float cusp = randFloat(&stateValue) * total;
+
+    float sumSoFar = 0.0f;
+
+    int selectIndex = 0;
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        sumSoFar += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
+
+        if (sumSoFar >= cusp) {
+            selectIndex = c;
+
+            break;
+        }
+    }
+
     // Set states
-    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
+    hiddenCs[hiddenColumnIndex] = maxIndex;
+    hiddenRandomCs[hiddenColumnIndex] = selectIndex;
 }
 
 void kernel scLearn(
@@ -296,21 +342,23 @@ void kernel scLearn(
     int3 hiddenSize,
     float alpha
 ) {
-    int3 visiblePosition = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+    int2 visibleColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    int visibleColumnIndex = address2(visiblePosition.xy, visibleSize.xy);
+    int visibleColumnIndex = address2(visibleColumnPosition, visibleSize.xy);
 
     int visibleC = visibleCs[visibleColumnIndex];
-    
-    int visibleIndex = address3(visiblePosition, visibleSize);
 
-    float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+    for (int c = 0; c < visibleSize.z; c++) {
+        int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
 
-    sum /= max(1, countT(columnRanges, visibleColumnIndex * visibleSize.z) / hiddenSize.z);
+        float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-    float error = (visiblePosition.z == visibleC ? 1.0f : 0.0f) - exp(sum);
+        sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
 
-    deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, alpha * error, visibleIndex, hiddenSize.z);
+        float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - sigmoid(sum));
+
+        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+    }
 }
 
 // ------------------------------------------- Actor -------------------------------------------

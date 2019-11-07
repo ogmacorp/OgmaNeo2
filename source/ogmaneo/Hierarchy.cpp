@@ -198,7 +198,7 @@ void Hierarchy::step(
 
             _updates[l] = true;
             
-            _scLayers[l].step(cs, _histories[l], learnEnabled);
+            _scLayers[l].step(cs, _histories[l], rng, learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {

@@ -20,7 +20,7 @@ public:
 
         VisibleLayerDesc()
         :
-        _size(4, 4, 16),
+        _size(8, 8, 16),
         _radius(2)
         {}
     };
@@ -33,8 +33,11 @@ private:
     Int3 _hiddenSize;
 
     cl::Buffer _hiddenCs;
+    cl::Buffer _hiddenRandomCs;
 
     cl::Buffer _hiddenActivations;
+
+    cl::Buffer _hiddenCounts;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -48,7 +51,7 @@ public:
 
     SparseCoder()
     :
-    _alpha(0.5f)
+    _alpha(4.0f)
     {}
 
     void init(
@@ -62,6 +65,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
+        std::mt19937 &rng,
         bool learnEnabled
     );
 
