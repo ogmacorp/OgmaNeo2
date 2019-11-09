@@ -56,21 +56,20 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
+    cl::Kernel _activateKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
 
 public:
-    cl_float _alpha; // Value learning rate
-    cl_float _beta; // Actor learning rate
-    cl_float _gamma; // Discount factor
-    cl_float _epsilon; // Exploration
+    cl_float _alpha;
+    cl_float _beta;
+    cl_float _gamma;
 
     Actor()
     :
-    _alpha(0.04f),
-    _beta(0.5f),
-    _gamma(0.98f),
-    _epsilon(0.02f)
+    _alpha(0.05f),
+    _beta(0.2f),
+    _gamma(0.97f)
     {}
 
     void init(
