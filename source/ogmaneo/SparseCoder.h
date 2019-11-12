@@ -33,11 +33,8 @@ private:
     Int3 _hiddenSize;
 
     cl::Buffer _hiddenCs;
-    cl::Buffer _hiddenRandomCs;
 
     cl::Buffer _hiddenActivations;
-
-    cl::Buffer _hiddenCounts;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -51,7 +48,7 @@ public:
 
     SparseCoder()
     :
-    _alpha(4.0f)
+    _alpha(0.1f)
     {}
 
     void init(

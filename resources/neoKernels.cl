@@ -245,21 +245,6 @@ float total(
 
 // ------------------------------------------- Sparse Coder -------------------------------------------
 
-void kernel scCount(
-    global const int* rowRanges,
-    global int* hiddenCounts,
-    int3 visibleSize,
-    int3 hiddenSize
-) {
-    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
-	      
-    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
-
-    int hiddenIndex = address3((int3)(hiddenColumnPosition, 0), (int3)(hiddenSize.xy, hiddenSize.z + 1));
-
-    hiddenCounts[hiddenColumnIndex] += count(rowRanges, hiddenIndex) / visibleSize.z;
-}
-
 void kernel scForward(
     global const int* visibleCs,
     global float* hiddenActivations,
@@ -279,25 +264,16 @@ void kernel scForward(
 void kernel scInhibit(
     global const float* hiddenActivations,
     global int* hiddenCs,
-    global int* hiddenRandomCs,
-    global const int* hiddenCounts,
-    int3 hiddenSize,
-    uint2 seed
+    int3 hiddenSize
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    uint2 stateValue = seed + (uint2)(get_global_id(0) * 293 + 12443, get_global_id(1) * 136 + 235) * 5461;
-
-    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
-
-    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
-
     int maxIndex = 0;
-    float maxValue = -999999.0f;
+    float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)];
     
     // Find max
-    for (int c = 0; c < hiddenSize.z; c++) {
-        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale;
+    for (int c = 1; c < hiddenSize.z; c++) {
+        float value = hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)];
 
         if (value > maxValue) {
             maxValue = value;
@@ -305,30 +281,8 @@ void kernel scInhibit(
         }
     }
 
-    float total = 0.0f;
-
-    for (int c = 0; c < hiddenSize.z; c++)
-        total += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
-
-    float cusp = randFloat(&stateValue) * total;
-
-    float sumSoFar = 0.0f;
-
-    int selectIndex = 0;
-
-    for (int c = 0; c < hiddenSize.z; c++) {
-        sumSoFar += exp(hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale - maxValue);
-
-        if (sumSoFar >= cusp) {
-            selectIndex = c;
-
-            break;
-        }
-    }
-
     // Set states
-    hiddenCs[hiddenColumnIndex] = maxIndex;
-    hiddenRandomCs[hiddenColumnIndex] = selectIndex;
+    hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)] = maxIndex;
 }
 
 void kernel scLearn(
@@ -348,16 +302,33 @@ void kernel scLearn(
 
     int visibleC = visibleCs[visibleColumnIndex];
 
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
+
     for (int c = 0; c < visibleSize.z; c++) {
         int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
 
         float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-        sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
+        if (sum > maxActivation) {
+            maxActivation = sum;
 
-        float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - sigmoid(sum));
+            maxIndex = c;
+        }
+    }
 
-        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+    if (maxIndex != visibleC) {
+        for (int c = 0; c < visibleSize.z; c++) {
+            int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
+
+            float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+
+            sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
+
+            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum)));
+
+            deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+        }
     }
 }
 
