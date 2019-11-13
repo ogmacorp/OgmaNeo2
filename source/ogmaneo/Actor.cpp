@@ -186,9 +186,13 @@ void Actor::step(
         const HistorySample &sPrev = _historySamples[0];
 
         cl_float q = 0.0f;
+        cl_float g = 1.0f;
 
-        for (int t = _historySize - 1; t >= 1; t--)
-            q += _historySamples[t]._reward * std::pow(_gamma, t - 1);
+        for (int t = 1; t < _historySize; t++) {
+            q += _historySamples[t]._reward * g;
+
+            g *= _gamma;
+        }
 
         // Initialize stimulus to 0
         cs.getQueue().enqueueFillBuffer(_hiddenValues[_back], static_cast<cl_float>(0.0f), 0, numHiddenColumns * sizeof(cl_float));
@@ -223,8 +227,6 @@ void Actor::step(
 
             cs.getQueue().enqueueNDRangeKernel(_activateKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
-
-        cl_float g = std::pow(_gamma, _historySize - 1);
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];

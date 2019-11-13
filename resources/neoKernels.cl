@@ -461,7 +461,7 @@ void kernel aLearn(
         float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
 
         float update = alpha * tdError;
-    
+
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
     else {
