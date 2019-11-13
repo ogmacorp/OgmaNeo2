@@ -26,13 +26,6 @@ void SparseCoder::init(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    // Counts
-    _hiddenCounts = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-
-    cs.getQueue().enqueueFillBuffer(_hiddenCounts, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
-
-    cl::Kernel countKernel = cl::Kernel(prog.getProgram(), "scCount");
-
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
@@ -41,26 +34,15 @@ void SparseCoder::init(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.01f, 0.01f, rng);
+        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.01f, 0.0f, rng);
 
         vl._weights.initT(cs);
-
-        int argIndex = 0;
-
-        countKernel.setArg(argIndex++, vl._weights._rowRanges);
-        countKernel.setArg(argIndex++, _hiddenCounts);
-        countKernel.setArg(argIndex++, vld._size);
-        countKernel.setArg(argIndex++, _hiddenSize);
-
-        cs.getQueue().enqueueNDRangeKernel(countKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 
     // Hidden Cs
     _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
 
     cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
-
-    _hiddenRandomCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
 
     // Hidden activations
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
@@ -103,16 +85,11 @@ void SparseCoder::step(
 
     // Inhibit
     {
-        std::uniform_int_distribution<int> seedDist(0, 9999999);
-
         int argIndex = 0;
 
         _inhibitKernel.setArg(argIndex++, _hiddenActivations);
         _inhibitKernel.setArg(argIndex++, _hiddenCs);
-        _inhibitKernel.setArg(argIndex++, _hiddenRandomCs);
-        _inhibitKernel.setArg(argIndex++, _hiddenCounts);
         _inhibitKernel.setArg(argIndex++, _hiddenSize);
-        _inhibitKernel.setArg(argIndex++, Vec2<cl_uint>(static_cast<cl_uint>(seedDist(rng)), static_cast<cl_uint>(seedDist(rng))));
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
@@ -126,7 +103,7 @@ void SparseCoder::step(
             int argIndex = 0;
 
             _learnKernel.setArg(argIndex++, visibleCs[vli]);
-            _learnKernel.setArg(argIndex++, _hiddenRandomCs);
+            _learnKernel.setArg(argIndex++, _hiddenCs);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValueIndices);
             _learnKernel.setArg(argIndex++, vl._weights._columnRanges);
@@ -184,8 +161,6 @@ void SparseCoder::readFromStream(
 
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
-    _hiddenRandomCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
 
     int numVisibleLayers;
@@ -211,25 +186,4 @@ void SparseCoder::readFromStream(
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "scLearn");
-
-    _hiddenCounts = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-
-    cs.getQueue().enqueueFillBuffer(_hiddenCounts, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
-
-    cl::Kernel countKernel = cl::Kernel(prog.getProgram(), "scCount");
-
-    // Create layers
-    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        VisibleLayer &vl = _visibleLayers[vli];
-        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-        int argIndex = 0;
-
-        countKernel.setArg(argIndex++, vl._weights._rowRanges);
-        countKernel.setArg(argIndex++, _hiddenCounts);
-        countKernel.setArg(argIndex++, vld._size);
-        countKernel.setArg(argIndex++, _hiddenSize);
-
-        cs.getQueue().enqueueNDRangeKernel(countKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
-    }
 }
