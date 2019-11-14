@@ -380,7 +380,7 @@ void kernel aActivate(
     float rescale = 1.0f / max(1, hiddenCounts[address2(hiddenColumnPosition, hiddenSize.xy)]);
 
     float maxValue = hiddenActivations[address3((int3)(hiddenColumnPosition, 0), hiddenSize)] * rescale;
-    
+ 
     // Find max
     for (int c = 1; c < hiddenSize.z; c++)
         maxValue = fmax(maxValue, hiddenActivations[address3((int3)(hiddenColumnPosition, c), hiddenSize)] * rescale);
@@ -454,7 +454,7 @@ void kernel aLearn(
     float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
 
     float qUpdate = q + g * hiddenValues[hiddenColumnIndex] * rescale;
-
+    
     int hiddenIndex1 = address3(hiddenPosition, (int3)(hiddenSize.xy, hiddenSize.z + 1));
 
     if (hiddenPosition.z == hiddenSize.z) {
