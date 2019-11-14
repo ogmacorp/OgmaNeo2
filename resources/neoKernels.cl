@@ -325,7 +325,7 @@ void kernel scLearn(
 
             sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
 
-            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum)));
+            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - sigmoid(sum));
 
             deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
         }
