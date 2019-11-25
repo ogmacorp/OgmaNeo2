@@ -38,7 +38,7 @@ public:
         _scRadius(2),
         _aRadius(2),
         _temporalHorizon(2),
-        _historyCapacity(8)
+        _historyCapacity(16)
         {}
     };
 
