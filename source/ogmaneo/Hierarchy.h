@@ -155,13 +155,17 @@ public:
     std::vector<Predictor> &getPLayers(
         int l
     ) {
-        return _pLayers[l];
+        int pl = l - 1;
+
+        return _pLayers[pl];
     }
 
     const std::vector<Predictor> &getPLayers(
         int l
     ) const {
-        return _pLayers[l];
+        int pl = l - 1;
+
+        return _pLayers[pl];
     }
 
     std::vector<std::unique_ptr<Actor>> &getALayers() {
