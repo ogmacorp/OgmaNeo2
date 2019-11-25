@@ -64,8 +64,8 @@ public:
 
     Actor()
     :
-    _alpha(0.05f),
-    _gamma(0.99f)
+    _alpha(0.1f),
+    _gamma(0.98f)
     {}
 
     void init(
@@ -81,7 +81,6 @@ public:
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
         const cl::Buffer &hiddenCsPrev,
-        std::mt19937 &rng,
         float reward,
         bool learnEnabled
     );

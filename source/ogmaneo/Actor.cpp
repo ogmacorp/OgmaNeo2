@@ -89,7 +89,6 @@ void Actor::step(
     ComputeSystem &cs,
     const std::vector<cl::Buffer> &visibleCs,
     const cl::Buffer &hiddenCsPrev,
-    std::mt19937 &rng,
     float reward,
     bool learnEnabled
 ) {

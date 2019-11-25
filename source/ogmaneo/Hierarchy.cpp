@@ -242,7 +242,7 @@ void Hierarchy::step(
 
             for (int p = 0; p < _aLayers[l].size(); p++) {
                 if (_aLayers[l][p] != nullptr) {
-                    _aLayers[l][p]->step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p], rng, r, learnEnabled);
+                    _aLayers[l][p]->step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p], r, learnEnabled);
                 }
             }
         }
@@ -261,7 +261,7 @@ void Hierarchy::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&numInputs), sizeof(int));
 
-    os.write(reinterpret_cast<const char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
+    os.write(reinterpret_cast<const char*>(_inputSizes.data()), numInputs * sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(_updates.data()), _updates.size() * sizeof(unsigned char));
     os.write(reinterpret_cast<const char*>(_ticks.data()), _ticks.size() * sizeof(int));
@@ -304,7 +304,7 @@ void Hierarchy::readFromStream(
     int numInputs;
     is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
     _inputSizes.resize(numInputs);
-    is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(cl_int3));
+    is.read(reinterpret_cast<char*>(_inputSizes.data()), numInputs * sizeof(Int3));
 
     _scLayers.resize(numLayers);
     _aLayers.resize(numLayers);
