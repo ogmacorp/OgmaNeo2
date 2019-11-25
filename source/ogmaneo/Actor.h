@@ -31,7 +31,8 @@ public:
 
     struct HistorySample {
         std::vector<cl::Buffer> _visibleCs;
-        cl::Buffer _hiddenCsPrev;
+        cl::Buffer _hiddenCs;
+        cl::Buffer _hiddenValues;
     
         float _reward;
     };
@@ -46,7 +47,8 @@ private:
     cl::Buffer _hiddenCs;
 
     cl::Buffer _hiddenActivations;
-    cl::Buffer _hiddenActivationsPartial;
+
+    DoubleBuffer _hiddenValues;
 
     std::vector<HistorySample> _historySamples;
 
@@ -54,18 +56,20 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
-    cl::Kernel _forwardPartialKernel;
+    cl::Kernel _activateKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
 
 public:
     cl_float _alpha;
+    cl_float _beta;
     cl_float _gamma;
 
     Actor()
     :
     _alpha(0.05f),
-    _gamma(0.90f)
+    _beta(0.5f),
+    _gamma(0.98f)
     {}
 
     void init(
@@ -80,7 +84,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &visibleCs,
-        const cl::Buffer &hiddenCsPrev,
+        std::mt19937 &rng,
         float reward,
         bool learnEnabled
     );
