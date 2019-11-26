@@ -98,6 +98,8 @@ void Hierarchy::init(
 
                     _aLayers[a]->init(cs, prog, inputSizes[a], firstLayerDesc._historyCapacity, aVisibleLayerDescs, rng);
                 }
+                else
+                    _aLayers[a] = nullptr;
             }
         }
         else {
@@ -230,13 +232,11 @@ void Hierarchy::step(
 
             if (l == 0) {
                 for (int a = 0; a < _aLayers.size(); a++) {
-                    if (_aLayers[a] != nullptr) {
+                    if (_aLayers[a] != nullptr)
                         _aLayers[a]->step(cs, feedBack, rng, reward, learnEnabled);
-                    }
                 }
             }
             else {
-                
                 for (int p = 0; p < _pLayers[pl].size(); p++)
                     _pLayers[pl][p].step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p], learnEnabled);
             }
@@ -285,7 +285,7 @@ void Hierarchy::writeToStream(
             }
         }
         else {
-            int pl = l = 1;
+            int pl = l - 1;
 
             for (int p = 0; p < _pLayers[pl].size(); p++)
                 _pLayers[pl][p].writeToStream(cs, os);
@@ -352,7 +352,7 @@ void Hierarchy::readFromStream(
             }
         }
         else {
-            int pl = l = 1;
+            int pl = l - 1;
 
             _pLayers[pl].resize(_ticksPerUpdate[l]);
 
