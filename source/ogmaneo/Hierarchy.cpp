@@ -56,7 +56,7 @@ void Hierarchy::init(
                     int index = t + firstLayerDesc._temporalHorizon * i;
 
                     scVisibleLayerDescs[index]._size = inputSizes[i];
-                    scVisibleLayerDescs[index]._radius = firstLayerDesc._scRadius;
+                    scVisibleLayerDescs[index]._radius = firstLayerDesc._ffRadius;
                 }
             }
             
@@ -107,7 +107,7 @@ void Hierarchy::init(
 
             for (int t = 0; t < higherLayerDescs[pl]._temporalHorizon; t++) {
                 scVisibleLayerDescs[t]._size = _scLayers[l - 1].getHiddenSize();
-                scVisibleLayerDescs[t]._radius = higherLayerDescs[pl]._scRadius;
+                scVisibleLayerDescs[t]._radius = higherLayerDescs[pl]._ffRadius;
             }
 
             int inSize = _scLayers[l - 1].getHiddenSize().x * _scLayers[l - 1].getHiddenSize().y;

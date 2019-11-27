@@ -91,6 +91,7 @@ void Predictor::step(
             _learnKernel.setArg(argIndex++, vl._visibleCsPrev);
             _learnKernel.setArg(argIndex++, _hiddenActivations);
             _learnKernel.setArg(argIndex++, hiddenTargetCs);
+            _learnKernel.setArg(argIndex++, _hiddenCounts);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
             _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
@@ -116,7 +117,6 @@ void Predictor::step(
 
         _forwardKernel.setArg(argIndex++, visibleCs[vli]);
         _forwardKernel.setArg(argIndex++, _hiddenActivations);
-        _forwardKernel.setArg(argIndex++, _hiddenCounts);
         _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
         _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
         _forwardKernel.setArg(argIndex++, vl._weights._columnIndices);

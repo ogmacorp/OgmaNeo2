@@ -352,7 +352,6 @@ void kernel pCount(
 void kernel pForward(
     global const int* visibleCs,
     global float* hiddenActivations,
-    global const int* hiddenCounts,
     global const float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -365,9 +364,7 @@ void kernel pForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
     
-    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
-
-    hiddenActivations[hiddenIndex] += rescale * multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
+    hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 }
 
 void kernel pInhibit(
@@ -397,6 +394,7 @@ void kernel pLearn(
     global const int* visibleCsPrev,
     global const float* hiddenActivationsPrev,
     global const int* hiddenTargetCs,
+    global const int* hiddenCounts,
     global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -408,11 +406,13 @@ void kernel pLearn(
 	
     int hiddenColumnIndex = address2(hiddenPosition.xy, hiddenSize.xy);
 
+    float rescale = 1.0f / max(1, hiddenCounts[hiddenColumnIndex]);
+
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
     int hiddenTargetC = hiddenTargetCs[hiddenColumnIndex];
 
-    float delta = (hiddenPosition.z == hiddenTargetC ? 1.0f : -1.0f) - tanh(hiddenActivationsPrev[hiddenIndex]);
+    float delta = (hiddenPosition.z == hiddenTargetC ? 1.0f : -1.0f) - tanh(hiddenActivationsPrev[hiddenIndex] * rescale);
 
     deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, alpha * delta, hiddenIndex, visibleSize.z);
 }

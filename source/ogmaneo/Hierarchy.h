@@ -25,7 +25,7 @@ public:
     struct FirstLayerDesc {
         Int3 _hiddenSize;
 
-        cl_int _scRadius;
+        cl_int _ffRadius;
         cl_int _aRadius;
 
         int _temporalHorizon;
@@ -35,17 +35,17 @@ public:
         FirstLayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _scRadius(2),
+        _ffRadius(2),
         _aRadius(2),
         _temporalHorizon(2),
-        _historyCapacity(16)
+        _historyCapacity(32)
         {}
     };
 
     struct HigherLayerDesc {
         Int3 _hiddenSize;
 
-        cl_int _scRadius;
+        cl_int _ffRadius;
         cl_int _pRadius;
 
         int _ticksPerUpdate;
@@ -55,7 +55,7 @@ public:
         HigherLayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _scRadius(2),
+        _ffRadius(2),
         _pRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2)
