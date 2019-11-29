@@ -34,7 +34,7 @@ void ImageEncoder::init(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -1.0f, 1.0f, rng);
+        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, 0.99f, 1.0f, rng);
     }
 
     // Hidden Cs
@@ -48,11 +48,13 @@ void ImageEncoder::init(
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "imForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "imInhibit");
+    _learnKernel = cl::Kernel(prog.getProgram(), "imLearn");
 }
 
 void ImageEncoder::step(
     ComputeSystem &cs,
-    const std::vector<cl::Buffer> &visibleActivations
+    const std::vector<cl::Buffer> &visibleActivations,
+    bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -87,6 +89,25 @@ void ImageEncoder::step(
 
         cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
+
+    if (learnEnabled) {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+            int argIndex = 0;
+
+            _learnKernel.setArg(argIndex++, visibleActivations[vli]);
+            _learnKernel.setArg(argIndex++, _hiddenCs);
+            _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+            _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
+            _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
+            _learnKernel.setArg(argIndex++, _hiddenSize);
+            _learnKernel.setArg(argIndex++, _alpha);
+
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+        }
+    }
 }
 
 void ImageEncoder::writeToStream(
@@ -96,6 +117,8 @@ void ImageEncoder::writeToStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
+
+    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
 
     writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
@@ -126,6 +149,8 @@ void ImageEncoder::readFromStream(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
+    is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
+
     readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
@@ -152,4 +177,5 @@ void ImageEncoder::readFromStream(
     // Create kernels
     _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
     _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
+    _learnKernel = cl::Kernel(prog.getProgram(), "imLearn");
 }
