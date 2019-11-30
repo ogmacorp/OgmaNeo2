@@ -34,7 +34,9 @@ void ImageEncoder::init(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, 0.99f, 1.0f, rng);
+        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.01f, 0.0f, rng);
+
+        vl._weights.initT(cs);
     }
 
     // Hidden Cs
@@ -100,12 +102,14 @@ void ImageEncoder::step(
             _learnKernel.setArg(argIndex++, visibleActivations[vli]);
             _learnKernel.setArg(argIndex++, _hiddenCs);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
-            _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
-            _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
+            _learnKernel.setArg(argIndex++, vl._weights._nonZeroValueIndices);
+            _learnKernel.setArg(argIndex++, vl._weights._columnRanges);
+            _learnKernel.setArg(argIndex++, vl._weights._rowIndices);
+            _learnKernel.setArg(argIndex++, vld._size);
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
 
-            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y));
         }
     }
 }

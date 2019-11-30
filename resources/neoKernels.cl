@@ -191,38 +191,6 @@ float multiply(
 	return sum;
 }
 
-float multiplyBiased(
-	global const float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
-    global const float* inputs,
-	int row,
-    float bias
-) {
-	float sum = 0.0f;
-
-	int nextIndex = row + 1;
-	
-	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
-		sum += nonZeroValues[j] * (inputs[columnIndices[j]] + bias);
-
-	return sum;
-}
-
-void hebb(
-	global float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
-    global const float* inputs,
-	int row,
-    float alpha
-) {
-	int nextIndex = row + 1;
-	
-	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
-		nonZeroValues[j] += alpha * (inputs[columnIndices[j]] - nonZeroValues[j]);
-}
-
 int count(
     global const int* rowRanges,
 	int row
@@ -621,14 +589,26 @@ void kernel imLearn(
     global const float* visibleActivations,
     global const int* hiddenCs,
     global float* nonZeroValues,
-    global const int* rowRanges,
-    global const int* columnIndices,
+    global const int* nonZeroValueIndices,
+    global const int* columnRanges,
+    global const int* rowIndices,
+    int3 visibleSize,
     int3 hiddenSize,
     float alpha
 ) {
-    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+    int2 visibleColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
-    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenCs[address2(hiddenColumnPosition, hiddenSize.xy)]), hiddenSize);
+    int visibleColumnIndex = address2(visibleColumnPosition, visibleSize.xy);
 
-    hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, alpha);
+    for (int c = 0; c < visibleSize.z; c++) {
+        int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
+
+        float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+
+        sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
+
+        float delta = alpha * (visibleActivations[visibleIndex] - exp(sum));
+
+        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+    }
 }
