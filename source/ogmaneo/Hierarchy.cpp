@@ -238,7 +238,7 @@ void Hierarchy::step(
             }
             else {
                 for (int p = 0; p < _pLayers[pl].size(); p++)
-                    _pLayers[pl][p].step(cs, feedBack, l == 0 ? inputCs[p] : _histories[l][p], learnEnabled);
+                    _pLayers[pl][p].step(cs, feedBack, _histories[l][p], learnEnabled);
             }
         }
     }
