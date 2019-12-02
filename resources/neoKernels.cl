@@ -211,7 +211,7 @@ float distance2(
 	return sum;
 }
 
-void hebbDecreasing(
+void hebb(
 	global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -222,7 +222,7 @@ void hebbDecreasing(
 	int nextIndex = row + 1;
 	
 	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
-		nonZeroValues[j] += alpha * fmin(0.0f, inputs[columnIndices[j]] - nonZeroValues[j]);
+		nonZeroValues[j] += alpha * (inputs[columnIndices[j]] - nonZeroValues[j]);
 }
 
 int count(
@@ -590,7 +590,7 @@ void kernel imForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += multiply(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+    hiddenActivations[hiddenIndex] += -distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
 }
 
 void kernel imInhibit(
@@ -622,6 +622,7 @@ void kernel imInhibit(
 void kernel imLearn(
     global const float* visibleActivations,
     global const int* hiddenCs,
+    global const float* hiddenActivations,
     global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -633,5 +634,19 @@ void kernel imLearn(
 
     int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
-    hebbDecreasing(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize), alpha);
+    int hiddenC = hiddenCs[hiddenColumnIndex];
+    
+    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenC), hiddenSize);
+
+    float error = -hiddenActivations[hiddenIndex];
+
+    if (error > 0.01f) {
+        hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, alpha);
+
+        if (hiddenC > 0)
+            hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, hiddenC - 1), hiddenSize), alpha);
+
+        if (hiddenC < hiddenSize.z - 1)
+            hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, hiddenC + 1), hiddenSize), alpha);
+    }
 }

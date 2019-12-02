@@ -34,7 +34,7 @@ void ImageEncoder::init(
         int numVisibleColumns = vld._size.x * vld._size.y;
         int numVisible = numVisibleColumns * vld._size.z;
 
-        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, 0.99f, 1.0f, rng);
+        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, 0.0f, 1.0f, rng);
 
         //vl._weights.initT(cs);
     }
@@ -101,6 +101,7 @@ void ImageEncoder::step(
 
             _learnKernel.setArg(argIndex++, visibleActivations[vli]);
             _learnKernel.setArg(argIndex++, _hiddenCs);
+            _learnKernel.setArg(argIndex++, _hiddenActivations);
             _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
             _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
             _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
