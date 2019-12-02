@@ -178,7 +178,7 @@ void ImageEncoder::readFromStream(
     }
 
     // Create kernels
-    _forwardKernel = cl::Kernel(prog.getProgram(), "scForward");
-    _inhibitKernel = cl::Kernel(prog.getProgram(), "scInhibit");
+    _forwardKernel = cl::Kernel(prog.getProgram(), "imForward");
+    _inhibitKernel = cl::Kernel(prog.getProgram(), "imInhibit");
     _learnKernel = cl::Kernel(prog.getProgram(), "imLearn");
 }
