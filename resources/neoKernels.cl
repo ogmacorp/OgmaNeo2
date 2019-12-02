@@ -211,7 +211,7 @@ float distance2(
 	return sum;
 }
 
-void hebb(
+void hebbDecreasing(
 	global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -633,5 +633,5 @@ void kernel imLearn(
 
     int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
 
-    hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize), alpha);
+    hebbDecreasing(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, hiddenCs[hiddenColumnIndex]), hiddenSize), alpha);
 }
