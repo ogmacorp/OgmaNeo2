@@ -246,7 +246,6 @@ int countT(
 float total(
 	global const float* nonZeroValues,
     global const int* rowRanges,
-    global const int* columnIndices,
 	int row
 ) {
 	float sum = 0.0f;
@@ -581,6 +580,7 @@ void kernel aLearn(
 void kernel imForward(
     global const float* visibleActivations,
     global float* hiddenActivations,
+    global float* hiddenDistances,
     global const float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -590,7 +590,8 @@ void kernel imForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += -distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+    hiddenActivations[hiddenIndex] += multiply(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+    hiddenDistances[hiddenIndex] += distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
 }
 
 void kernel imInhibit(
@@ -622,13 +623,14 @@ void kernel imInhibit(
 void kernel imLearn(
     global const float* visibleActivations,
     global const int* hiddenCs,
-    global const float* hiddenActivations,
+    global const float* hiddenDistances,
     global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
     int3 visibleSize,
     int3 hiddenSize,
-    float alpha
+    float alpha,
+    float minError
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
@@ -638,15 +640,8 @@ void kernel imLearn(
     
     int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenC), hiddenSize);
 
-    float error = -hiddenActivations[hiddenIndex];
+    float error = hiddenDistances[hiddenIndex];
 
-    if (error > 0.01f) {
+    if (error > minError)
         hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, alpha);
-
-        if (hiddenC > 0)
-            hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, hiddenC - 1), hiddenSize), alpha);
-
-        if (hiddenC < hiddenSize.z - 1)
-            hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, hiddenC + 1), hiddenSize), alpha);
-    }
 }
