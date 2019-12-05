@@ -580,7 +580,6 @@ void kernel aLearn(
 void kernel imForward(
     global const float* visibleActivations,
     global float* hiddenActivations,
-    global float* hiddenDistances,
     global const float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
@@ -590,8 +589,7 @@ void kernel imForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += multiply(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
-    hiddenDistances[hiddenIndex] += distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+    hiddenActivations[hiddenIndex] += -distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
 }
 
 void kernel imInhibit(
@@ -623,13 +621,14 @@ void kernel imInhibit(
 void kernel imLearn(
     global const float* visibleActivations,
     global const int* hiddenCs,
-    global const float* hiddenDistances,
+    global const float* hiddenActivations,
     global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
     int3 visibleSize,
     int3 hiddenSize,
     float alpha,
+    float gamma,
     float minError
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
@@ -639,9 +638,14 @@ void kernel imLearn(
     int hiddenC = hiddenCs[hiddenColumnIndex];
     
     int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenC), hiddenSize);
+    
+    if (-hiddenActivations[hiddenIndex] > minError) {
+        for (int c = 0; c < hiddenSize.z; c++) {
+            float delta = hiddenC - c;
 
-    float error = hiddenDistances[hiddenIndex];
+            float strength = alpha * exp(-delta * delta * gamma);
 
-    if (error > minError)
-        hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, alpha);
+            hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, c), hiddenSize), strength);
+        }
+    }
 }

@@ -35,7 +35,6 @@ private:
     cl::Buffer _hiddenCs;
 
     cl::Buffer _hiddenActivations;
-    cl::Buffer _hiddenDistances;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -46,12 +45,14 @@ private:
 
 public:
     cl_float _alpha;
+    cl_float _gamma;
     cl_float _minError;
 
     ImageEncoder()
     :
-    _alpha(0.1f),
-    _minError(5.0f)
+    _alpha(0.01f),
+    _gamma(0.2f),
+    _minError(1.1f)
     {}
 
     void init(
