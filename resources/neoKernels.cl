@@ -621,15 +621,14 @@ void kernel imInhibit(
 void kernel imLearn(
     global const float* visibleActivations,
     global const int* hiddenCs,
-    global const float* hiddenActivations,
+    global const float* hiddenResources,
     global float* nonZeroValues,
     global const int* rowRanges,
     global const int* columnIndices,
     int3 visibleSize,
     int3 hiddenSize,
     float alpha,
-    float gamma,
-    float minError
+    float gamma
 ) {
     int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
 
@@ -637,15 +636,37 @@ void kernel imLearn(
 
     int hiddenC = hiddenCs[hiddenColumnIndex];
     
-    int hiddenIndex = address3((int3)(hiddenColumnPosition, hiddenC), hiddenSize);
-    
-    if (-hiddenActivations[hiddenIndex] > minError) {
-        for (int c = 0; c < hiddenSize.z; c++) {
-            float delta = hiddenC - c;
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
 
-            float strength = alpha * exp(-delta * delta * gamma);
+        float delta = hiddenC - c;
 
-            hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, address3((int3)(hiddenColumnPosition, c), hiddenSize), strength);
-        }
+        float strength = alpha * exp(-delta * delta * gamma);
+
+        hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, strength * hiddenResources[hiddenIndex]);
+    }
+}
+
+void kernel imDeplete(
+    global const int* hiddenCs,
+    global float* hiddenResources,
+    int3 hiddenSize,
+    float alpha,
+    float gamma
+) {
+    int2 hiddenColumnPosition = (int2)(get_global_id(0), get_global_id(1));
+
+    int hiddenColumnIndex = address2(hiddenColumnPosition, hiddenSize.xy);
+
+    int hiddenC = hiddenCs[hiddenColumnIndex];
+
+    for (int c = 0; c < hiddenSize.z; c++) {
+        int hiddenIndex = address3((int3)(hiddenColumnPosition, c), hiddenSize);
+
+        float delta = hiddenC - c;
+
+        float strength = alpha * exp(-delta * delta * gamma);
+
+        hiddenResources[hiddenIndex] -= strength * hiddenResources[hiddenIndex];
     }
 }

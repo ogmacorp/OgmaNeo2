@@ -36,23 +36,24 @@ private:
 
     cl::Buffer _hiddenActivations;
 
+    cl::Buffer _hiddenResources;
+
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
+    cl::Kernel _depleteKernel;
 
 public:
     cl_float _alpha;
     cl_float _gamma;
-    cl_float _minError;
 
     ImageEncoder()
     :
     _alpha(0.01f),
-    _gamma(0.2f),
-    _minError(1.1f)
+    _gamma(0.2f)
     {}
 
     void init(
