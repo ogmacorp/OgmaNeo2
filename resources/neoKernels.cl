@@ -641,9 +641,9 @@ void kernel imLearn(
 
         float delta = hiddenC - c;
 
-        float strength = alpha * exp(-delta * delta * gamma);
+        float strength = exp(-delta * delta * gamma) * hiddenResources[hiddenIndex];
 
-        hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, strength * hiddenResources[hiddenIndex]);
+        hebb(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex, strength);
     }
 }
 
@@ -665,8 +665,8 @@ void kernel imDeplete(
 
         float delta = hiddenC - c;
 
-        float strength = alpha * exp(-delta * delta * gamma);
+        float strength = exp(-delta * delta * gamma) * hiddenResources[hiddenIndex];
 
-        hiddenResources[hiddenIndex] -= strength * hiddenResources[hiddenIndex];
+        hiddenResources[hiddenIndex] -= alpha * strength;
     }
 }
