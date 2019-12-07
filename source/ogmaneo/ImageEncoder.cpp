@@ -128,7 +128,7 @@ void ImageEncoder::step(
             _depleteKernel.setArg(argIndex++, _alpha);
             _depleteKernel.setArg(argIndex++, _gamma);
 
-            cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+            cs.getQueue().enqueueNDRangeKernel(_depleteKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
         }
     }
 }
