@@ -11,8 +11,8 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// Sparse coder
-class SparseCoder {
+// A prediction layer (predicts x_(t+1))
+class Predictor {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
@@ -31,76 +31,79 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
+
+        IntBuffer _inputCsPrev; // Previous timestep (prev) input states
     };
 
 private:
-    Int3 _hiddenSize; // Size of hidden/output layer
+    Int3 _hiddenSize; // Size of the output/hidden/prediction
 
-    IntBuffer _hiddenCs; // Hidden states
+    IntBuffer _hiddenCs; // Hidden state
 
-    // Visible layers and associated descriptors
+    FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
+
+    // Visible layers and descs
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
-    
+
     // --- Kernels ---
-    
+
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
     );
 
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        const IntBuffer* hiddenTargetCs
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        Predictor* p,
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        p->forward(pos, rng, inputCs);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
+        Predictor* p,
+        const IntBuffer* hiddenTargetCs
     ) {
-        sc->learn(pos, rng, inputCs, vli);
+        p->learn(pos, rng, hiddenTargetCs);
     }
 
 public:
-    float _alpha; // Weight learning rate
-    float _beta; // Usage update rate
+    float _alpha; // Learning rate
 
     // Defaults
-    SparseCoder()
+    Predictor()
     :
-    _alpha(0.1f),
-    _beta(0.1f)
+    _alpha(0.5f)
     {}
 
-    // Create a sparse coding layer with random initialization
+    // Create with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
-        const Int3 &hiddenSize, // Hidden/output size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
+        const Int3 &hiddenSize, // Hidden/output/prediction size
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+    ); 
+
+    // Activate the predictor (predict values)
+    void activate(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &visibleCs // Hidden/output/prediction size
     );
 
-    // Activate the sparse coder (perform sparse coding)
-    void step(
-        ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input states
-        bool learnEnabled // Whether to learn
+    // Learning predictions (update weights)
+    void learn(
+        ComputeSystem &cs,
+        const IntBuffer* hiddenTargetCs
     );
 
     // Write to stream
@@ -113,7 +116,7 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get the number of visible layers
+    // Get number of visible layers
     int getNumVisibleLayers() const {
         return _visibleLayers.size();
     }
@@ -132,7 +135,7 @@ public:
         return _visibleLayerDescs[i];
     }
 
-    // Get the hidden states
+    // Get the hidden activations (predictions)
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
     }
@@ -141,5 +144,12 @@ public:
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
     }
+
+    // Get the weights for a visible layer
+    const SparseMatrix &getWeights(
+        int i // Index of visible layer
+    ) {
+        return _visibleLayers[i]._weights;
+    }
 };
-} // namespace ogmaneo
+} // Namespace ogmaneo

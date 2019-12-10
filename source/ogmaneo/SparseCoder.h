@@ -11,8 +11,8 @@
 #include "ComputeSystem.h"
 
 namespace ogmaneo {
-// A prediction layer (predicts x_(t+1))
-class Predictor {
+// Sparse coder
+class SparseCoder {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
@@ -31,23 +31,19 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix _weights; // Weight matrix
-
-        IntBuffer _inputCsPrev; // Previous timestep (prev) input states
     };
 
 private:
-    Int3 _hiddenSize; // Size of the output/hidden/prediction
+    Int3 _hiddenSize; // Size of hidden/output layer
 
-    IntBuffer _hiddenCs; // Hidden state
+    IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
-
-    // Visible layers and descs
+    // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
-
+    
     // --- Kernels ---
-
+    
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -57,53 +53,50 @@ private:
     void learn(
         const Int2 &pos,
         std::mt19937 &rng,
-        const IntBuffer* hiddenTargetCs
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Predictor* p,
+        SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs
     ) {
-        p->forward(pos, rng, inputCs);
+        sc->forward(pos, rng, inputCs);
     }
 
     static void learnKernel(
         const Int2 &pos,
         std::mt19937 &rng,
-        Predictor* p,
-        const IntBuffer* hiddenTargetCs
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
     ) {
-        p->learn(pos, rng, hiddenTargetCs);
+        sc->learn(pos, rng, inputCs, vli);
     }
 
 public:
-    float _alpha; // Learning rate
+    float _alpha; // Weight learning rate
 
     // Defaults
-    Predictor()
+    SparseCoder()
     :
-    _alpha(1.0f)
+    _alpha(0.1f)
     {}
 
-    // Create with random initialization
+    // Create a sparse coding layer with random initialization
     void initRandom(
         ComputeSystem &cs, // Compute system
-        const Int3 &hiddenSize, // Hidden/output/prediction size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
-    ); 
-
-    // Activate the predictor (predict values)
-    void activate(
-        ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &visibleCs // Hidden/output/prediction size
+        const Int3 &hiddenSize, // Hidden/output size
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
-    // Learning predictions (update weights)
-    void learn(
-        ComputeSystem &cs,
-        const IntBuffer* hiddenTargetCs
+    // Activate the sparse coder (perform sparse coding)
+    void step(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &inputCs, // Input states
+        bool learnEnabled // Whether to learn
     );
 
     // Write to stream
@@ -116,7 +109,7 @@ public:
         std::istream &is // Stream to read from
     );
 
-    // Get number of visible layers
+    // Get the number of visible layers
     int getNumVisibleLayers() const {
         return _visibleLayers.size();
     }
@@ -135,7 +128,7 @@ public:
         return _visibleLayerDescs[i];
     }
 
-    // Get the hidden activations (predictions)
+    // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return _hiddenCs;
     }
@@ -144,12 +137,5 @@ public:
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
     }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return _visibleLayers[i]._weights;
-    }
 };
-} // Namespace ogmaneo
+} // namespace ogmaneo

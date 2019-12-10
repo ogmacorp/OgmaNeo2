@@ -31,21 +31,21 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
  
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
-    "${SOURCE_PATH}/Helpers.cpp"
-    "${SOURCE_PATH}/SparseCoder.cpp"
-    "${SOURCE_PATH}/Predictor.cpp"
-    "${SOURCE_PATH}/Hierarchy.cpp"
-    "${SOURCE_PATH}/ImageEncoder.cpp"
-	"${SOURCE_PATH}/SparseMatrix.cpp"
+    "${SOURCE_PATH}/ogmaneo/Helpers.cpp"
+    "${SOURCE_PATH}/ogmaneo/SparseCoder.cpp"
+    "${SOURCE_PATH}/ogmaneo/Predictor.cpp"
+    "${SOURCE_PATH}/ogmaneo/Hierarchy.cpp"
+    "${SOURCE_PATH}/ogmaneo/ImageEncoder.cpp"
+	"${SOURCE_PATH}/ogmaneo/SparseMatrix.cpp"
 )
 
 set(HEADERS
-	"${SOURCE_PATH}/Helpers.h"
-    "${SOURCE_PATH}/SparseCoder.h"
-    "${SOURCE_PATH}/Predictor.h"
-    "${SOURCE_PATH}/Hierarchy.h"
-    "${SOURCE_PATH}/ImageEncoder.h"
-	"${SOURCE_PATH}/SparseMatrix.h"
+	"${SOURCE_PATH}/ogmaneo/Helpers.h"
+    "${SOURCE_PATH}/ogmaneo/SparseCoder.h"
+    "${SOURCE_PATH}/ogmaneo/Predictor.h"
+    "${SOURCE_PATH}/ogmaneo/Hierarchy.h"
+    "${SOURCE_PATH}/ogmaneo/ImageEncoder.h"
+	"${SOURCE_PATH}/ogmaneo/SparseMatrix.h"
 )
 
 add_library(OgmaNeo ${SOURCES} ${HEADERS})
@@ -56,5 +56,5 @@ install(TARGETS OgmaNeo
         ARCHIVE DESTINATION lib)
 
 install(DIRECTORY "${SOURCE_PATH}/"
-        DESTINATION include/ogmaneo
+        DESTINATION include
         FILES_MATCHING PATTERN "*.h*")
