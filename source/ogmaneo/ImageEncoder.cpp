@@ -32,7 +32,7 @@ void ImageEncoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiply(*inputActs[vli], hiddenIndex);
+            sum -= vl._weights.distance2(*inputActs[vli], hiddenIndex);
             count += vl._weights.count(hiddenIndex);
         }
 
@@ -50,38 +50,20 @@ void ImageEncoder::forward(
         for (int hc = 0; hc < _hiddenSize.z; hc++) {
             int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-            float delta = _beta * (1.0f / _hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
+            float delta = maxIndex - hc;
+
+            float strength = std::exp(-delta * delta * _gamma) * _hiddenResources[hiddenIndex];
+
+            _hiddenResources[hiddenIndex] -= _alpha * strength;
 
             // For each visible layer
             for (int vli = 0; vli < _visibleLayers.size(); vli++) {
                 VisibleLayer &vl = _visibleLayers[vli];
                 const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-                vl._weights.deltas(*inputActs[vli], delta, hiddenIndex);
+                vl._weights.hebb(*inputActs[vli], hiddenIndex, strength);
             }
         }
-    }
-}
-
-void ImageEncoder::learn(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputActs,
-    int vli
-) {
-    VisibleLayer &vl = _visibleLayers[vli];
-    VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-    int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
-
-    for (int vc = 0; vc < vld._size.z; vc++) {
-        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
-
-        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
-
-        float delta = _alpha * ((*inputActs[vli])[visibleIndex] - sigmoid(sum));
-
-        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 
@@ -101,7 +83,7 @@ void ImageEncoder::backward(
 
         float sum = vl._weights.multiplyOHVsT(*hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
 
-        vl._reconActs[visibleIndex] = sigmoid(sum);
+        vl._reconActs[visibleIndex] = sum;
     }
 }
 
@@ -144,6 +126,8 @@ void ImageEncoder::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
+
+    _hiddenResources = FloatBuffer(numHidden, 1.0f);
 }
 
 void ImageEncoder::step(
@@ -161,21 +145,6 @@ void ImageEncoder::step(
 #else
     runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs, learnEnabled), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
-
-    if (learnEnabled) {
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-#ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < vld._size.x; x++)
-                for (int y = 0; y < vld._size.y; y++)
-                    learn(Int2(x, y), cs._rng, inputActs, vli);
-#else
-            runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
-#endif
-        }
-    }
 }
 
 void ImageEncoder::reconstruct(
@@ -205,8 +174,10 @@ void ImageEncoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
 
     writeBufferToStream(os, &_hiddenCs);
+    writeBufferToStream(os, &_hiddenResources);
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -231,8 +202,10 @@ void ImageEncoder::readFromStream(
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
+    readBufferFromStream(is, &_hiddenResources);
 
     int numVisibleLayers;
     

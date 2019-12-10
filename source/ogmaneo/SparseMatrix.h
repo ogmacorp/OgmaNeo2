@@ -76,7 +76,7 @@ struct SparseMatrix {
 		int row
 	);
 
-	float distance(
+	float distance2(
 		const std::vector<float> &in,
 		int row
 	);
@@ -106,7 +106,7 @@ struct SparseMatrix {
 		int column
 	);
 
-	float distanceT(
+	float distance2T(
 		const std::vector<float> &in,
 		int column
 	);
@@ -195,13 +195,13 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	float distanceOHVs(
+	float distance2OHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
 		int oneHotSize
 	);
 
-	float distanceOHVsT(
+	float distance2OHVsT(
 		const std::vector<int> &nonZeroIndices,
 		int column,
 		int oneHotSize

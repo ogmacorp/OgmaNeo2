@@ -111,7 +111,7 @@ float SparseMatrix::multiply(
 	return sum;
 }
 
-float SparseMatrix::distance(
+float SparseMatrix::distance2(
 	const std::vector<float> &in,
 	int row
 ) {
@@ -189,7 +189,7 @@ float SparseMatrix::multiplyT(
 	return sum;
 }
 
-float SparseMatrix::distanceT(
+float SparseMatrix::distance2T(
 	const std::vector<float> &in,
 	int column
 ) {
@@ -439,7 +439,7 @@ float SparseMatrix::countsOHVsT(
 	return sum;
 }
 
-float SparseMatrix::distanceOHVs(
+float SparseMatrix::distance2OHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
 	int oneHotSize
@@ -461,7 +461,7 @@ float SparseMatrix::distanceOHVs(
 	return dist;
 }
 
-float SparseMatrix::distanceOHVsT(
+float SparseMatrix::distance2OHVsT(
 	const std::vector<int> &nonZeroIndices,
 	int column,
 	int oneHotSize

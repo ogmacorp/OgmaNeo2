@@ -55,13 +55,6 @@ private:
         bool learnEnabled
     );
 
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActs,
-        int vli
-    );
-
     void backward(
         const Int2 &pos,
         std::mt19937 &rng,
@@ -77,16 +70,6 @@ private:
         bool learnEnabled
     ) {
         sc->forward(pos, rng, inputActs, learnEnabled);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActs,
-        int vli
-    ) {
-        sc->learn(pos, rng, inputActs, vli);
     }
 
     static void backwardKernel(
