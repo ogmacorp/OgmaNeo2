@@ -144,18 +144,9 @@ void Hierarchy::initRandom(
                 _pLayers[l][p]->initRandom(cs, layerDescs[l - 1]._hiddenSize, pVisibleLayerDescs);
             }
         }
-
-        if (layerDescs[l]._rRadius >= 0) {
-            SparseCoder::VisibleLayerDesc vld;
-
-            vld._size = layerDescs[l]._hiddenSize;
-            vld._radius = layerDescs[l]._rRadius;
-
-            scVisibleLayerDescs.push_back(vld);
-        }
 		
         // Create the sparse coding layer
-        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, scVisibleLayerDescs);
+        _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._lRadius, scVisibleLayerDescs);
 
         _hiddenCsPrev[l] = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
     }
