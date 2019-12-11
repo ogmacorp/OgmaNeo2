@@ -52,7 +52,7 @@ void ImageEncoder::forward(
 
             float delta = maxIndex - hc;
 
-            float strength = std::exp(-delta * delta * _gamma) * _hiddenResources[hiddenIndex];
+            float strength = std::exp(-delta * delta * _gamma / std::max(0.001f, _hiddenResources[hiddenIndex])) * _hiddenResources[hiddenIndex];
 
             _hiddenResources[hiddenIndex] -= _alpha * strength;
 
@@ -102,7 +102,7 @@ void ImageEncoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::normal_distribution<float> weightDist(0.0f, 1.0f);
+    std::normal_distribution<float> weightDist(-0.01f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
