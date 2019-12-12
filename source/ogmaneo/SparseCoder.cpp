@@ -30,7 +30,7 @@ void SparseCoder::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._weights.multiplyThreshOHVs(*inputCs[vli], hiddenIndex, vld._size.z, _thresh);
         }
 
         if (sum > maxActivation) {
@@ -55,31 +55,14 @@ void SparseCoder::learn(
 
     int targetC = (*inputCs[vli])[visibleColumnIndex];
 
-    int maxIndex = 0;
-    float maxValue = -999999.0f;
-
     for (int vc = 0; vc < vld._size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-        float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
+        float sum = vl._weights.multiplyThreshOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z, _thresh) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
 
-        if (sum > maxValue) {
-            maxValue = sum;
+        float delta = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sum);
 
-            maxIndex = vc;
-        }
-    }
-
-    if (maxIndex != targetC) {
-        for (int vc = 0; vc < vld._size.z; vc++) {
-            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
-
-            float sum = vl._weights.multiplyOHVsT(_hiddenCs, visibleIndex, _hiddenSize.z) / std::max(1, vl._weights.countT(visibleIndex) / _hiddenSize.z);
-
-            float delta = _alpha * ((vc == targetC ? 1.0f : 0.0f) - std::exp(sum));
-
-            vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
-        }
+        vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
     }
 }
 
@@ -98,7 +81,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {

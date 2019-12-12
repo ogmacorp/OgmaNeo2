@@ -369,6 +369,20 @@ struct SparseMatrix {
 		int column
 	);
 
+	void hebbIncreasingOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float alpha
+	);
+
+    void hebbIncreasingOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+		float alpha
+	);
+
     void hebbDecreasingOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
@@ -385,10 +399,25 @@ struct SparseMatrix {
 
 	// --- Special ---
 	
-	float multiplyNoDiagonalOHVs(
+	float multiplyThreshOHVs(
 		const std::vector<int> &nonZeroIndices,
 		int row,
-		int oneHotSize
+		int oneHotSize,
+		float thresh
+	);
+
+	float multiplyThreshOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+		float thresh
+	);
+	
+	float multiplyThreshNoDiagonalOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float thresh
 	);
 };
 } // namespace ogmaneo

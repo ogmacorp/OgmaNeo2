@@ -829,6 +829,48 @@ void SparseMatrix::hebbErrorsT(
 		_nonZeroValues[_nonZeroValueIndices[j]] += errors[_rowIndices[j]];
 }
 
+void SparseMatrix::hebbIncreasingOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[j] += alpha * (std::max(target, _nonZeroValues[j]) - _nonZeroValues[j]);
+		}
+	}
+}
+
+void SparseMatrix::hebbIncreasingOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	int column,
+	int oneHotSize,
+	float alpha
+) {
+	int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int targetDJ = nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		for (int dj = 0; dj < oneHotSize; dj++) {
+			int j = jj + dj;
+
+			float target = (dj == targetDJ ? 1.0f : 0.0f);
+
+			_nonZeroValues[_nonZeroValueIndices[j]] += alpha * (std::max(target, _nonZeroValues[_nonZeroValueIndices[j]]) - _nonZeroValues[_nonZeroValueIndices[j]]);
+		}
+	}
+}
+
 void SparseMatrix::hebbDecreasingOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
@@ -871,10 +913,49 @@ void SparseMatrix::hebbDecreasingOHVsT(
 	}
 }
 
-float SparseMatrix::multiplyNoDiagonalOHVs(
+float SparseMatrix::multiplyThreshOHVs(
 	const std::vector<int> &nonZeroIndices,
 	int row,
-	int oneHotSize
+	int oneHotSize,
+	float thresh
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		sum += std::min(1.0f, std::max(0.0f, _nonZeroValues[j]));
+	}
+
+	return sum;
+}
+
+float SparseMatrix::multiplyThreshOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	int column,
+	int oneHotSize,
+	float thresh
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int jj = _columnRanges[column]; jj < _columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_rowIndices[jj] / oneHotSize];
+
+		sum += std::min(1.0f, std::max(0.0f, _nonZeroValues[_nonZeroValueIndices[j]]));
+	}
+
+	return sum;
+}
+
+float SparseMatrix::multiplyThreshNoDiagonalOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize,
+	float thresh
 ) {
 	float sum = 0.0f;
 
@@ -886,7 +967,7 @@ float SparseMatrix::multiplyNoDiagonalOHVs(
 		if (_columnIndices[j] == row)
 			continue;
 
-		sum += _nonZeroValues[j];
+		sum += std::min(1.0f, std::max(0.0f, _nonZeroValues[j]));
 	}
 
 	return sum;
