@@ -340,7 +340,7 @@ void kernel scLearn(
 
             sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
 
-            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - sum);
+            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - exp(sum));
 
             deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
         }
@@ -589,7 +589,7 @@ void kernel imForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += -distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
+    hiddenActivations[hiddenIndex] -= distance2(nonZeroValues, rowRanges, columnIndices, visibleActivations, hiddenIndex);
 }
 
 void kernel imInhibit(
