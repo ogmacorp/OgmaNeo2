@@ -396,28 +396,5 @@ struct SparseMatrix {
 		int oneHotSize,
 		float alpha
 	);
-
-	// --- Special ---
-	
-	float multiplyThreshOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float thresh
-	);
-
-	float multiplyThreshOHVsT(
-		const std::vector<int> &nonZeroIndices,
-		int column,
-		int oneHotSize,
-		float thresh
-	);
-	
-	float multiplyThreshNoDiagonalOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize,
-		float thresh
-	);
 };
 } // namespace ogmaneo

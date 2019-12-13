@@ -40,8 +40,6 @@ private:
 
     IntBuffer _hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenResources; // Resources
-
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -83,14 +81,12 @@ private:
     }
 
 public:
-    float _alpha; // Resource depletion rate
-    float _gamma; // SOM falloff
+    float _alpha; // Learning rate
 
     // Defaults
     ImageEncoder()
     :
-    _alpha(0.1f),
-    _gamma(0.3f)
+    _alpha(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization
