@@ -560,7 +560,7 @@ void kernel aLearn(
     if (hiddenPosition.z == hiddenSize.z) {
         float tdError = qUpdate - hiddenValuesPrev[hiddenColumnIndex] * rescale;
 
-        float update = alpha * tanh(tdError);
+        float update = alpha * tdError;
 
         deltaOHVs(nonZeroValues, rowRanges, columnIndices, visibleCsPrev, update, hiddenIndex1, visibleSize.z);
     }
