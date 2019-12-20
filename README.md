@@ -16,7 +16,7 @@ Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that c
 
 For an introduction to how the algorithm works, see [the presentation](./SPH_Presentation.pdf).
 
-Python bindings are available [here](https://github.com/ogmacorp/PyOgmaNeo2) (use the matching branch name).
+Python bindings are available [here](https://github.com/ogmacorp/PyOgmaNeo2) (use the matching branch name). This is the recommended way of using OgmaNeo2.
 
 There are also two depcrecated versions, [OgmaNeo1](https://github.com/ogmacorp/OgmaNeo) and [EOgmaNeo](https://github.com/ogmacorp/EOgmaNeo). Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
 
