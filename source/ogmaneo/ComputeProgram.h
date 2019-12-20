@@ -19,7 +19,7 @@ private:
 
     bool loadFromString(
         ComputeSystem &cs,
-        const std::string& prog
+        const std::string &prog
     );
 
 public:

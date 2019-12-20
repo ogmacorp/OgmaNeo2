@@ -11,7 +11,7 @@
 #include "SparseMatrix.h"
 
 namespace ogmaneo {
-class ImageEncoder {
+class SparseCoder {
 public:
     struct VisibleLayerDesc {
         Int3 _size;
@@ -20,15 +20,13 @@ public:
 
         VisibleLayerDesc()
         :
-        _size({ 8, 8, 3 }),
+        _size(8, 8, 16),
         _radius(2)
         {}
     };
 
     struct VisibleLayer {
         SparseMatrix _weights;
-
-        cl::Buffer _visibleRecons;
     };
 
 private:
@@ -48,7 +46,7 @@ private:
 public:
     cl_float _alpha;
 
-    ImageEncoder()
+    SparseCoder()
     :
     _alpha(0.1f)
     {}
@@ -56,14 +54,15 @@ public:
     void init(
         ComputeSystem &cs,
         ComputeProgram &prog,
-        Int3 hiddenSize, const
-        std::vector<VisibleLayerDesc> &visibleLayerDescs,
+        Int3 hiddenSize,
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs,
         std::mt19937 &rng
     );
 
     void step(
         ComputeSystem &cs,
-        const std::vector<cl::Buffer> &visibleActivations,
+        const std::vector<cl::Buffer> &visibleCs,
+        std::mt19937 &rng,
         bool learnEnabled
     );
 

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "SparseCoder.h"
+#include "Predictor.h"
 #include "Actor.h"
 
 #include <memory>
@@ -21,31 +22,49 @@ enum InputType {
 
 class Hierarchy {
 public:
-    struct LayerDesc {
+    struct FirstLayerDesc {
         Int3 _hiddenSize;
 
-        cl_int _scRadius;
+        cl_int _ffRadius;
         cl_int _aRadius;
-
-        int _ticksPerUpdate;
 
         int _temporalHorizon;
 
         int _historyCapacity;
 
-        LayerDesc()
+        FirstLayerDesc()
         :
         _hiddenSize(4, 4, 16),
-        _scRadius(2),
+        _ffRadius(2),
         _aRadius(2),
-        _ticksPerUpdate(2),
         _temporalHorizon(2),
-        _historyCapacity(16)
+        _historyCapacity(32)
+        {}
+    };
+
+    struct HigherLayerDesc {
+        Int3 _hiddenSize;
+
+        cl_int _ffRadius;
+        cl_int _pRadius;
+
+        int _ticksPerUpdate;
+
+        int _temporalHorizon;
+
+        HigherLayerDesc()
+        :
+        _hiddenSize(4, 4, 16),
+        _ffRadius(2),
+        _pRadius(2),
+        _ticksPerUpdate(2),
+        _temporalHorizon(2)
         {}
     };
 private:
     std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Actor>>> _aLayers;
+    std::vector<std::vector<Predictor>> _pLayers; // Prediction layers for all but bottom of hierarchy
+    std::vector<std::unique_ptr<Actor>> _aLayers; // Action layers at bottom of hierarchy
 
     std::vector<std::vector<cl::Buffer>> _histories;
     std::vector<std::vector<int>> _historySizes;
@@ -55,9 +74,6 @@ private:
     std::vector<int> _ticks;
     std::vector<int> _ticksPerUpdate;
 
-    std::vector<float> _rewards;
-    std::vector<float> _rewardCounts;
-
     std::vector<Int3> _inputSizes;
 
 public:
@@ -66,7 +82,8 @@ public:
         ComputeProgram &prog,
         const std::vector<Int3> &inputSizes,
         const std::vector<InputType> &inputTypes,
-        const std::vector<LayerDesc> &layerDescs,
+        const FirstLayerDesc &firstLayerDesc,
+        const std::vector<HigherLayerDesc> &higherLayerDescs,
         std::mt19937 &rng
     );
 
@@ -96,9 +113,9 @@ public:
     const cl::Buffer &getActionCs(
         int i
     ) const {
-        assert(_aLayers.front()[i] != nullptr);
+        assert(_aLayers[i] != nullptr);
 
-        return _aLayers.front()[i]->getHiddenCs();
+        return _aLayers[i]->getHiddenCs();
     }
 
     bool getUpdate(
@@ -135,16 +152,28 @@ public:
         return _scLayers[l];
     }
 
-    std::vector<std::unique_ptr<Actor>> &getALayers(
+    std::vector<Predictor> &getPLayers(
         int l
     ) {
-        return _aLayers[l];
+        int pl = l - 1;
+
+        return _pLayers[pl];
     }
 
-    const std::vector<std::unique_ptr<Actor>> &getALayers(
+    const std::vector<Predictor> &getPLayers(
         int l
     ) const {
-        return _aLayers[l];
+        int pl = l - 1;
+
+        return _pLayers[pl];
+    }
+
+    std::vector<std::unique_ptr<Actor>> &getALayers() {
+        return _aLayers;
+    }
+
+    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
+        return _aLayers;
     }
 };
 } // namespace ogmaneo

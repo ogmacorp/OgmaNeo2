@@ -107,7 +107,7 @@ inline Int2 project(
     return Int2(pos.x * toScalars.x + 0.5f, pos.y * toScalars.y + 0.5f);
 }
 
-// Row-major accessors
+// Raveled accessors
 inline int address2(
     const Int2 &pos, // Position
     const Int2 &dims // Dimensions to ravel with
@@ -128,4 +128,9 @@ inline int address4(
 ) {
     return pos.w + pos.z * dims.w + pos.y * dims.w * dims.z + pos.x * dims.w * dims.z * dims.y;
 }
+
+void writeBufferToStream(ComputeSystem &cs, std::ostream &os, cl::Buffer &buf, int size);
+void readBufferFromStream(ComputeSystem &cs, std::istream &is, cl::Buffer &buf, int size);
+void writeDoubleBufferToStream(ComputeSystem &cs, std::ostream &os, DoubleBuffer &buf, int size);
+void readDoubleBufferFromStream(ComputeSystem &cs, std::istream &is, DoubleBuffer &buf, int size);
 } // namespace ogmaneo

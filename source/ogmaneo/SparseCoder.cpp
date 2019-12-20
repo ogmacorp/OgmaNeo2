@@ -56,6 +56,7 @@ void SparseCoder::init(
 void SparseCoder::step(
     ComputeSystem &cs,
     const std::vector<cl::Buffer> &visibleCs,
+    std::mt19937 &rng,
     bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
@@ -111,7 +112,7 @@ void SparseCoder::step(
             _learnKernel.setArg(argIndex++, _hiddenSize);
             _learnKernel.setArg(argIndex++, _alpha);
 
-            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y, vld._size.z));
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(vld._size.x, vld._size.y));
         }
     }
 }
@@ -127,9 +128,7 @@ void SparseCoder::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
 
-    std::vector<cl_int> hiddenCs(numHiddenColumns);
-    cs.getQueue().enqueueReadBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
-    os.write(reinterpret_cast<const char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
+    writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
     int numVisibleLayers = _visibleLayers.size();
 
@@ -160,10 +159,7 @@ void SparseCoder::readFromStream(
 
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
 
-    std::vector<cl_int> hiddenCs(numHiddenColumns);
-    is.read(reinterpret_cast<char*>(hiddenCs.data()), numHiddenColumns * sizeof(cl_int));
-    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
-    cs.getQueue().enqueueWriteBuffer(_hiddenCs, CL_TRUE, 0, numHiddenColumns * sizeof(cl_int), hiddenCs.data());
+    readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
 
     _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
 

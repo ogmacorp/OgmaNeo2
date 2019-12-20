@@ -125,7 +125,7 @@ void SparseMatrix::initT(ComputeSystem &cs) {
 			columnRanges[columnIndices[j]]++;
 	}
 
-	// Bring row range array in place using exclusive scan
+    // Convert columnRanges from counts to cumulative counts
 	int offset = 0;
 
 	for (int i = 0; i < _columns; i++) {

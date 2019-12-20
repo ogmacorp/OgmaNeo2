@@ -31,14 +31,25 @@ include_directories(${OpenCL_INCLUDE_DIR})
 
 set(SOURCE_PATH "${PROJECT_SOURCE_DIR}/source")
 set(SOURCES
-    "${SOURCE_PATH}/ComputeSystem.cpp"
-    "${SOURCE_PATH}/ComputeProgram.cpp"
-    "${SOURCE_PATH}/Helpers.cpp"
-    "${SOURCE_PATH}/SparseMatrix.cpp"
-    "${SOURCE_PATH}/SparseCoder.cpp"
-    "${SOURCE_PATH}/Actor.cpp"
-    "${SOURCE_PATH}/Hierarchy.cpp"
-    "${SOURCE_PATH}/ImageEncoder.cpp"
+    "${SOURCE_PATH}/ogmaneo/ComputeSystem.cpp"
+    "${SOURCE_PATH}/ogmaneo/ComputeProgram.cpp"
+    "${SOURCE_PATH}/ogmaneo/Helpers.cpp"
+    "${SOURCE_PATH}/ogmaneo/SparseMatrix.cpp"
+    "${SOURCE_PATH}/ogmaneo/SparseCoder.cpp"
+    "${SOURCE_PATH}/ogmaneo/Predictor.cpp"
+    "${SOURCE_PATH}/ogmaneo/Actor.cpp"
+    "${SOURCE_PATH}/ogmaneo/Hierarchy.cpp"
+    "${SOURCE_PATH}/ogmaneo/ImageEncoder.cpp"
+
+    "${SOURCE_PATH}/ogmaneo/ComputeSystem.h"
+    "${SOURCE_PATH}/ogmaneo/ComputeProgram.h"
+    "${SOURCE_PATH}/ogmaneo/Helpers.h"
+    "${SOURCE_PATH}/ogmaneo/SparseMatrix.h"
+    "${SOURCE_PATH}/ogmaneo/SparseCoder.h"
+    "${SOURCE_PATH}/ogmaneo/Predictor.h"
+    "${SOURCE_PATH}/ogmaneo/Actor.h"
+    "${SOURCE_PATH}/ogmaneo/Hierarchy.h"
+    "${SOURCE_PATH}/ogmaneo/ImageEncoder.h"
 )
 
 add_library(OgmaNeo ${SOURCES})
@@ -51,5 +62,5 @@ install(TARGETS OgmaNeo
         ARCHIVE DESTINATION lib)
 
 install(DIRECTORY "${SOURCE_PATH}/"
-        DESTINATION include/ogmaneo
+        DESTINATION include
         FILES_MATCHING PATTERN "*.h*")
