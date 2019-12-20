@@ -912,3 +912,21 @@ void SparseMatrix::hebbDecreasingOHVsT(
 		}
 	}
 }
+
+float SparseMatrix::multiplyExpOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = _rowRanges[row]; jj < _rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[_columnIndices[jj] / oneHotSize];
+
+		sum += (_nonZeroValues[j] > 0.0f ? 1.0f + _nonZeroValues[j] : std::exp(_nonZeroValues[j]));
+	}
+
+	return sum;
+}

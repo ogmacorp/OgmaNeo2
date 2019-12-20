@@ -396,5 +396,11 @@ struct SparseMatrix {
 		int oneHotSize,
 		float alpha
 	);
+
+	float multiplyExpOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
 };
 } // namespace ogmaneo
