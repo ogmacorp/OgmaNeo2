@@ -11,7 +11,7 @@
 #include "SparseMatrix.h"
 
 namespace ogmaneo {
-class ImageEncoder {
+class Predictor {
 public:
     struct VisibleLayerDesc {
         Int3 _size;
@@ -20,23 +20,27 @@ public:
 
         VisibleLayerDesc()
         :
-        _size(8, 8, 3),
+        _size(4, 4, 16),
         _radius(2)
         {}
     };
 
     struct VisibleLayer {
         SparseMatrix _weights;
+
+        cl::Buffer _visibleCsPrev;
     };
 
 private:
     Int3 _hiddenSize;
 
+    int _historySize;
+
+    cl::Buffer _hiddenCounts;
+
     cl::Buffer _hiddenCs;
 
     cl::Buffer _hiddenActivations;
-
-    cl::Buffer _hiddenResources;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
@@ -44,29 +48,27 @@ private:
     cl::Kernel _forwardKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
-    cl::Kernel _depleteKernel;
 
 public:
     cl_float _alpha;
-    cl_float _gamma;
 
-    ImageEncoder()
+    Predictor()
     :
-    _alpha(0.1f),
-    _gamma(0.1f)
+    _alpha(0.5f)
     {}
 
     void init(
         ComputeSystem &cs,
         ComputeProgram &prog,
-        Int3 hiddenSize, const
-        std::vector<VisibleLayerDesc> &visibleLayerDescs,
+        Int3 hiddenSize,
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs,
         std::mt19937 &rng
     );
-
+    
     void step(
         ComputeSystem &cs,
-        const std::vector<cl::Buffer> &visibleActivations,
+        const std::vector<cl::Buffer> &visibleCs,
+        const cl::Buffer &hiddenTargetCs,
         bool learnEnabled
     );
 

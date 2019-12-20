@@ -107,7 +107,7 @@ inline Int2 project(
     return Int2(pos.x * toScalars.x + 0.5f, pos.y * toScalars.y + 0.5f);
 }
 
-// Row-major accessors
+// Raveled accessors
 inline int address2(
     const Int2 &pos, // Position
     const Int2 &dims // Dimensions to ravel with
