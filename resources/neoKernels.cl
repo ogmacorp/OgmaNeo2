@@ -137,6 +137,27 @@ float multiplyOHVsT(
     return sum;
 }
 
+float multiplyExpOHVs(
+    global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const int* nonZeroIndices,
+    int row,
+    int oneHotSize
+) {
+    float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+		sum += (nonZeroValues[j] > 0.0f ? 1.0f + nonZeroValues[j] : exp(nonZeroValues[j]));
+	}
+
+    return sum;
+}
+
 void deltaOHVs(
     global float* nonZeroValues,
     global const int* rowRanges,
@@ -273,7 +294,7 @@ void kernel scForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
+    hiddenActivations[hiddenIndex] += multiplyExpOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 }
 
 void kernel scInhibit(
@@ -340,7 +361,7 @@ void kernel scLearn(
 
             sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
 
-            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - exp(sum));
+            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum)));
 
             deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
         }
