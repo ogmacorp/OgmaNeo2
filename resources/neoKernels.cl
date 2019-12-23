@@ -315,18 +315,35 @@ void kernel scLearn(
 
     int visibleColumnIndex = address2(visibleColumnPosition, visibleSize.xy);
 
-    int visibleC = visibleCs[visibleColumnIndex];
+    int maxIndex = 0;
+    float maxValue = -999999.0f;
 
     for (int c = 0; c < visibleSize.z; c++) {
         int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
 
         float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-        sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
+        if (sum > maxValue) {
+            maxValue = sum;
 
-        float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum)));
+            maxIndex = c;
+        }
+    }
 
-        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+    int visibleC = visibleCs[visibleColumnIndex];
+
+    if (maxIndex != visibleC) {
+        for (int c = 0; c < visibleSize.z; c++) {
+            int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
+
+            float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+
+            sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
+
+            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum)));
+
+            deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
+        }
     }
 }
 
