@@ -17,7 +17,8 @@
 namespace ogmaneo {
 enum InputType {
     _none,
-    _act
+    _prediction,
+    _action
 };
 
 class Hierarchy {
@@ -26,6 +27,7 @@ public:
         Int3 _hiddenSize;
 
         cl_int _ffRadius;
+        cl_int _pRadius;
         cl_int _aRadius;
 
         int _temporalHorizon;
@@ -36,6 +38,7 @@ public:
         :
         _hiddenSize(4, 4, 16),
         _ffRadius(2),
+        _pRadius(2),
         _aRadius(2),
         _temporalHorizon(2),
         _historyCapacity(32)
@@ -64,7 +67,8 @@ public:
 private:
     std::vector<SparseCoder> _scLayers;
     std::vector<std::vector<Predictor>> _pLayers; // Prediction layers for all but bottom of hierarchy
-    std::vector<std::unique_ptr<Actor>> _aLayers; // Action layers at bottom of hierarchy
+    std::vector<std::unique_ptr<Predictor>> _bpLayers; // Prediction layers at bottom of hierarchy
+    std::vector<std::unique_ptr<Actor>> _baLayers; // Action layers at bottom of hierarchy
 
     std::vector<std::vector<cl::Buffer>> _histories;
     std::vector<std::vector<int>> _historySizes;
@@ -91,8 +95,8 @@ public:
         ComputeSystem &cs,
         const std::vector<cl::Buffer> &inputCs,
         std::mt19937 &rng,
-        float reward,
-        bool learn = true
+        bool learnEnabled = true,
+        float reward = 0.0f
     );
 
     void writeToStream(
@@ -110,12 +114,20 @@ public:
         return _scLayers.size();
     }
 
+    const cl::Buffer &getPredictionCs(
+        int i
+    ) const {
+        assert(_bpLayers[i] != nullptr);
+
+        return _bpLayers[i]->getHiddenCs();
+    }
+
     const cl::Buffer &getActionCs(
         int i
     ) const {
-        assert(_aLayers[i] != nullptr);
+        assert(_baLayers[i] != nullptr);
 
-        return _aLayers[i]->getHiddenCs();
+        return _baLayers[i]->getHiddenCs();
     }
 
     bool getUpdate(
@@ -168,12 +180,20 @@ public:
         return _pLayers[pl];
     }
 
-    std::vector<std::unique_ptr<Actor>> &getALayers() {
-        return _aLayers;
+    std::vector<std::unique_ptr<Predictor>> &getBPLayers() {
+        return _bpLayers;
     }
 
-    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
-        return _aLayers;
+    const std::vector<std::unique_ptr<Predictor>> &getBPLayers() const {
+        return _bpLayers;
+    }
+
+    std::vector<std::unique_ptr<Actor>> &getBALayers() {
+        return _baLayers;
+    }
+
+    const std::vector<std::unique_ptr<Actor>> &getBALayers() const {
+        return _baLayers;
     }
 };
 } // namespace ogmaneo

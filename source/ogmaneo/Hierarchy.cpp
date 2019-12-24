@@ -72,12 +72,21 @@ void Hierarchy::init(
                 _historySizes[l][v] = inSize;
 			}
 
-            // Actors
-            _aLayers.resize(inputSizes.size());
+            // Predictors and actors
+            _bpLayers.resize(inputSizes.size());
+            _baLayers.resize(inputSizes.size());
 
+            std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs;
             std::vector<Actor::VisibleLayerDesc> aVisibleLayerDescs;
 
             if (l < _scLayers.size() - 1) {
+                pVisibleLayerDescs.resize(2);
+
+                pVisibleLayerDescs[0]._size = firstLayerDesc._hiddenSize;
+                pVisibleLayerDescs[0]._radius = firstLayerDesc._pRadius;
+
+                pVisibleLayerDescs[1] = pVisibleLayerDescs[0];
+
                 aVisibleLayerDescs.resize(2);
 
                 aVisibleLayerDescs[0]._size = firstLayerDesc._hiddenSize;
@@ -86,20 +95,33 @@ void Hierarchy::init(
                 aVisibleLayerDescs[1] = aVisibleLayerDescs[0];
             }
             else {
+                pVisibleLayerDescs.resize(1);
+
+                pVisibleLayerDescs[0]._size = firstLayerDesc._hiddenSize;
+                pVisibleLayerDescs[0]._radius = firstLayerDesc._pRadius;
+
                 aVisibleLayerDescs.resize(1);
 
                 aVisibleLayerDescs[0]._size = firstLayerDesc._hiddenSize;
                 aVisibleLayerDescs[0]._radius = firstLayerDesc._aRadius;
             }
 
-            for (int a = 0; a < _aLayers.size(); a++) {
-                if (inputTypes[a] == InputType::_act) {
-                    _aLayers[a] = std::make_unique<Actor>();
+            for (int i = 0; i < _inputSizes.size(); i++) {
+                if (inputTypes[i] == InputType::_prediction) {
+                    _bpLayers[i] = std::make_unique<Predictor>();
 
-                    _aLayers[a]->init(cs, prog, inputSizes[a], firstLayerDesc._historyCapacity, aVisibleLayerDescs, rng);
+                    _bpLayers[i]->init(cs, prog, inputSizes[i], pVisibleLayerDescs, rng);
                 }
                 else
-                    _aLayers[a] = nullptr;
+                    _bpLayers[i] = nullptr;
+
+                if (inputTypes[i] == InputType::_action) {
+                    _baLayers[i] = std::make_unique<Actor>();
+
+                    _baLayers[i]->init(cs, prog, inputSizes[i], firstLayerDesc._historyCapacity, aVisibleLayerDescs, rng);
+                }
+                else
+                    _baLayers[i] = nullptr;
             }
         }
         else {
@@ -152,8 +174,8 @@ void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<cl::Buffer> &inputCs,
     std::mt19937 &rng,
-    float reward,
-    bool learnEnabled
+    bool learnEnabled,
+    float reward
 ) {
     assert(inputCs.size() == _inputSizes.size());
 
@@ -231,9 +253,12 @@ void Hierarchy::step(
                 feedBack[1] = _pLayers[pl + 1][_ticksPerUpdate[l + 1] - 1 - _ticks[l + 1]].getHiddenCs();
 
             if (l == 0) {
-                for (int a = 0; a < _aLayers.size(); a++) {
-                    if (_aLayers[a] != nullptr)
-                        _aLayers[a]->step(cs, feedBack, rng, reward, learnEnabled);
+                for (int i = 0; i < _inputSizes.size(); i++) {
+                    if (_bpLayers[i] != nullptr)
+                        _bpLayers[i]->step(cs, feedBack, inputCs[i], learnEnabled);
+
+                    if (_baLayers[i] != nullptr)
+                        _baLayers[i]->step(cs, feedBack, rng, reward, learnEnabled);
                 }
             }
             else {
@@ -275,13 +300,24 @@ void Hierarchy::writeToStream(
         _scLayers[l].writeToStream(cs, os);
 
         if (l == 0) {
-            for (int a = 0; a < _aLayers.size(); a++) {
-                unsigned char exists = _aLayers[a] != nullptr;
+            for (int i = 0; i < _inputSizes.size(); i++) {
+                {
+                    unsigned char exists = _bpLayers[i] != nullptr;
 
-                os.write(reinterpret_cast<const char*>(&exists), sizeof(unsigned char));
+                    os.write(reinterpret_cast<const char*>(&exists), sizeof(unsigned char));
 
-                if (exists)
-                    _aLayers[a]->writeToStream(cs, os);
+                    if (exists)
+                        _bpLayers[i]->writeToStream(cs, os);
+                }
+
+                {
+                    unsigned char exists = _baLayers[i] != nullptr;
+
+                    os.write(reinterpret_cast<const char*>(&exists), sizeof(unsigned char));
+
+                    if (exists)
+                        _baLayers[i]->writeToStream(cs, os);
+                }
             }
         }
         else {
@@ -308,7 +344,8 @@ void Hierarchy::readFromStream(
 
     _scLayers.resize(numLayers);
     _pLayers.resize(numLayers - 1);
-    _aLayers.resize(numInputs);
+    _bpLayers.resize(numInputs);
+    _baLayers.resize(numInputs);
 
     _ticks.resize(numLayers);
 
@@ -338,17 +375,32 @@ void Hierarchy::readFromStream(
         _scLayers[l].readFromStream(cs, prog, is);
 
         if (l == 0) {
-            for (int a = 0; a < _aLayers.size(); a++) {
-                unsigned char exists;
+            for (int i = 0; i < _inputSizes.size(); i++) {
+                {
+                    unsigned char exists;
 
-                is.read(reinterpret_cast<char*>(&exists), sizeof(unsigned char));
+                    is.read(reinterpret_cast<char*>(&exists), sizeof(unsigned char));
 
-                if (exists) {
-                    _aLayers[a] = std::make_unique<Actor>();
-                    _aLayers[a]->readFromStream(cs, prog, is);
+                    if (exists) {
+                        _bpLayers[i] = std::make_unique<Predictor>();
+                        _bpLayers[i]->readFromStream(cs, prog, is);
+                    }
+                    else
+                        _bpLayers[i] = nullptr;
                 }
-                else
-                    _aLayers[a] = nullptr;
+
+                {
+                    unsigned char exists;
+
+                    is.read(reinterpret_cast<char*>(&exists), sizeof(unsigned char));
+
+                    if (exists) {
+                        _baLayers[i] = std::make_unique<Actor>();
+                        _baLayers[i]->readFromStream(cs, prog, is);
+                    }
+                    else
+                        _baLayers[i] = nullptr;
+                }
             }
         }
         else {
