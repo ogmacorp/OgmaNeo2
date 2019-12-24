@@ -11,7 +11,7 @@
 #include "SparseMatrix.h"
 
 namespace ogmaneo {
-class ImageEncoder {
+class Actor {
 public:
     struct VisibleLayerDesc {
         Int3 _size;
@@ -20,7 +20,7 @@ public:
 
         VisibleLayerDesc()
         :
-        _size(8, 8, 3),
+        _size(4, 4, 16),
         _radius(2)
         {}
     };
@@ -29,44 +29,63 @@ public:
         SparseMatrix _weights;
     };
 
+    struct HistorySample {
+        std::vector<cl::Buffer> _visibleCs;
+        cl::Buffer _hiddenCs;
+        cl::Buffer _hiddenValues;
+    
+        float _reward;
+    };
+
 private:
     Int3 _hiddenSize;
+
+    int _historySize;
+
+    cl::Buffer _hiddenCounts;
 
     cl::Buffer _hiddenCs;
 
     cl::Buffer _hiddenActivations;
 
-    cl::Buffer _hiddenResources;
+    DoubleBuffer _hiddenValues;
+
+    std::vector<HistorySample> _historySamples;
 
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
     cl::Kernel _forwardKernel;
+    cl::Kernel _activateKernel;
     cl::Kernel _inhibitKernel;
     cl::Kernel _learnKernel;
-    cl::Kernel _depleteKernel;
 
 public:
     cl_float _alpha;
+    cl_float _beta;
     cl_float _gamma;
 
-    ImageEncoder()
+    Actor()
     :
-    _alpha(0.1f),
-    _gamma(0.1f)
+    _alpha(0.05f),
+    _beta(0.1f),
+    _gamma(0.99f)
     {}
 
     void init(
         ComputeSystem &cs,
         ComputeProgram &prog,
-        Int3 hiddenSize, const
-        std::vector<VisibleLayerDesc> &visibleLayerDescs,
+        Int3 hiddenSize,
+        int historyCapacity,
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs,
         std::mt19937 &rng
     );
-
+    
     void step(
         ComputeSystem &cs,
-        const std::vector<cl::Buffer> &visibleActivations,
+        const std::vector<cl::Buffer> &visibleCs,
+        std::mt19937 &rng,
+        float reward,
         bool learnEnabled
     );
 

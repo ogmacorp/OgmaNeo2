@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -8,19 +8,16 @@
 
 #pragma once
 
-#include "ComputeSystem.h"
+#include "SparseMatrix.h"
 
 namespace ogmaneo {
-// A prediction layer (predicts x_(t+1))
 class Predictor {
 public:
-    // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size; // Size of input
+        Int3 _size;
 
-        int _radius; // Radius onto input
+        cl_int _radius;
 
-        // Defaults
         VisibleLayerDesc()
         :
         _size(4, 4, 16),
@@ -28,128 +25,86 @@ public:
         {}
     };
 
-    // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix _weights;
 
-        IntBuffer _inputCsPrev; // Previous timestep (prev) input states
+        cl::Buffer _visibleCsPrev;
     };
 
 private:
-    Int3 _hiddenSize; // Size of the output/hidden/prediction
+    Int3 _hiddenSize;
 
-    IntBuffer _hiddenCs; // Hidden state
+    int _historySize;
 
-    FloatBuffer _hiddenActivations; // Hidden activations, used for interal computation
+    cl::Buffer _hiddenCounts;
 
-    // Visible layers and descs
+    cl::Buffer _hiddenCs;
+
+    cl::Buffer _hiddenActivations;
+
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
 
-    // --- Kernels ---
-
-    void forward(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const IntBuffer* hiddenTargetCs
-    );
-
-    static void forwardKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        Predictor* p,
-        const std::vector<const IntBuffer*> &inputCs
-    ) {
-        p->forward(pos, rng, inputCs);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        Predictor* p,
-        const IntBuffer* hiddenTargetCs
-    ) {
-        p->learn(pos, rng, hiddenTargetCs);
-    }
+    cl::Kernel _forwardKernel;
+    cl::Kernel _inhibitKernel;
+    cl::Kernel _learnKernel;
 
 public:
-    float _alpha; // Learning rate
+    cl_float _alpha;
 
-    // Defaults
     Predictor()
     :
     _alpha(0.5f)
     {}
 
-    // Create with random initialization
-    void initRandom(
-        ComputeSystem &cs, // Compute system
-        const Int3 &hiddenSize, // Hidden/output/prediction size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // First visible layer must be from current hidden state, second must be feed back state, rest can be whatever
+    void init(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        Int3 hiddenSize,
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+        std::mt19937 &rng
+    );
+    
+    void step(
+        ComputeSystem &cs,
+        const std::vector<cl::Buffer> &visibleCs,
+        const cl::Buffer &hiddenTargetCs,
+        bool learnEnabled
+    );
+
+    void writeToStream(
+        ComputeSystem &cs,
+        std::ostream &os
+    );
+
+    void readFromStream(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        std::istream &is
     ); 
 
-    // Activate the predictor (predict values)
-    void activate(
-        ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &visibleCs // Hidden/output/prediction size
-    );
-
-    // Learning predictions (update weights)
-    void learn(
-        ComputeSystem &cs,
-        const IntBuffer* hiddenTargetCs
-    );
-
-    // Write to stream
-    void writeToStream(
-        std::ostream &os // Stream to write to
-    ) const;
-
-    // Read from stream
-    void readFromStream(
-        std::istream &is // Stream to read from
-    );
-
-    // Get number of visible layers
     int getNumVisibleLayers() const {
         return _visibleLayers.size();
     }
 
-    // Get a visible layer
     const VisibleLayer &getVisibleLayer(
-        int i // Index of visible layer
+        int index
     ) const {
-        return _visibleLayers[i];
+        return _visibleLayers[index];
     }
 
-    // Get a visible layer descriptor
     const VisibleLayerDesc &getVisibleLayerDesc(
-        int i // Index of visible layer
+        int index
     ) const {
-        return _visibleLayerDescs[i];
+        return _visibleLayerDescs[index];
     }
 
-    // Get the hidden activations (predictions)
-    const IntBuffer &getHiddenCs() const {
+    const cl::Buffer &getHiddenCs() const {
         return _hiddenCs;
     }
 
-    // Get the hidden size
-    const Int3 &getHiddenSize() const {
+    Int3 getHiddenSize() const {
         return _hiddenSize;
     }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return _visibleLayers[i]._weights;
-    }
 };
-} // Namespace ogmaneo
+} // namespace ogmaneo

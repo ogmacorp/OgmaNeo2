@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -8,133 +8,96 @@
 
 #pragma once
 
-#include "ComputeSystem.h"
+#include "SparseMatrix.h"
 
 namespace ogmaneo {
-// Sparse coder
 class SparseCoder {
 public:
-    // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size; // Size of input
+        Int3 _size;
 
-        int _radius; // Radius onto input
+        cl_int _radius;
 
-        // Defaults
         VisibleLayerDesc()
         :
-        _size(4, 4, 16),
+        _size(8, 8, 16),
         _radius(2)
         {}
     };
 
-    // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix _weights;
     };
 
 private:
-    Int3 _hiddenSize; // Size of hidden/output layer
+    Int3 _hiddenSize;
 
-    IntBuffer _hiddenCs; // Hidden states
+    cl::Buffer _hiddenCs;
 
-    // Visible layers and associated descriptors
+    cl::Buffer _hiddenActivations;
+
     std::vector<VisibleLayer> _visibleLayers;
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
-    
-    // --- Kernels ---
-    
-    void forward(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
 
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
-    );
-
-    static void forwardKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
-    ) {
-        sc->forward(pos, rng, inputCs);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        int vli
-    ) {
-        sc->learn(pos, rng, inputCs, vli);
-    }
+    cl::Kernel _forwardKernel;
+    cl::Kernel _inhibitKernel;
+    cl::Kernel _learnKernel;
 
 public:
-    float _alpha; // Weight learning rate
+    cl_float _alpha;
 
-    // Defaults
     SparseCoder()
     :
-    _alpha(0.5f)
+    _alpha(0.1f)
     {}
 
-    // Create a sparse coding layer with random initialization
-    void initRandom(
-        ComputeSystem &cs, // Compute system
-        const Int3 &hiddenSize, // Hidden/output size
-        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
+    void init(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        Int3 hiddenSize,
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+        std::mt19937 &rng
     );
 
-    // Activate the sparse coder (perform sparse coding)
     void step(
-        ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input states
-        bool learnEnabled // Whether to learn
+        ComputeSystem &cs,
+        const std::vector<cl::Buffer> &visibleCs,
+        std::mt19937 &rng,
+        bool learnEnabled
     );
 
-    // Write to stream
     void writeToStream(
-        std::ostream &os // Stream to write to
-    ) const;
-
-    // Read from stream
-    void readFromStream(
-        std::istream &is // Stream to read from
+        ComputeSystem &cs,
+        std::ostream &os
     );
 
-    // Get the number of visible layers
+    void readFromStream(
+        ComputeSystem &cs,
+        ComputeProgram &prog,
+        std::istream &is
+    ); 
+
     int getNumVisibleLayers() const {
         return _visibleLayers.size();
     }
 
-    // Get a visible layer
     const VisibleLayer &getVisibleLayer(
-        int i // Index of visible layer
+        int index
     ) const {
-        return _visibleLayers[i];
+        return _visibleLayers[index];
     }
 
-    // Get a visible layer descriptor
     const VisibleLayerDesc &getVisibleLayerDesc(
-        int i // Index of visible layer
+        int index
     ) const {
-        return _visibleLayerDescs[i];
+        return _visibleLayerDescs[index];
     }
 
-    // Get the hidden states
-    const IntBuffer &getHiddenCs() const {
+    const cl::Buffer &getHiddenCs() const {
         return _hiddenCs;
     }
 
-    // Get the hidden size
-    const Int3 &getHiddenSize() const {
+    Int3 getHiddenSize() const {
         return _hiddenSize;
     }
 };

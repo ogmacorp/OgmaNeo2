@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -10,78 +10,12 @@
 
 using namespace ogmaneo;
 
-// Kernels
-void Predictor::forward(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs
-) {
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        _hiddenActivations[hiddenIndex] = 0.0f;
-
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            _hiddenActivations[hiddenIndex] += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
-        }
-
-        if (_hiddenActivations[hiddenIndex] > maxActivation) {
-            maxActivation = _hiddenActivations[hiddenIndex];
-            maxIndex = hc;
-        }
-    }
-
-    _hiddenCs[address2(pos, Int2(_hiddenSize.x, _hiddenSize.y))] = maxIndex;
-}
-
-void Predictor::learn(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const IntBuffer* hiddenTargetCs
-) {
-    int hiddenColumnIndex = address2(pos, Int2(_hiddenSize.x, _hiddenSize.y));
-
-    int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
-
-    // --- Delta Rule ---
-
-    for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
-
-        float target = (hc == targetC ? 1.0f : -1.0f);
-
-        int count = 0;
-
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            count += vl._weights.count(hiddenIndex) / vld._size.z;
-        }
-
-        float delta = _alpha * (target - std::tanh(_hiddenActivations[hiddenIndex] / std::max(1, count))); // Delta
-
-        // For each visible layer
-        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-            VisibleLayer &vl = _visibleLayers[vli];
-            const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
-
-            vl._weights.deltaOHVs(vl._inputCsPrev, delta, hiddenIndex, vld._size.z); // Apply delta rule
-        }
-    }
-}
-
-void Predictor::initRandom(
+void Predictor::init(
     ComputeSystem &cs,
-    const Int3 &hiddenSize,
-    const std::vector<VisibleLayerDesc> &visibleLayerDescs
+    ComputeProgram &prog,
+    Int3 hiddenSize,
+    const std::vector<VisibleLayerDesc> &visibleLayerDescs,
+    std::mt19937 &rng
 ) {
     _visibleLayerDescs = visibleLayerDescs;
 
@@ -89,11 +23,15 @@ void Predictor::initRandom(
 
     _visibleLayers.resize(_visibleLayerDescs.size());
 
-    // Pre-compute dimensions
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
+    // Counts
+    _hiddenCounts = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+
+    cs.getQueue().enqueueFillBuffer(_hiddenCounts, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
+
+    cl::Kernel countKernel = cl::Kernel(prog.getProgram(), "pCount");
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
@@ -102,110 +40,146 @@ void Predictor::initRandom(
 
         int numVisibleColumns = vld._size.x * vld._size.y;
 
-        // Create weight matrix for this visible layer and initialize randomly
-        initSMLocalRF(vld._size, _hiddenSize, vld._radius, vl._weights);
+        vl._weights.initLocalRF(cs, vld._size, _hiddenSize, vld._radius, -0.01f, 0.01f, rng);
 
-        for (int i = 0; i < vl._weights._nonZeroValues.size(); i++)
-            vl._weights._nonZeroValues[i] = weightDist(cs._rng);
+        int argIndex = 0;
 
-        vl._inputCsPrev = IntBuffer(numVisibleColumns, 0);
+        countKernel.setArg(argIndex++, vl._weights._rowRanges);
+        countKernel.setArg(argIndex++, _hiddenCounts);
+        countKernel.setArg(argIndex++, vld._size);
+        countKernel.setArg(argIndex++, _hiddenSize);
+
+        cs.getQueue().enqueueNDRangeKernel(countKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
+
+        vl._visibleCsPrev = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numVisibleColumns * sizeof(cl_int));
+
+        cs.getQueue().enqueueFillBuffer(vl._visibleCsPrev, static_cast<cl_int>(0), 0, numVisibleColumns * sizeof(cl_int));
     }
 
     // Hidden Cs
-    _hiddenCs = IntBuffer(numHiddenColumns, 0);
+    _hiddenCs = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
 
-    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
+    cs.getQueue().enqueueFillBuffer(_hiddenCs, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
+ 
+    // Stimulus
+    _hiddenActivations = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHidden * sizeof(cl_float));
+
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0), 0, numHidden * sizeof(cl_float));
+
+    // Create kernels
+    _forwardKernel = cl::Kernel(prog.getProgram(), "pForward");
+    _inhibitKernel = cl::Kernel(prog.getProgram(), "pInhibit");
+    _learnKernel = cl::Kernel(prog.getProgram(), "pLearn");
 }
 
-void Predictor::activate(
+void Predictor::step(
     ComputeSystem &cs,
-    const std::vector<const IntBuffer*> &visibleCs
+    const std::vector<cl::Buffer> &visibleCs,
+    const cl::Buffer &hiddenTargetCs,
+    bool learnEnabled
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    // Forward kernel
-#ifdef KERNEL_NOTHREAD
-    for (int x = 0; x < _hiddenSize.x; x++)
-        for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, visibleCs);
-#else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-#endif
+    if (learnEnabled) {
+        for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+            VisibleLayer &vl = _visibleLayers[vli];
+            VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-    // Copy to prevs
+            int argIndex = 0;
+
+            _learnKernel.setArg(argIndex++, vl._visibleCsPrev);
+            _learnKernel.setArg(argIndex++, _hiddenActivations);
+            _learnKernel.setArg(argIndex++, hiddenTargetCs);
+            _learnKernel.setArg(argIndex++, _hiddenCounts);
+            _learnKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+            _learnKernel.setArg(argIndex++, vl._weights._rowRanges);
+            _learnKernel.setArg(argIndex++, vl._weights._columnIndices);
+            _learnKernel.setArg(argIndex++, vld._size);
+            _learnKernel.setArg(argIndex++, _hiddenSize);
+            _learnKernel.setArg(argIndex++, _alpha);
+
+            cs.getQueue().enqueueNDRangeKernel(_learnKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+        }
+    }
+
+    // Initialize stimulus to 0
+    cs.getQueue().enqueueFillBuffer(_hiddenActivations, static_cast<cl_float>(0.0f), 0, numHidden * sizeof(cl_float));
+
+    // Compute feed stimulus
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
         int numVisibleColumns = vld._size.x * vld._size.y;
 
-#ifdef KERNEL_NOTHREAD
-        for (int x = 0; x < numVisibleColumns; x++)
-            copyInt(x, cs._rng, visibleCs[vli], &vl._inputCsPrev);
-#else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &vl._inputCsPrev), numVisibleColumns, cs._rng, cs._batchSize1);
-#endif
+        int argIndex = 0;
+
+        _forwardKernel.setArg(argIndex++, visibleCs[vli]);
+        _forwardKernel.setArg(argIndex++, _hiddenActivations);
+        _forwardKernel.setArg(argIndex++, vl._weights._nonZeroValues);
+        _forwardKernel.setArg(argIndex++, vl._weights._rowRanges);
+        _forwardKernel.setArg(argIndex++, vl._weights._columnIndices);
+        _forwardKernel.setArg(argIndex++, vld._size);
+        _forwardKernel.setArg(argIndex++, _hiddenSize);
+
+        cs.getQueue().enqueueNDRangeKernel(_forwardKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y, _hiddenSize.z));
+
+        // Copy to prevs
+        cs.getQueue().enqueueCopyBuffer(visibleCs[vli], vl._visibleCsPrev, 0, 0, numVisibleColumns * sizeof(cl_int));
+    }
+
+    // Inhibit
+    {
+        int argIndex = 0;
+
+        _inhibitKernel.setArg(argIndex++, _hiddenActivations);
+        _inhibitKernel.setArg(argIndex++, _hiddenCs);
+        _inhibitKernel.setArg(argIndex++, _hiddenSize);
+
+        cs.getQueue().enqueueNDRangeKernel(_inhibitKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 }
 
-void Predictor::learn(
-    ComputeSystem &cs,
-    const IntBuffer* hiddenTargetCs
-) {
-    // Learn kernel
-#ifdef KERNEL_NOTHREAD
-    for (int x = 0; x < _hiddenSize.x; x++)
-        for (int y = 0; y < _hiddenSize.y; y++)
-            learn(Int2(x, y), cs._rng, hiddenTargetCs);
-#else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
-#endif
-}
-
-void Predictor::writeToStream(
-    std::ostream &os
-) const {
+void Predictor::writeToStream(ComputeSystem &cs, std::ostream &os) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
     os.write(reinterpret_cast<const char*>(&_hiddenSize), sizeof(Int3));
 
-    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&_alpha), sizeof(cl_float));
 
-    writeBufferToStream(os, &_hiddenCs);
-
-    writeBufferToStream(os, &_hiddenActivations);
+    writeBufferToStream(cs, os, _hiddenCs, numHiddenColumns * sizeof(cl_int));
+    writeBufferToStream(cs, os, _hiddenActivations, numHidden * sizeof(cl_int));
 
     int numVisibleLayers = _visibleLayers.size();
 
-    os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&numVisibleLayers), sizeof(int));
     
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
-        const VisibleLayer &vl = _visibleLayers[vli];
-        const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int numVisibleColumns = vld._size.x * vld._size.y;
 
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
-        writeSMToStream(os, vl._weights);
+        vl._weights.writeToStream(cs, os);
 
-        writeBufferToStream(os, &vl._inputCsPrev);
+        writeBufferToStream(cs, os, vl._visibleCsPrev, numVisibleColumns * sizeof(cl_int));
     }
 }
 
-void Predictor::readFromStream(
-    std::istream &is
-) {
+void Predictor::readFromStream(ComputeSystem &cs, ComputeProgram &prog, std::istream &is) {
     is.read(reinterpret_cast<char*>(&_hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&_alpha), sizeof(cl_float));
 
-    readBufferFromStream(is, &_hiddenCs);
-
-    readBufferFromStream(is, &_hiddenActivations);
+    readBufferFromStream(cs, is, _hiddenCs, numHiddenColumns * sizeof(cl_int));
+    readBufferFromStream(cs, is, _hiddenActivations, numHidden * sizeof(cl_int));
 
     int numVisibleLayers;
     
@@ -218,10 +192,38 @@ void Predictor::readFromStream(
         VisibleLayer &vl = _visibleLayers[vli];
         VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
+        int numVisibleColumns = vld._size.x * vld._size.y;
+
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
 
-        readSMFromStream(is, vl._weights);
+        vl._weights.readFromStream(cs, is);
 
-        readBufferFromStream(is, &vl._inputCsPrev);
+        readBufferFromStream(cs, is, vl._visibleCsPrev, numVisibleColumns * sizeof(cl_int));
+    }
+
+    // Create kernels
+    _forwardKernel = cl::Kernel(prog.getProgram(), "pForward");
+    _inhibitKernel = cl::Kernel(prog.getProgram(), "pInhibit");
+    _learnKernel = cl::Kernel(prog.getProgram(), "pLearn");
+
+    _hiddenCounts = cl::Buffer(cs.getContext(), CL_MEM_READ_WRITE, numHiddenColumns * sizeof(cl_int));
+
+    cs.getQueue().enqueueFillBuffer(_hiddenCounts, static_cast<cl_int>(0), 0, numHiddenColumns * sizeof(cl_int));
+
+    cl::Kernel countKernel = cl::Kernel(prog.getProgram(), "pCount");
+
+    // Create layers
+    for (int vli = 0; vli < _visibleLayers.size(); vli++) {
+        VisibleLayer &vl = _visibleLayers[vli];
+        VisibleLayerDesc &vld = _visibleLayerDescs[vli];
+
+        int argIndex = 0;
+
+        countKernel.setArg(argIndex++, vl._weights._rowRanges);
+        countKernel.setArg(argIndex++, _hiddenCounts);
+        countKernel.setArg(argIndex++, vld._size);
+        countKernel.setArg(argIndex++, _hiddenSize);
+
+        cs.getQueue().enqueueNDRangeKernel(countKernel, cl::NullRange, cl::NDRange(_hiddenSize.x, _hiddenSize.y));
     }
 }
