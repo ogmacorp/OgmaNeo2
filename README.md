@@ -14,9 +14,9 @@
 
 Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that contains an implementation of Sparse Predictive Hierarchies.
 
-For an introduction to how the algorithm works, see [the presentation](./SPH_Presentation.pdf).
+For an introduction to how the algorithm works, see [the presentation](./SPH_Presentation.pdf). For a bit more detail, see [the whitepaper](./OgmaNeo2_Whitepaper_DRAFT.pdf).
 
-Python bindings are available [here](https://github.com/ogmacorp/PyOgmaNeo2) (use the matching branch name). This is the recommended way of using OgmaNeo2.
+Python bindings are available [(PyOgmaNeo2) here](https://github.com/ogmacorp/PyOgmaNeo2) (use the matching branch name). **This is the recommended way of using OgmaNeo2.**
 
 There are also two depcrecated versions, [OgmaNeo1](https://github.com/ogmacorp/OgmaNeo) and [EOgmaNeo](https://github.com/ogmacorp/EOgmaNeo). Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
 
@@ -55,6 +55,11 @@ The `BUILD_SHARED_LIBS` boolean cmake option can be used to create dynamic/share
 `make install` can be run to install the library. `make uninstall` can be used to uninstall the library.
 
 On **Windows** systems it is recommended to use `cmake-gui` to define which generator to use and specify optional build parameters, such as `CMAKE_INSTALL_PREFIX`.
+
+## Documentation
+
+It is recommended to use [PyOgmaNeo2](https://github.com/ogmacorp/PyOgmaNeo2) instead of OgmaNeo2 directly. The interface is very similar.
+Therefore, we currently only maintain the documentation for PyOgmaNeo2. PyOgmaNeo2 has documentation [available here](https://ogmacorp.github.io/PyOgmaNeo2-Docs/overview.html).
 
 ## Contributions
 
