@@ -14,7 +14,7 @@
 
 Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that contains an implementation of Sparse Predictive Hierarchies.
 
-For an introduction to how the algorithm works, see [the presentation](./SPH_Presentation.pdf).
+For an introduction to how the algorithm works, see [the presentation](./SPH_Presentation.pdf). For a bit more detail, see [the whitepaper](./OgmaNeo2_Whitepaper_DRAFT.pdf).
 
 Python bindings are available [here](https://github.com/ogmacorp/PyOgmaNeo2) (use the matching branch name). This is the recommended way of using OgmaNeo2.
 
