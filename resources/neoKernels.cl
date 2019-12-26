@@ -137,6 +137,53 @@ float multiplyOHVsT(
     return sum;
 }
 
+float multiplyExpOHVs(
+    global const float* nonZeroValues,
+    global const int* rowRanges,
+    global const int* columnIndices,
+    global const int* nonZeroIndices,
+    int row,
+    int oneHotSize
+) {
+    float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+        float value = nonZeroValues[j];
+
+		sum += (value > 0.0f ? 1.0f + value : exp(value));
+	}
+
+    return sum;
+}
+
+float multiplyExpOHVsT(
+    global const float* nonZeroValues,
+    global const int* columnRanges,
+    global const int* rowIndices,
+    global const int* nonZeroValueIndices,
+    global const int* nonZeroIndices,
+    int column,
+    int oneHotSize
+) {
+    float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
+
+		float value = nonZeroValues[nonZeroValueIndices[j]];
+        
+        sum += (value > 0.0f ? 1.0f + value : exp(value));
+	}
+
+    return sum;
+}
+
 void deltaOHVs(
     global float* nonZeroValues,
     global const int* rowRanges,
@@ -273,7 +320,7 @@ void kernel scForward(
 
     int hiddenIndex = address3(hiddenPosition, hiddenSize);
 
-    hiddenActivations[hiddenIndex] += multiplyOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
+    hiddenActivations[hiddenIndex] += multiplyExpOHVs(nonZeroValues, rowRanges, columnIndices, visibleCs, hiddenIndex, visibleSize.z);
 }
 
 void kernel scInhibit(
@@ -315,35 +362,18 @@ void kernel scLearn(
 
     int visibleColumnIndex = address2(visibleColumnPosition, visibleSize.xy);
 
-    int maxIndex = 0;
-    float maxValue = -999999.0f;
+    int visibleC = visibleCs[visibleColumnIndex];
 
     for (int c = 0; c < visibleSize.z; c++) {
         int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
 
-        float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
+        float sum = multiplyExpOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
 
-        if (sum > maxValue) {
-            maxValue = sum;
+        sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
 
-            maxIndex = c;
-        }
-    }
+        float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - sum);
 
-    int visibleC = visibleCs[visibleColumnIndex];
-
-    if (maxIndex != visibleC) {
-        for (int c = 0; c < visibleSize.z; c++) {
-            int visibleIndex = address3((int3)(visibleColumnPosition, c), visibleSize);
-
-            float sum = multiplyOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, visibleIndex, hiddenSize.z);
-
-            sum /= max(1, countT(columnRanges, visibleIndex) / hiddenSize.z);
-
-            float delta = alpha * ((c == visibleC ? 1.0f : 0.0f) - (sum > 0.0f ? 1.0f + sum : exp(sum)));
-
-            deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
-        }
+        deltaOHVsT(nonZeroValues, columnRanges, rowIndices, nonZeroValueIndices, hiddenCs, delta, visibleIndex, hiddenSize.z);
     }
 }
 
