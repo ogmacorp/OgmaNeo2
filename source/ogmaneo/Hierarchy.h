@@ -10,6 +10,7 @@
 
 #include "SparseCoder.h"
 #include "Predictor.h"
+#include "Actor.h"
 
 #include <memory>
 
@@ -17,7 +18,8 @@ namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
     _none = 0,
-    _predict = 1
+    _prediction = 1,
+    _action = 2
 };
 
 // A SPH
@@ -35,6 +37,9 @@ public:
 
         int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
 
+        // If there is an actor (only valid for first layer)
+        int _historyCapacity;
+
         LayerDesc()
         :
         _hiddenSize(4, 4, 16),
@@ -42,13 +47,15 @@ public:
         _lRadius(2),
         _pRadius(2),
         _ticksPerUpdate(2),
-        _temporalHorizon(2)
+        _temporalHorizon(2),
+        _historyCapacity(32)
         {}
     };
 private:
     // Layers
     std::vector<SparseCoder> _scLayers;
     std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
+    std::vector<std::unique_ptr<Actor>> _aLayers;
 
     // Histories
     std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
@@ -91,7 +98,8 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
-        bool learnEnabled = true // Whether learning is enabled
+        bool learnEnabled = true, // Whether learning is enabled
+        float reward = 0.0f // Optional reward for actor layers
     );
 
     // Write to stream
@@ -113,6 +121,9 @@ public:
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
+        if (_aLayers[i] != nullptr) // If is an action layer
+            return _aLayers[i]->getHiddenCs();
+
         return _pLayers.front()[i]->getHiddenCs();
     }
 
@@ -157,17 +168,27 @@ public:
     }
 
     // Retrieve predictor layer(s)
-    std::vector<std::unique_ptr<Predictor>> &getPLayer(
+    std::vector<std::unique_ptr<Predictor>> &getPLayers(
         int l // Layer index
     ) {
         return _pLayers[l];
     }
 
     // Retrieve predictor layer(s), const version
-    const std::vector<std::unique_ptr<Predictor>> &getPLayer(
+    const std::vector<std::unique_ptr<Predictor>> &getPLayers(
         int l // Layer index
     ) const {
         return _pLayers[l];
+    }
+
+    // Retrieve predictor layer(s)
+    std::vector<std::unique_ptr<Actor>> &getALayers() {
+        return _aLayers;
+    }
+
+    // Retrieve predictor layer(s), const version
+    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
+        return _aLayers;
     }
 };
 } // namespace ogmaneo
