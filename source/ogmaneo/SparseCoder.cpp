@@ -62,7 +62,7 @@ void SparseCoder::inhibit(
 
         float sum = _laterals.multiplyNoDiagonalOHVs(_hiddenCsTemp, hiddenIndex, _hiddenSize.z) / std::max(1, _laterals.count(hiddenIndex) / _hiddenSize.z - 1); // -1 for missing diagonal
         
-        _hiddenActivations[hiddenIndex] += _hiddenStimuli[hiddenIndex] * (1.0f - sum);
+        _hiddenActivations[hiddenIndex] += _hiddenStimuli[hiddenIndex] - sum;
 
         if (_hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = _hiddenActivations[hiddenIndex];
@@ -87,10 +87,10 @@ void SparseCoder::learn(
         VisibleLayer &vl = _visibleLayers[vli];
         const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-        vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, 1.0f / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
+        vl._weights.hebbOHVs(*inputCs[vli], hiddenIndexMax, vld._size.z, 0.5f / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
     }
 
-    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 1.0f / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
+    _laterals.hebbOHVs(_hiddenCs, hiddenIndexMax, _hiddenSize.z, 0.5f / (1.0f + _alpha * _hiddenUsages[hiddenIndexMax]));
 
     _hiddenUsages[hiddenIndexMax] = std::min(999999, _hiddenUsages[hiddenIndexMax] + 1);
 }

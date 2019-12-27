@@ -22,7 +22,6 @@ void Hierarchy::initRandom(
     // Create layers
     _scLayers.resize(layerDescs.size());
     _pLayers.resize(layerDescs.size());
-    _hiddenCsPrev.resize(layerDescs.size());
 
     _ticks.assign(layerDescs.size(), 0);
 
@@ -147,8 +146,6 @@ void Hierarchy::initRandom(
 		
         // Create the sparse coding layer
         _scLayers[l].initRandom(cs, layerDescs[l]._hiddenSize, layerDescs[l]._lRadius, scVisibleLayerDescs);
-
-        _hiddenCsPrev[l] = IntBuffer(layerDescs[l]._hiddenSize.x * layerDescs[l]._hiddenSize.y, 0);
     }
 }
 
@@ -247,21 +244,8 @@ void Hierarchy::step(
             // Updated
             _updates[l] = true;
 
-            // Copy
-#ifdef KERNEL_NOTHREAD
-            for (int x = 0; x < _scLayers[l].getHiddenCs().size(); x++)
-                copyInt(x, cs._rng, &_scLayers[l].getHiddenCs(), &_hiddenCsPrev[l]);
-#else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &_scLayers[l].getHiddenCs(), &_hiddenCsPrev[l]), _scLayers[l].getHiddenCs().size(), cs._rng, cs._batchSize1);
-#endif
-
-            std::vector<const IntBuffer*> allInputCs = constGet(_histories[l]);
-
-            if (allInputCs.size() < _scLayers[l].getNumVisibleLayers())
-                allInputCs.push_back(&_hiddenCsPrev[l]);
-
             // Activate sparse coder
-            _scLayers[l].step(cs, allInputCs, learnEnabled);
+            _scLayers[l].step(cs, constGet(_histories[l]), learnEnabled);
 
             // Add to next layer's history
             if (l < _scLayers.size() - 1) {
@@ -353,8 +337,6 @@ void Hierarchy::writeToStream(
             if (exists)
                 _pLayers[l][v]->writeToStream(os);
         }
-
-        writeBufferToStream(os, &_hiddenCsPrev[l]);
     }
 }
 
@@ -374,7 +356,6 @@ void Hierarchy::readFromStream(
 
     _scLayers.resize(numLayers);
     _pLayers.resize(numLayers);
-    _hiddenCsPrev.resize(numLayers);
 
     _ticks.resize(numLayers);
 
@@ -420,7 +401,5 @@ void Hierarchy::readFromStream(
             else
                 _pLayers[l][v] = nullptr;
         }
-
-        readBufferFromStream(is, &_hiddenCsPrev[l]);
     }
 }

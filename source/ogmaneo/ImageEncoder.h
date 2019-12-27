@@ -90,7 +90,7 @@ public:
     ImageEncoder()
     :
     _alpha(0.1f),
-    _gamma(0.3f)
+    _gamma(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization
