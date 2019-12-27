@@ -82,8 +82,8 @@ void Hierarchy::initRandom(
 			}
 
             // Predictors
-            _pLayers[l].resize(inputSizes.size(), nullptr);
-            _aLayers.resize(inputSizes.size(), nullptr);
+            _pLayers[l].resize(inputSizes.size());
+            _aLayers.resize(inputSizes.size());
 
             // Predictor visible layer descriptors
             std::vector<Predictor::VisibleLayerDesc> pVisibleLayerDescs(1);
@@ -201,6 +201,18 @@ const Hierarchy &Hierarchy::operator=(
         }
     }
 
+    _aLayers.resize(_inputSizes.size());
+    
+    for (int v = 0; v < _aLayers.size(); v++) {
+        if (other._aLayers[v] != nullptr) {
+            _aLayers[v] = std::make_unique<Actor>();
+
+            (*_aLayers[v]) = (*other._aLayers[v]);
+        }
+        else
+            _aLayers[v] = nullptr;
+    }
+
     return *this;
 }
 
@@ -316,9 +328,8 @@ void Hierarchy::step(
             if (l == 0) {
                 // Step actors
                 for (int p = 0; p < _aLayers.size(); p++) {
-                    if (_aLayers[p] != nullptr) {
+                    if (_aLayers[p] != nullptr)
                         _aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled);
-                    }
                 }
             }
         }
