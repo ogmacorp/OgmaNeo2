@@ -43,31 +43,46 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-
+    
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
+        const std::vector<const IntBuffer*> &inputCs
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        int vli
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs,
-        bool learnEnabled
+        const std::vector<const IntBuffer*> &inputCs
     ) {
-        sc->forward(pos, rng, inputCs, learnEnabled);
+        sc->forward(pos, rng, inputCs);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        SparseCoder* sc,
+        const std::vector<const IntBuffer*> &inputCs,
+        int vli
+    ) {
+        sc->learn(pos, rng, inputCs, vli);
     }
 
 public:
-    float _alpha; // Activation parameter
+    float _alpha; // Weight learning rate
 
     // Defaults
     SparseCoder()
     :
-    _alpha(0.01f)
+    _alpha(0.5f)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -121,13 +136,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return _hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) const {
-        return _visibleLayers[i]._weights;
     }
 };
 } // namespace ogmaneo
