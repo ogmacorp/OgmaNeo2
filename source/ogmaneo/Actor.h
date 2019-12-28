@@ -104,12 +104,15 @@ public:
     float _beta; // Action learning rate
     float _gamma; // Discount factor
 
+    int _historyIters; // Sample iters
+
     // Defaults
     Actor()
     :
     _alpha(0.05f),
     _beta(0.1f),
-    _gamma(0.99f)
+    _gamma(0.99f),
+    _historyIters(8)
     {}
 
     Actor(
