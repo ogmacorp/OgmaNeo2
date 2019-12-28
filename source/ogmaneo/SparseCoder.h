@@ -35,16 +35,10 @@ public:
 
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
-    int _lateralRadius;
 
-    FloatBuffer _hiddenStimuli;
     FloatBuffer _hiddenActivations;
 
     IntBuffer _hiddenCs; // Hidden states
-    IntBuffer _hiddenCsTemp; // Temporaries for hidden state iteration
-    IntBuffer _hiddenUsages; // Number of times used
-
-    SparseMatrix _laterals;
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> _visibleLayers;
@@ -96,14 +90,12 @@ private:
     }
 
 public:
-    int _explainIters; // Explaining-away iterations
     float _alpha; // Learning decay
 
     // Defaults
     SparseCoder()
     :
-    _explainIters(3),
-    _alpha(0.3f)
+    _alpha(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
