@@ -329,7 +329,7 @@ void Actor::step(
             const HistorySample &sPrev = *_historySamples[historyIndex - 1];
             const HistorySample &s = *_historySamples[historyIndex];
 
-            // Compute (partial) Q value, rest is completed in the kernel
+            // Compute (partial) values, rest is completed in the kernel
             float q = 0.0f;
             float g = 1.0f;
 
