@@ -38,6 +38,7 @@ public:
         int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
 
         // If there is an actor (only valid for first layer)
+        int _aRadius;
         int _historyCapacity;
 
         LayerDesc()
@@ -48,6 +49,7 @@ public:
         _pRadius(2),
         _ticksPerUpdate(2),
         _temporalHorizon(2),
+        _aRadius(2),
         _historyCapacity(32)
         {}
     };
