@@ -48,7 +48,7 @@ public:
         _ticksPerUpdate(2),
         _temporalHorizon(2),
         _aRadius(2),
-        _historyCapacity(64)
+        _historyCapacity(16)
         {}
     };
 private:
