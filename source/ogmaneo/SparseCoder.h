@@ -36,8 +36,6 @@ public:
 private:
     Int3 _hiddenSize; // Size of hidden/output layer
 
-    FloatBuffer _hiddenActivations;
-
     IntBuffer _hiddenCs; // Hidden states
 
     // Visible layers and associated descriptors
@@ -45,52 +43,26 @@ private:
     std::vector<VisibleLayerDesc> _visibleLayerDescs;
     
     // --- Kernels ---
-    
+
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
-    );
-
-    void inhibit(
-        const Int2 &pos,
-        std::mt19937 &rng
-    );
-
-    void learn(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     );
 
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputCs);
-    }
-
-    static void inhibitKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc
-    ) {
-        sc->inhibit(pos, rng);
-    }
-
-    static void learnKernel(
-        const Int2 &pos,
-        std::mt19937 &rng,
-        SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
-    ) {
-        sc->learn(pos, rng, inputCs);
+        sc->forward(pos, rng, inputCs, learnEnabled);
     }
 
 public:
-    float _alpha; // Learning decay
+    float _alpha; // Activation parameter
 
     // Defaults
     SparseCoder()
@@ -102,7 +74,6 @@ public:
     void initRandom(
         ComputeSystem &cs, // Compute system
         const Int3 &hiddenSize, // Hidden/output size
-        int lateralRadius,
         const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
     );
 
