@@ -48,7 +48,7 @@ void Actor::forward(
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            sum += vl._actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld._size.z);
+            sum += vl._actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
         sum /= std::max(1, count);
@@ -82,6 +82,7 @@ void Actor::forward(
             break;
         }
     }
+    
     _hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
