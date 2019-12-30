@@ -74,7 +74,7 @@ void Actor::forward(
     float sumSoFar = 0.0f;
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
-        sumSoFar += activations[hc] / std::max(0.0001f, total);
+        sumSoFar += activations[hc];
 
         if (sumSoFar >= cusp) {
             selectIndex = hc;

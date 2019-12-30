@@ -45,7 +45,7 @@ void SparseCoder::forward(
 void SparseCoder::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs,
+    const IntBuffer* inputCs,
     int vli
 ) {
     VisibleLayer &vl = _visibleLayers[vli];
@@ -53,7 +53,7 @@ void SparseCoder::learn(
 
     int visibleColumnIndex = address2(pos, Int2(vld._size.x, vld._size.y));
 
-    int targetC = (*inputCs[vli])[visibleColumnIndex];
+    int targetC = (*inputCs)[visibleColumnIndex];
 
     int maxIndex = 0;
     float maxActivation = -999999.0f;
@@ -146,9 +146,9 @@ void SparseCoder::step(
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < vld._size.x; x++)
                 for (int y = 0; y < vld._size.y; y++)
-                    learn(Int2(x, y), cs._rng, inputCs, vli);
+                    learn(Int2(x, y), cs._rng, inputCs[vli], vli);
 #else
-            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
+            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld._size.x, vld._size.y), cs._rng, cs._batchSize2);
 #endif
         }
     }
