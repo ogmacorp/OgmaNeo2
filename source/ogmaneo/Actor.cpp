@@ -247,8 +247,6 @@ const Actor &Actor::operator=(
 ) {
     _hiddenSize = other._hiddenSize;
 
-    _historySize = other._historySize;
-
     _hiddenCs = other._hiddenCs;
 
     _hiddenValues = other._hiddenValues;
@@ -259,6 +257,9 @@ const Actor &Actor::operator=(
     _alpha = other._alpha;
     _beta = other._beta;
     _gamma = other._gamma;
+    _historyIters = other._historyIters;
+
+    _historySize = other._historySize;
 
     _historySamples.resize(other._historySamples.size());
 
@@ -387,8 +388,6 @@ void Actor::writeToStream(
     os.write(reinterpret_cast<const char*>(&_gamma), sizeof(float));
     os.write(reinterpret_cast<const char*>(&_historyIters), sizeof(int));
 
-    os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
-
     writeBufferToStream(os, &_hiddenCs);
 
     writeBufferToStream(os, &_hiddenValues);
@@ -409,6 +408,8 @@ void Actor::writeToStream(
         writeSMToStream(os, vl._valueWeights);
         writeSMToStream(os, vl._actionWeights);
     }
+
+    os.write(reinterpret_cast<const char*>(&_historySize), sizeof(int));
 
     int numHistorySamples = _historySamples.size();
 
@@ -440,8 +441,6 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&_gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&_historyIters), sizeof(int));
 
-    is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
-
     readBufferFromStream(is, &_hiddenCs);
 
     readBufferFromStream(is, &_hiddenValues);
@@ -465,6 +464,8 @@ void Actor::readFromStream(
         readSMFromStream(is, vl._valueWeights);
         readSMFromStream(is, vl._actionWeights);
     }
+
+    is.read(reinterpret_cast<char*>(&_historySize), sizeof(int));
 
     int numHistorySamples;
 
