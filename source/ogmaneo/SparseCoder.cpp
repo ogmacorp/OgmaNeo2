@@ -76,7 +76,7 @@ void SparseCoder::learn(
         for (int vc = 0; vc < vld._size.z; vc++) {
             int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld._size);
 
-            float delta = _alpha * ((vc == targetC ? 1.0f : 0.0f) - (activations[vc] > 0.0f ? 1.0f + activations[vc] : std::exp(activations[vc])));
+            float delta = _alpha * ((vc == targetC ? 1.0f : 0.0f) - sigmoid(activations[vc]));
 
             vl._weights.deltaOHVsT(_hiddenCs, delta, visibleIndex, _hiddenSize.z);
         }
@@ -98,7 +98,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(-0.01f, 0.0f);
+    std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
 
     // Create layers
     for (int vli = 0; vli < _visibleLayers.size(); vli++) {
