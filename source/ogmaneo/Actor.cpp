@@ -274,7 +274,7 @@ const Actor &Actor::operator=(
 
 void Actor::step(
     ComputeSystem &cs,
-    const std::vector<const IntBuffer*> &visibleCs,
+    const std::vector<const IntBuffer*> &inputCs,
     const IntBuffer* hiddenCsPrev,
     float reward,
     bool learnEnabled
@@ -286,9 +286,9 @@ void Actor::step(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, visibleCs);
+            forward(Int2(x, y), cs._rng, inputCs);
 #else
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     // Add sample
@@ -318,9 +318,9 @@ void Actor::step(
             // Copy visible Cs
 #ifdef KERNEL_NOTHREAD
             for (int x = 0; x < numVisibleColumns; x++)
-                copyInt(x, cs._rng, visibleCs[vli], &s._inputCs[vli]);
+                copyInt(x, cs._rng, inputCs[vli], &s._inputCs[vli]);
 #else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &s._inputCs[vli]), numVisibleColumns, cs._rng, cs._batchSize1);
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s._inputCs[vli]), numVisibleColumns, cs._rng, cs._batchSize1);
 #endif
         }
 
