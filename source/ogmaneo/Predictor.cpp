@@ -22,18 +22,18 @@ void Predictor::forward(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        _hiddenActivations[hiddenIndex] = 0.0f;
+        float sum = 0.0f;
 
         // For each visible layer
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            _hiddenActivations[hiddenIndex] += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
+            sum += vl._weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld._size.z);
         }
 
-        if (_hiddenActivations[hiddenIndex] > maxActivation) {
-            maxActivation = _hiddenActivations[hiddenIndex];
+        if (sum > maxActivation) {
+            maxActivation = sum;
             maxIndex = hc;
         }
     }
@@ -53,25 +53,26 @@ void Predictor::learn(
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
-        float target = (hc == targetC ? 1.0f : -1.0f);
-
+        float sum = 0.0f;
         int count = 0;
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
+            sum += vl._weights.multiplyOHVs(vl._inputCsPrev, hiddenIndex, vld._size.z);
             count += vl._weights.count(hiddenIndex) / vld._size.z;
         }
 
-        float delta = _alpha * (target - std::tanh(_hiddenActivations[hiddenIndex] / std::max(1, count))); // Delta
+        sum /= std::max(1, count);
 
-        // For each visible layer
+        float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.deltaOHVs(vl._inputCsPrev, delta, hiddenIndex, vld._size.z); // Apply delta rule
+            vl._weights.deltaOHVs(vl._inputCsPrev, delta, hiddenIndex, vld._size.z);
         }
     }
 }
@@ -111,13 +112,11 @@ void Predictor::initRandom(
 
     // Hidden Cs
     _hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    _hiddenActivations = FloatBuffer(numHidden, 0.0f);
 }
 
 void Predictor::activate(
     ComputeSystem &cs,
-    const std::vector<const IntBuffer*> &visibleCs
+    const std::vector<const IntBuffer*> &inputCs
 ) {
     int numHiddenColumns = _hiddenSize.x * _hiddenSize.y;
     int numHidden = numHiddenColumns * _hiddenSize.z;
@@ -126,9 +125,9 @@ void Predictor::activate(
 #ifdef KERNEL_NOTHREAD
     for (int x = 0; x < _hiddenSize.x; x++)
         for (int y = 0; y < _hiddenSize.y; y++)
-            forward(Int2(x, y), cs._rng, visibleCs);
+            forward(Int2(x, y), cs._rng, inputCs);
 #else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, visibleCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(_hiddenSize.x, _hiddenSize.y), cs._rng, cs._batchSize2);
 #endif
 
     // Copy to prevs
@@ -140,9 +139,9 @@ void Predictor::activate(
 
 #ifdef KERNEL_NOTHREAD
         for (int x = 0; x < numVisibleColumns; x++)
-            copyInt(x, cs._rng, visibleCs[vli], &vl._inputCsPrev);
+            copyInt(x, cs._rng, inputCs[vli], &vl._inputCsPrev);
 #else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, visibleCs[vli], &vl._inputCsPrev), numVisibleColumns, cs._rng, cs._batchSize1);
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl._inputCsPrev), numVisibleColumns, cs._rng, cs._batchSize1);
 #endif
     }
 }
@@ -173,8 +172,6 @@ void Predictor::writeToStream(
 
     writeBufferToStream(os, &_hiddenCs);
 
-    writeBufferToStream(os, &_hiddenActivations);
-
     int numVisibleLayers = _visibleLayers.size();
 
     os.write(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -202,8 +199,6 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&_alpha), sizeof(float));
 
     readBufferFromStream(is, &_hiddenCs);
-
-    readBufferFromStream(is, &_hiddenActivations);
 
     int numVisibleLayers;
     
