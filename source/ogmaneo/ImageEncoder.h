@@ -84,7 +84,7 @@ private:
 
 public:
     float _alpha; // Resource depletion rate
-    float _gamma; // SOM falloff
+    float _gamma; // Gas falloff
 
     // Defaults
     ImageEncoder()

@@ -8,7 +8,13 @@
 
 #include "ImageEncoder.h"
 
+#include <algorithm>
+
 using namespace ogmaneo;
+
+bool pairfiCompare(const std::pair<float, int> &lhs, const std::pair<float, int> &rhs) {
+    return lhs.first > rhs.first; // Backwards so largest is in front
+}
 
 void ImageEncoder::forward(
     const Int2 &pos,
@@ -20,6 +26,8 @@ void ImageEncoder::forward(
 
     int maxIndex = 0;
     float maxActivation = -999999.0f;
+
+    std::vector<std::pair<float, int>> activations(_hiddenSize.z);
 
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
@@ -38,6 +46,8 @@ void ImageEncoder::forward(
 
         sum /= std::max(1, count);
 
+        activations[hc] = std::make_pair(sum, hc);
+
         if (sum > maxActivation) {
             maxActivation = sum;
             maxIndex = hc;
@@ -47,12 +57,12 @@ void ImageEncoder::forward(
     _hiddenCs[hiddenColumnIndex] = maxIndex;
 
     if (learnEnabled) {
-        for (int hc = 0; hc < _hiddenSize.z; hc++) {
-            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
+        std::sort(activations.begin(), activations.end(), pairfiCompare);
 
-            float delta = maxIndex - hc;
+        for (int i = 0; i < _hiddenSize.z; i++) {
+            int hiddenIndex = address3(Int3(pos.x, pos.y, activations[i].second), _hiddenSize);
 
-            float strength = std::exp(-delta * delta * _gamma / std::max(0.001f, _hiddenResources[hiddenIndex])) * _hiddenResources[hiddenIndex];
+            float strength = std::exp(-i * _gamma / std::max(0.001f, _hiddenResources[hiddenIndex])) * _hiddenResources[hiddenIndex];
 
             _hiddenResources[hiddenIndex] -= _alpha * strength;
 
