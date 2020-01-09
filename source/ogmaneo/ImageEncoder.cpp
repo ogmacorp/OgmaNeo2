@@ -62,7 +62,7 @@ void ImageEncoder::forward(
         for (int i = 0; i < _hiddenSize.z; i++) {
             int hiddenIndex = address3(Int3(pos.x, pos.y, activations[i].second), _hiddenSize);
 
-            float strength = std::exp(-i * _gamma / std::max(0.001f, _hiddenResources[hiddenIndex])) * _hiddenResources[hiddenIndex];
+            float strength = std::exp(-i * i * _gamma / std::max(0.001f, _hiddenResources[hiddenIndex])) * _hiddenResources[hiddenIndex];
 
             _hiddenResources[hiddenIndex] -= _alpha * strength;
 
