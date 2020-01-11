@@ -50,38 +50,29 @@ void Predictor::learn(
 
     int targetC = (*hiddenTargetCs)[hiddenColumnIndex];
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-
     for (int hc = 0; hc < _hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), _hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
             sum += vl._weights.multiplyOHVs(vl._inputCsPrev, hiddenIndex, vld._size.z);
+            count += vl._weights.count(hiddenIndex) / vld._size.z;
         }
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
-            maxIndex = hc;
-        }
-    }
+        sum /= std::max(1, count);
 
-    if (maxIndex != targetC) {
-        int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), _hiddenSize);
-        int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), _hiddenSize);
-        
-        // For each visible layer
+        float delta = _alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+
         for (int vli = 0; vli < _visibleLayers.size(); vli++) {
             VisibleLayer &vl = _visibleLayers[vli];
             const VisibleLayerDesc &vld = _visibleLayerDescs[vli];
 
-            vl._weights.deltaOHVs(vl._inputCsPrev, _alpha, hiddenIndexTarget, vld._size.z);
-            vl._weights.deltaOHVs(vl._inputCsPrev, -_alpha, hiddenIndexMax, vld._size.z);
+            vl._weights.deltaOHVs(vl._inputCsPrev, delta, hiddenIndex, vld._size.z);
         }
     }
 }
