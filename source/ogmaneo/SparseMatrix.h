@@ -1,9 +1,9 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
-//  in the OGMANEOLICENSE.md file included in this distribution.
+//  in the OGMANEO_LICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
 #pragma once
