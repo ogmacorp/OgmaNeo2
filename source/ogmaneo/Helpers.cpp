@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -30,7 +30,7 @@ void ogmaneo::runKernel1(
     for (int x = 0; x < batches; x++) {
         int itemBatchSize = std::min(size - x * batchSize, batchSize);
         
-        futures[x] = std::move(cs._pool.push([](int id, int seed, int pos, int batchSize, const std::function<void(int, std::mt19937 &)> &func) {
+        futures[x] = std::move(cs.pool.push([](int id, int seed, int pos, int batchSize, const std::function<void(int, std::mt19937 &)> &func) {
             std::mt19937 subRng(seed);
 
             for (int x = 0; x < batchSize; x++)
@@ -61,7 +61,7 @@ void ogmaneo::runKernel2(
         for (int y = 0; y < batches.y; y++) {
             Int2 itemBatchSize = Int2(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y));
 
-            futures[x + y * batches.x] = std::move(cs._pool.push([](int id, int seed, const Int2 &pos, const Int2 &batchSize, const std::function<void(const Int2 &, std::mt19937 &)> &func) {
+            futures[x + y * batches.x] = std::move(cs.pool.push([](int id, int seed, const Int2 &pos, const Int2 &batchSize, const std::function<void(const Int2 &, std::mt19937 &)> &func) {
                 std::mt19937 subRng(seed);
 
                 for (int x = 0; x < batchSize.x; x++)
@@ -100,7 +100,7 @@ void ogmaneo::runKernel3(
             for (int z = 0; z < batches.z; z++) {
                 Int3 itemBatchSize = Int3(std::min(size.x - x * batchSize.x, batchSize.x), std::min(size.y - y * batchSize.y, batchSize.y), std::min(size.z - z * batchSize.z, batchSize.z));
 
-                futures[x + y * batches.x + z * batches.x * batches.y] = std::move(cs._pool.push([](int id, int seed, const Int3 &pos, const Int3 &batchSize, const std::function<void(const Int3 &, std::mt19937 &)> &func) {
+                futures[x + y * batches.x + z * batches.x * batches.y] = std::move(cs.pool.push([](int id, int seed, const Int3 &pos, const Int3 &batchSize, const std::function<void(const Int3 &, std::mt19937 &)> &func) {
                     std::mt19937 subRng(seed);
 
                     for (int x = 0; x < batchSize.x; x++)
@@ -263,11 +263,11 @@ void ogmaneo::initSMLocalRF(
 
     int weightsSize = numOut * numWeightsPerOutput;
 
-    mat._nonZeroValues.reserve(weightsSize);
+    mat.nonZeroValues.reserve(weightsSize);
 
-    mat._rowRanges.resize(numOut + 1);
+    mat.rowRanges.resize(numOut + 1);
 
-    mat._columnIndices.reserve(weightsSize);
+    mat.columnIndices.reserve(weightsSize);
 
     // Initialize weight matrix
     for (int ox = 0; ox < outSize.x; ox++)
@@ -293,63 +293,63 @@ void ogmaneo::initSMLocalRF(
 
                             int inIndex = address3(inPos, inSize);
 
-                            mat._nonZeroValues.push_back(0.0f);
-                            mat._columnIndices.push_back(inIndex);
+                            mat.nonZeroValues.push_back(0.0f);
+                            mat.columnIndices.push_back(inIndex);
                             
                             nonZeroInRow++;
                         }
                     }
 
-                mat._rowRanges[address3(outPos, outSize)] = nonZeroInRow;
+                mat.rowRanges[address3(outPos, outSize)] = nonZeroInRow;
             }
         }
 
-    mat._nonZeroValues.shrink_to_fit();
-    mat._columnIndices.shrink_to_fit();
+    mat.nonZeroValues.shrink_to_fit();
+    mat.columnIndices.shrink_to_fit();
 
     // Convert rowRanges from counts to cumulative counts
     int offset = 0;
 
 	for (int i = 0; i < numOut; i++) {
-		int temp = mat._rowRanges[i];
+		int temp = mat.rowRanges[i];
 
-		mat._rowRanges[i] = offset;
+		mat.rowRanges[i] = offset;
 
 		offset += temp;
 	}
 
-    mat._rowRanges[numOut] = offset;
+    mat.rowRanges[numOut] = offset;
 
-    mat._rows = numOut;
-    mat._columns = inSize.x * inSize.y * inSize.z;
+    mat.rows = numOut;
+    mat.columns = inSize.x * inSize.y * inSize.z;
 }
 
 void ogmaneo::writeSMToStream(
     std::ostream &os,
     const SparseMatrix &mat
 ) {
-    os.write(reinterpret_cast<const char*>(&mat._rows), sizeof(int));
-    os.write(reinterpret_cast<const char*>(&mat._columns), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&mat.rows), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&mat.columns), sizeof(int));
 
-    writeBufferToStream(os, &mat._nonZeroValues);
-    writeBufferToStream(os, &mat._nonZeroValueIndices);
-    writeBufferToStream(os, &mat._rowRanges);
-    writeBufferToStream(os, &mat._columnIndices);
-    writeBufferToStream(os, &mat._columnRanges);
-    writeBufferToStream(os, &mat._rowIndices);
+    writeBufferToStream(os, &mat.nonZeroValues);
+    writeBufferToStream(os, &mat.nonZeroValueIndices);
+    writeBufferToStream(os, &mat.rowRanges);
+    writeBufferToStream(os, &mat.columnIndices);
+    writeBufferToStream(os, &mat.columnRanges);
+    writeBufferToStream(os, &mat.rowIndices);
 }
 
 void ogmaneo::readSMFromStream(
     std::istream &is,
     SparseMatrix &mat
 ) {
-    is.read(reinterpret_cast<char*>(&mat._rows), sizeof(int));
-    is.read(reinterpret_cast<char*>(&mat._columns), sizeof(int));
+    is.read(reinterpret_cast<char*>(&mat.rows), sizeof(int));
+    is.read(reinterpret_cast<char*>(&mat.columns), sizeof(int));
 
-    readBufferFromStream(is, &mat._nonZeroValues);
-    readBufferFromStream(is, &mat._nonZeroValueIndices);
-    readBufferFromStream(is, &mat._rowRanges);
-    readBufferFromStream(is, &mat._columnIndices);
-    readBufferFromStream(is, &mat._columnRanges);
-    readBufferFromStream(is, &mat._rowIndices);
+    readBufferFromStream(is, &mat.nonZeroValues);
+    readBufferFromStream(is, &mat.nonZeroValueIndices);
+    readBufferFromStream(is, &mat.rowRanges);
+    readBufferFromStream(is, &mat.columnIndices);
+    readBufferFromStream(is, &mat.columnRanges);
+    readBufferFromStream(is, &mat.rowIndices);
 }

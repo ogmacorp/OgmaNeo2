@@ -16,48 +16,48 @@ class Actor {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size; // Visible/input size
+        Int3 size; // Visible/input size
 
-        int _radius; // Radius onto input
+        int radius; // Radius onto input
 
         // Defaults
         VisibleLayerDesc()
         :
-        _size(4, 4, 16),
-        _radius(2)
+        size(4, 4, 16),
+        radius(2)
         {}
     };
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _valueWeights; // Value function weights
-        SparseMatrix _actionWeights; // Action function weights
+        SparseMatrix valueWeights; // Value function weights
+        SparseMatrix actionWeights; // Action function weights
     };
 
     // History sample for delayed updates
     struct HistorySample {
-        std::vector<IntBuffer> _inputCs;
-        IntBuffer _hiddenCsPrev;
-        FloatBuffer _hiddenValues;
+        std::vector<IntBuffer> inputCs;
+        IntBuffer hiddenCsPrev;
+        FloatBuffer hiddenValues;
         
-        float _reward;
+        float reward;
     };
 
 private:
-    Int3 _hiddenSize; // Hidden/output/action size
+    Int3 hiddenSize; // Hidden/output/action size
 
     // Current history size - fixed after initialization. Determines length of wait before updating
-    int _historySize;
+    int historySize;
 
-    IntBuffer _hiddenCs; // Hidden states
+    IntBuffer hiddenCs; // Hidden states
 
-    FloatBuffer _hiddenValues; // Hidden value function output buffer
+    FloatBuffer hiddenValues; // Hidden value function output buffer
 
-    std::vector<std::shared_ptr<HistorySample>> _historySamples; // History buffer, fixed length
+    std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
 
     // Visible layers and descriptors
-    std::vector<VisibleLayer> _visibleLayers;
-    std::vector<VisibleLayerDesc> _visibleLayerDescs;
+    std::vector<VisibleLayer> visibleLayers;
+    std::vector<VisibleLayerDesc> visibleLayerDescs;
 
     // --- Kernels ---
 
@@ -100,19 +100,19 @@ private:
     }
 
 public:
-    float _alpha; // Value learning rate
-    float _beta; // Action learning rate
-    float _gamma; // Discount factor
+    float alpha; // Value learning rate
+    float beta; // Action learning rate
+    float gamma; // Discount factor
 
-    int _historyIters; // Sample iters
+    int historyIters; // Sample iters
 
     // Defaults
     Actor()
     :
-    _alpha(0.01f),
-    _beta(0.01f),
-    _gamma(0.99f),
-    _historyIters(16)
+    alpha(0.01f),
+    beta(0.01f),
+    gamma(0.99f),
+    historyIters(16)
     {}
 
     Actor(
@@ -154,45 +154,45 @@ public:
 
     // Get number of visible layers
     int getNumVisibleLayers() const {
-        return _visibleLayers.size();
+        return visibleLayers.size();
     }
 
     // Get a visible layer
     const VisibleLayer &getVisibleLayer(
         int i // Index of layer
     ) const {
-        return _visibleLayers[i];
+        return visibleLayers[i];
     }
 
     // Get a visible layer descriptor
     const VisibleLayerDesc &getVisibleLayerDesc(
         int i // Index of layer
     ) const {
-        return _visibleLayerDescs[i];
+        return visibleLayerDescs[i];
     }
 
     // Get hidden state/output/actions
     const IntBuffer &getHiddenCs() const {
-        return _hiddenCs;
+        return hiddenCs;
     }
 
     // Get the hidden size
     const Int3 &getHiddenSize() const {
-        return _hiddenSize;
+        return hiddenSize;
     }
 
     // Get the value weights for a visible layer
     const SparseMatrix &getValueWeights(
         int i // Index of layer
     ) {
-        return _visibleLayers[i]._valueWeights;
+        return visibleLayers[i].valueWeights;
     }
 
     // Get the action weights for a visible layer
     const SparseMatrix &getActionWeights(
         int i // Index of layer
     ) {
-        return _visibleLayers[i]._actionWeights;
+        return visibleLayers[i].actionWeights;
     }
 };
 } // namespace ogmaneo

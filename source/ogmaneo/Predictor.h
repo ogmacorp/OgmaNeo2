@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -16,33 +16,33 @@ class Predictor {
 public:
     // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size; // Size of input
+        Int3 size; // Size of input
 
-        int _radius; // Radius onto input
+        int radius; // Radius onto input
 
         // Defaults
         VisibleLayerDesc()
         :
-        _size(4, 4, 16),
-        _radius(2)
+        size(4, 4, 16),
+        radius(2)
         {}
     };
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights; // Weight matrix
+        SparseMatrix weights; // Weight matrix
 
-        IntBuffer _inputCsPrev; // Previous timestep (prev) input states
+        IntBuffer inputCsPrev; // Previous timestep (prev) input states
     };
 
 private:
-    Int3 _hiddenSize; // Size of the output/hidden/prediction
+    Int3 hiddenSize; // Size of the output/hidden/prediction
 
-    IntBuffer _hiddenCs; // Hidden state
+    IntBuffer hiddenCs; // Hidden state
 
     // Visible layers and descs
-    std::vector<VisibleLayer> _visibleLayers;
-    std::vector<VisibleLayerDesc> _visibleLayerDescs;
+    std::vector<VisibleLayer> visibleLayers;
+    std::vector<VisibleLayerDesc> visibleLayerDescs;
 
     // --- Kernels ---
 
@@ -77,12 +77,12 @@ private:
     }
 
 public:
-    float _alpha; // Learning rate
+    float alpha; // Learning rate
 
     // Defaults
     Predictor()
     :
-    _alpha(0.1f)
+    alpha(0.1f)
     {}
 
     // Create with random initialization
@@ -116,38 +116,38 @@ public:
 
     // Get number of visible layers
     int getNumVisibleLayers() const {
-        return _visibleLayers.size();
+        return visibleLayers.size();
     }
 
     // Get a visible layer
     const VisibleLayer &getVisibleLayer(
         int i // Index of visible layer
     ) const {
-        return _visibleLayers[i];
+        return visibleLayers[i];
     }
 
     // Get a visible layer descriptor
     const VisibleLayerDesc &getVisibleLayerDesc(
         int i // Index of visible layer
     ) const {
-        return _visibleLayerDescs[i];
+        return visibleLayerDescs[i];
     }
 
     // Get the hidden activations (predictions)
     const IntBuffer &getHiddenCs() const {
-        return _hiddenCs;
+        return hiddenCs;
     }
 
     // Get the hidden size
     const Int3 &getHiddenSize() const {
-        return _hiddenSize;
+        return hiddenSize;
     }
 
     // Get the weights for a visible layer
     const SparseMatrix &getWeights(
         int i // Index of visible layer
     ) {
-        return _visibleLayers[i]._weights;
+        return visibleLayers[i].weights;
     }
 };
 } // Namespace ogmaneo

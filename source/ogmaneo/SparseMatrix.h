@@ -3,7 +3,7 @@
 //  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
-//  in the OGMANEO_LICENSE.md file included in this distribution.
+//  in the OGMANEOLICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
 #pragma once
@@ -15,16 +15,16 @@
 namespace ogmaneo {
 // Compressed sparse row (CSR) format
 struct SparseMatrix {
-	int _rows, _columns; // Dimensions
+	int rows, columns; // Dimensions
 
-	std::vector<float> _nonZeroValues;
-	std::vector<int> _rowRanges;
-	std::vector<int> _columnIndices;
+	std::vector<float> nonZeroValues;
+	std::vector<int> rowRanges;
+	std::vector<int> columnIndices;
 
 	// Transpose
-	std::vector<int> _nonZeroValueIndices;
-	std::vector<int> _columnRanges;
-	std::vector<int> _rowIndices;
+	std::vector<int> nonZeroValueIndices;
+	std::vector<int> columnRanges;
+	std::vector<int> rowIndices;
 
 	// --- Init ---
 

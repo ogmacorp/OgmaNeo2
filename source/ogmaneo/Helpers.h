@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -32,10 +32,10 @@ struct Vec2 {
     Vec2() {}
 
     Vec2(
-        T X,
-        T Y
+        T x,
+        T y
     )
-    : x(X), y(Y)
+    : x(x), y(y)
     {}
 };
 
@@ -48,11 +48,11 @@ struct Vec3 {
     {}
 
     Vec3(
-        T X,
-        T Y,
-        T Z
+        T x,
+        T y,
+        T z
     )
-    : x(X), y(Y), z(Z)
+    : x(x), y(y), z(z)
     {}
 };
 
@@ -64,12 +64,12 @@ struct Vec4 {
     {}
 
     Vec4(
-        T X,
-        T Y,
-        T Z,
-        T W
+        T x,
+        T y,
+        T z,
+        T w
     )
-    : x(X), y(Y), z(Z), w(W)
+    : x(x), y(y), z(z), w(w)
     {}
 };
 
@@ -261,10 +261,10 @@ void writeBufferToStream(
 ) {
     int size = buf->size();
 
-    os.write(reinterpret_cast<const char*>(&size), sizeof(int));
+    os.write(reinterpretcast<const char*>(&size), sizeof(int));
 
     if (size > 0)
-        os.write(reinterpret_cast<const char*>(buf->data()), size * sizeof(T));
+        os.write(reinterpretcast<const char*>(buf->data()), size * sizeof(T));
 }
 
 template <class T>
@@ -274,7 +274,7 @@ void readBufferFromStream(
 ) {
     int size;
 
-    is.read(reinterpret_cast<char*>(&size), sizeof(int));
+    is.read(reinterpretcast<char*>(&size), sizeof(int));
 
     if (size == 0)
         buf->clear();
@@ -282,7 +282,7 @@ void readBufferFromStream(
         if (buf->size() != size)
             buf->resize(size);
 
-        is.read(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
+        is.read(reinterpretcast<char*>(buf->data()), size * sizeof(T));
     }
 }
 

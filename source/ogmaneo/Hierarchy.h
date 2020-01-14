@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2017-2018 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2017-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -17,9 +17,9 @@
 namespace ogmaneo {
 // Type of hierarchy input layer
 enum InputType {
-    _none = 0,
-    _prediction = 1,
-    _action = 2
+    none = 0,
+    prediction = 1,
+    action = 2
 };
 
 // A SPH
@@ -27,48 +27,48 @@ class Hierarchy {
 public:
     // Describes a layer for construction
     struct LayerDesc {
-        Int3 _hiddenSize; // Size of hidden layer
+        Int3 hiddenSize; // Size of hidden layer
 
-        int _ffRadius; // Feed forward radius
-        int _pRadius; // Prediction radius
+        int ffRadius; // Feed forward radius
+        int pRadius; // Prediction radius
 
-        int _ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
+        int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
-        int _temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to _ticksPerUpdate
+        int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
 
         // If there is an actor (only valid for first layer)
-        int _aRadius;
-        int _historyCapacity;
+        int aRadius;
+        int historyCapacity;
 
         LayerDesc()
         :
-        _hiddenSize(4, 4, 16),
-        _ffRadius(2),
-        _pRadius(2),
-        _ticksPerUpdate(2),
-        _temporalHorizon(2),
-        _aRadius(2),
-        _historyCapacity(32)
+        hiddenSize(4, 4, 16),
+        ffRadius(2),
+        pRadius(2),
+        ticksPerUpdate(2),
+        temporalHorizon(2),
+        aRadius(2),
+        historyCapacity(32)
         {}
     };
 private:
     // Layers
-    std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<std::unique_ptr<Predictor>>> _pLayers;
-    std::vector<std::unique_ptr<Actor>> _aLayers;
+    std::vector<SparseCoder> scLayers;
+    std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
+    std::vector<std::unique_ptr<Actor>> aLayers;
 
     // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> _histories;
-    std::vector<std::vector<int>> _historySizes;
+    std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
+    std::vector<std::vector<int>> historySizes;
 
     // Per-layer values
-    std::vector<char> _updates;
+    std::vector<char> updates;
 
-    std::vector<int> _ticks;
-    std::vector<int> _ticksPerUpdate;
+    std::vector<int> ticks;
+    std::vector<int> ticksPerUpdate;
 
     // Input dimensions
-    std::vector<Int3> _inputSizes;
+    std::vector<Int3> inputSizes;
 
 public:
     // Default
@@ -114,81 +114,81 @@ public:
 
     // Get the number of layers (scLayers)
     int getNumLayers() const {
-        return _scLayers.size();
+        return scLayers.size();
     }
 
     // Retrieve predictions
     const IntBuffer &getPredictionCs(
         int i // Index of input layer to get predictions for
     ) const {
-        if (_aLayers[i] != nullptr) // If is an action layer
-            return _aLayers[i]->getHiddenCs();
+        if (aLayers[i] != nullptr) // If is an action layer
+            return aLayers[i]->getHiddenCs();
 
-        return _pLayers.front()[i]->getHiddenCs();
+        return pLayers.front()[i]->getHiddenCs();
     }
 
     // Whether this layer received on update this timestep
     bool getUpdate(
         int l // Layer index
     ) const {
-        return _updates[l];
+        return updates[l];
     }
 
     // Get current layer ticks, relative to previous layer
     int getTicks(
         int l // Layer Index
     ) const {
-        return _ticks[l];
+        return ticks[l];
     }
 
     // Get layer ticks per update, relative to previous layer
     int getTicksPerUpdate(
         int l // Layer Index
     ) const {
-        return _ticksPerUpdate[l];
+        return ticksPerUpdate[l];
     }
 
     // Get input sizes
     const std::vector<Int3> &getInputSizes() const {
-        return _inputSizes;
+        return inputSizes;
     }
 
     // Retrieve a sparse coding layer
     SparseCoder &getSCLayer(
         int l // Layer index
     ) {
-        return _scLayers[l];
+        return scLayers[l];
     }
 
     // Retrieve a sparse coding layer, const version
     const SparseCoder &getSCLayer(
         int l // Layer index
     ) const {
-        return _scLayers[l];
+        return scLayers[l];
     }
 
     // Retrieve predictor layer(s)
     std::vector<std::unique_ptr<Predictor>> &getPLayers(
         int l // Layer index
     ) {
-        return _pLayers[l];
+        return pLayers[l];
     }
 
     // Retrieve predictor layer(s), const version
     const std::vector<std::unique_ptr<Predictor>> &getPLayers(
         int l // Layer index
     ) const {
-        return _pLayers[l];
+        return pLayers[l];
     }
 
     // Retrieve predictor layer(s)
     std::vector<std::unique_ptr<Actor>> &getALayers() {
-        return _aLayers;
+        return aLayers;
     }
 
     // Retrieve predictor layer(s), const version
     const std::vector<std::unique_ptr<Actor>> &getALayers() const {
-        return _aLayers;
+        return aLayers;
     }
 };
 } // namespace ogmaneo
