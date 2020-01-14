@@ -261,10 +261,10 @@ void writeBufferToStream(
 ) {
     int size = buf->size();
 
-    os.write(reinterpretcast<const char*>(&size), sizeof(int));
+    os.write(reinterpret_cast<const char*>(&size), sizeof(int));
 
     if (size > 0)
-        os.write(reinterpretcast<const char*>(buf->data()), size * sizeof(T));
+        os.write(reinterpret_cast<const char*>(buf->data()), size * sizeof(T));
 }
 
 template <class T>
@@ -274,7 +274,7 @@ void readBufferFromStream(
 ) {
     int size;
 
-    is.read(reinterpretcast<char*>(&size), sizeof(int));
+    is.read(reinterpret_cast<char*>(&size), sizeof(int));
 
     if (size == 0)
         buf->clear();
@@ -282,7 +282,7 @@ void readBufferFromStream(
         if (buf->size() != size)
             buf->resize(size);
 
-        is.read(reinterpretcast<char*>(buf->data()), size * sizeof(T));
+        is.read(reinterpret_cast<char*>(buf->data()), size * sizeof(T));
     }
 }
 

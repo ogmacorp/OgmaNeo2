@@ -71,7 +71,7 @@ void Hierarchy::initRandom(
 				
 				histories[l][v] = std::make_shared<IntBuffer>(inSize);
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                 for (int x = 0; x < inSize; x++)
                     fillInt(x, cs.rng, histories[l][v].get(), 0);
 #else
@@ -130,7 +130,7 @@ void Hierarchy::initRandom(
 			for (int v = 0; v < histories[l].size(); v++) {
                 histories[l][v] = std::make_shared<IntBuffer>(inSize);
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                 for (int x = 0; x < inSize; x++)
                     fillInt(x, cs.rng, histories[l][v].get(), 0);
 #else
@@ -247,7 +247,7 @@ void Hierarchy::step(
             assert(inputSizes[i].x * inputSizes[i].y == inputCs[i]->size());
             
             // Copy
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
             for (int x = 0; x < inputCs[i]->size(); x++)
                 copyInt(x, cs.rng, inputCs[i], lasts[i].get());
 #else
@@ -287,7 +287,7 @@ void Hierarchy::step(
                     histories[lNext][t] = histories[lNext][t - 1];
 
                 // Copy
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
                 for (int x = 0; x < scLayers[l].getHiddenCs().size(); x++)
                     copyInt(x, cs.rng, &scLayers[l].getHiddenCs(), last.get());
 #else
