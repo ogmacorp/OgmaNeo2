@@ -130,7 +130,7 @@ void SparseCoder::step(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
     for (int x = 0; x < hiddenSize.x; x++)
         for (int y = 0; y < hiddenSize.y; y++)
             forward(Int2(x, y), cs.rng, inputCs);
@@ -143,7 +143,7 @@ void SparseCoder::step(
             VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-#ifdef KERNELNOTHREAD
+#ifdef KERNEL_NO_THREAD
             for (int x = 0; x < vld.size.x; x++)
                 for (int y = 0; y < vld.size.y; y++)
                     learn(Int2(x, y), cs.rng, inputCs[vli], vli);
