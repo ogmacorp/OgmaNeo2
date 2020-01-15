@@ -20,7 +20,7 @@ endif()
 
 if(DISABLE_THREADING)
     message("Disabling threading")
-    add_compile_definitions(KERNEL_NOTHREAD)
+    add_compile_definitions(KERNEL_NO_THREAD)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
