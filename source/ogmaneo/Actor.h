@@ -98,14 +98,12 @@ private:
 public:
     float alpha; // Value learning rate
     float gamma; // Discount factor
-    int historyIters;
 
     // Defaults
     Actor()
     :
     alpha(0.01f),
-    gamma(0.99f),
-    historyIters(16)
+    gamma(0.99f)
     {}
 
     Actor(

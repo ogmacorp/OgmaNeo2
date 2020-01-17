@@ -162,7 +162,6 @@ const Actor &Actor::operator=(
 
     alpha = other.alpha;
     gamma = other.gamma;
-    historyIters = other.historyIters;
 
     historySize = other.historySize;
 
@@ -242,33 +241,27 @@ void Actor::step(
 
     // Learn (if have sufficient samples)
     if (learnEnabled && historySize > 1) {
-        std::uniform_int_distribution<int> historyDist(1, historySize - 1);
+        const HistorySample &sPrev = *historySamples[0];
+        const HistorySample &s = *historySamples[1];
 
-        for (int it = 0; it < historyIters; it++) {
-            int historyIndex = historyDist(cs.rng);
+        // Compute (partial) values, rest is completed in the kernel
+        float q = 0.0f;
+        float g = 1.0f;
 
-            const HistorySample &sPrev = *historySamples[historyIndex - 1];
-            const HistorySample &s = *historySamples[historyIndex];
+        for (int t = 1; t < historySize; t++) {
+            q += historySamples[t]->reward * g;
 
-            // Compute (partial) values, rest is completed in the kernel
-            float q = 0.0f;
-            float g = 1.0f;
-
-            for (int t = historyIndex; t < historySize; t++) {
-                q += historySamples[t]->reward * g;
-
-                g *= gamma;
-            }
-
-            // Learn kernel
-#ifdef KERNELNOTHREAD
-            for (int x = 0; x < hiddenSize.x; x++)
-                for (int y = 0; y < hiddenSize.y; y++)
-                    learn(Int2(x, y), cs.rng, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g);
-#else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-#endif
+            g *= gamma;
         }
+
+        // Learn kernel
+#ifdef KERNELNOTHREAD
+        for (int x = 0; x < hiddenSize.x; x++)
+            for (int y = 0; y < hiddenSize.y; y++)
+                learn(Int2(x, y), cs.rng, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g);
+#else
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+#endif
     }
 }
 
@@ -282,7 +275,6 @@ void Actor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
 
     writeBufferToStream(os, &hiddenCs);
 
@@ -332,7 +324,6 @@ void Actor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
-    is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
     readBufferFromStream(is, &hiddenCs);
 
