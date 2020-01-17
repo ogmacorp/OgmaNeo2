@@ -78,11 +78,13 @@ private:
 
 public:
     float alpha; // Weight learning rate
+    float tolerance; // Tolerance to errors
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.2f)
+    alpha(0.2f),
+    tolerance(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization

@@ -60,7 +60,9 @@ void SparseCoder::learn(
 
         float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
-        float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - sum);
+        float error = (vc == targetC ? 1.0f : 0.0f) - sum;
+
+        float delta = alpha * (std::max(0.0f, std::abs(error) - tolerance)) * (error > 0.0f ? 1.0f : -1.0f);
 
         vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
     }
@@ -146,6 +148,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&tolerance), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
 
@@ -172,6 +175,7 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&tolerance), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
 
