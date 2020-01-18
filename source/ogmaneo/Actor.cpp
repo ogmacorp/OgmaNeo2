@@ -47,45 +47,41 @@ void Actor::forward(
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
 
+    hiddenActivationsPrev[hiddenColumnIndex] = hiddenActivations[hiddenColumnIndex];
     hiddenActivations[hiddenColumnIndex] = maxActivation;
 }
 
 void Actor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCsPrev,
     const IntBuffer* hiddenCsPrev,
-    float q,
-    float g
+    float reward
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
-    int hiddenIndex = address3(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), hiddenSize);
+    int hiddenIndexPrev = address3(Int3(pos.x, pos.y, (*hiddenCsPrev)[hiddenColumnIndex]), hiddenSize);
 
-    float newValue = q + g * hiddenActivations[hiddenColumnIndex];
+    float newValue = reward + gamma * hiddenActivations[hiddenColumnIndex];
 
-    float sum = 0.0f;
-    int count = 0;
+    float tdError = newValue - hiddenActivationsPrev[hiddenColumnIndex];
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        sum += vl.weights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
-        count += vl.weights.count(hiddenIndex) / vld.size.z;
+        vl.traces.setTraceOHVs(vl.inputCsPrev, hiddenIndexPrev, vld.size.z);
     }
 
-    sum /= std::max(1, count);
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-    float delta = alpha * (newValue - sum);
+        for (int vli = 0; vli < visibleLayers.size(); vli++) {
+            VisibleLayer &vl = visibleLayers[vli];
+            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-        vl.weights.deltaOHVs(*inputCsPrev[vli], delta, hiddenIndex, vld.size.z);
+            vl.weights.deltaTraceOHVs(vl.traces, alpha * tdError, hiddenIndex, vld.size.z, traceDecay);
+        }
     }
 }
 
@@ -118,62 +114,21 @@ void Actor::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.weights);
 
-        for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
+        vl.traces = vl.weights;
+
+        for (int i = 0; i < vl.weights.nonZeroValues.size(); i++) {
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
+            vl.traces.nonZeroValues[i] = 0.0f;
+        }
+
+        vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
     }
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
 
     hiddenActivations = FloatBuffer(numHiddenColumns, 0.0f);
-
-    // Create (pre-allocated) history samples
-    historySize = 0;
-    historySamples.resize(historyCapacity);
-
-    for (int i = 0; i < historySamples.size(); i++) {
-        historySamples[i] = std::make_shared<HistorySample>();
-
-        historySamples[i]->inputCs.resize(visibleLayers.size());
-
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
-
-            int numVisibleColumns = vld.size.x * vld.size.y;
-
-            historySamples[i]->inputCs[vli] = IntBuffer(numVisibleColumns);
-        }
-
-        historySamples[i]->hiddenCsPrev = IntBuffer(numHiddenColumns);
-    }
-}
-
-const Actor &Actor::operator=(
-    const Actor &other
-) {
-    hiddenSize = other.hiddenSize;
-
-    hiddenCs = other.hiddenCs;
-
-    hiddenActivations = other.hiddenActivations;
-
-    visibleLayerDescs = other.visibleLayerDescs;
-    visibleLayers = other.visibleLayers;
-
-    alpha = other.alpha;
-    gamma = other.gamma;
-
-    historySize = other.historySize;
-
-    historySamples.resize(other.historySamples.size());
-
-    for (int t = 0; t < historySamples.size(); t++) {
-        historySamples[t] = std::make_shared<HistorySample>();
-
-        (*historySamples[t]) = (*other.historySamples[t]);
-    }
-
-    return *this;
+    hiddenActivationsPrev = FloatBuffer(numHiddenColumns, 0.0f);
 }
 
 void Actor::step(
@@ -195,72 +150,28 @@ void Actor::step(
     runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 #endif
 
-    // Add sample
-    if (historySize == historySamples.size()) {
-        // Circular buffer swap
-        std::shared_ptr<HistorySample> temp = historySamples.front();
-
-        for (int i = 0; i < historySamples.size() - 1; i++)
-            historySamples[i] = historySamples[i + 1];
-
-        historySamples.back() = temp;
-    }
-
-    // If not at cap, increment
-    if (historySize < historySamples.size())
-        historySize++;
-    
-    // Add new sample
-    {
-        HistorySample &s = *historySamples[historySize - 1];
-
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-            int numVisibleColumns = vld.size.x * vld.size.y;
-
-            // Copy visible Cs
-#ifdef KERNELNOTHREAD
-            for (int x = 0; x < numVisibleColumns; x++)
-                copyInt(x, cs.rng, inputCs[vli], &s.inputCs[vli]);
-#else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s.inputCs[vli]), numVisibleColumns, cs.rng, cs.batchSize1);
-#endif
-        }
-
-        // Copy hidden Cs
-#ifdef KERNELNOTHREAD
-        for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs.rng, hiddenCsPrev, &s.hiddenCsPrev);
-#else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
-#endif
-
-        s.reward = reward;
-    }
-
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > 1) {
-        const HistorySample &sPrev = *historySamples[0];
-        const HistorySample &s = *historySamples[1];
-
-        // Compute (partial) values, rest is completed in the kernel
-        float q = 0.0f;
-        float g = 1.0f;
-
-        for (int t = 1; t < historySize; t++) {
-            q += historySamples[t]->reward * g;
-
-            g *= gamma;
-        }
-
+    if (learnEnabled) {
         // Learn kernel
 #ifdef KERNELNOTHREAD
         for (int x = 0; x < hiddenSize.x; x++)
             for (int y = 0; y < hiddenSize.y; y++)
-                learn(Int2(x, y), cs.rng, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g);
+                learn(Int2(x, y), cs.rng, hiddenCsPrev, reward);
 #else
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCsPrev, reward), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+#endif
+    }
+
+    // Copy to prevs
+    for (int vli = 0; vli < visibleLayers.size(); vli++) {
+        VisibleLayer &vl = visibleLayers[vli];
+        VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+#ifdef KERNEL_NO_THREAD
+        for (int x = 0; x < inputCs[vli]->size(); x++)
+            copyInt(x, cs.rng, inputCs[vli], &vl.inputCsPrev);
+#else
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), inputCs[vli]->size(), cs.rng, cs.batchSize1);
 #endif
     }
 }
@@ -279,6 +190,7 @@ void Actor::writeToStream(
     writeBufferToStream(os, &hiddenCs);
 
     writeBufferToStream(os, &hiddenActivations);
+    writeBufferToStream(os, &hiddenActivationsPrev);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -294,23 +206,8 @@ void Actor::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl.weights);
-    }
 
-    os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
-
-    int numHistorySamples = historySamples.size();
-
-    os.write(reinterpret_cast<const char*>(&numHistorySamples), sizeof(int));
-
-    for (int t = 0; t < historySamples.size(); t++) {
-        const HistorySample &s = *historySamples[t];
-
-        for (int vli = 0; vli < visibleLayers.size(); vli++)
-            writeBufferToStream(os, &s.inputCs[vli]);
-
-        writeBufferToStream(os, &s.hiddenCsPrev);
-
-        os.write(reinterpret_cast<const char*>(&s.reward), sizeof(float));
+        writeBufferToStream(os, &vl.inputCsPrev);
     }
 }
 
@@ -328,6 +225,7 @@ void Actor::readFromStream(
     readBufferFromStream(is, &hiddenCs);
 
     readBufferFromStream(is, &hiddenActivations);
+    readBufferFromStream(is, &hiddenActivationsPrev);
 
     int numVisibleLayers;
     
@@ -346,28 +244,7 @@ void Actor::readFromStream(
         int numVisible = numVisibleColumns * vld.size.z;
 
         readSMFromStream(is, vl.weights);
-    }
 
-    is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
-
-    int numHistorySamples;
-
-    is.read(reinterpret_cast<char*>(&numHistorySamples), sizeof(int));
-
-    historySamples.resize(numHistorySamples);
-
-    for (int t = 0; t < historySamples.size(); t++) {
-        historySamples[t] = std::make_shared<HistorySample>();
-
-        HistorySample &s = *historySamples[t];
-
-        s.inputCs.resize(visibleLayers.size());
-
-        for (int vli = 0; vli < visibleLayers.size(); vli++)
-            readBufferFromStream(is, &s.inputCs[vli]);
-
-        readBufferFromStream(is, &s.hiddenCsPrev);
-
-        is.read(reinterpret_cast<char*>(&s.reward), sizeof(float));
+        readBufferFromStream(is, &vl.inputCsPrev);
     }
 }
