@@ -211,22 +211,6 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
-	// --- Traces ---
-
-	void setTraceOHVs(
-		const std::vector<int> &nonZeroIndices,
-		int row,
-		int oneHotSize
-	);
-
-	void deltaTraceOHVs(
-		SparseMatrix &traces,
-		float delta,
-		int row,
-		int oneHotSize,
-		float traceDecay
-	);
-
 	// --- Hebb Rules ---
 
 	void hebb(

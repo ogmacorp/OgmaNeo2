@@ -467,39 +467,6 @@ void SparseMatrix::deltaOHVsT(
 	}
 }
 
-void SparseMatrix::setTraceOHVs(
-	const std::vector<int> &nonZeroIndices,
-	int row,
-	int oneHotSize
-) {
-	int nextIndex = row + 1;
-
-	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
-		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
-
-		nonZeroValues[j] = 1.0f;
-	}
-}
-
-void SparseMatrix::deltaTraceOHVs(
-	SparseMatrix &traces,
-	float delta,
-	int row,
-	int oneHotSize,
-	float traceDecay
-) {
-	int nextIndex = row + 1;
-
-	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
-		for (int dj = 0; dj < oneHotSize; dj++) {
-			int j = jj + dj;
-
-			nonZeroValues[j] += delta * traces.nonZeroValues[j];
-			traces.nonZeroValues[j] *= traceDecay;
-		}
-	}
-}
-
 void SparseMatrix::hebb(
 	const std::vector<float> &in,
 	int row,
