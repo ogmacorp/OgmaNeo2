@@ -111,6 +111,15 @@ void SparseCoder::learn(
             vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
         }
     }
+    else {
+        for (int vc = 0; vc < vld.size.z; vc++) {
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
+
+            float delta = alpha * ((vc == targetC ? 0.0f : -1.0f) - std::tanh(activations[vc]));
+
+            vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
+        }
+    }
 }
 
 void SparseCoder::initRandom(
