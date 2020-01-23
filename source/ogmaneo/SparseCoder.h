@@ -113,7 +113,7 @@ public:
     :
     explainIters(4),
     alpha(0.2f),
-    beta(0.04f)
+    beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
