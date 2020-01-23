@@ -42,6 +42,8 @@ private:
 
     FloatBuffer hiddenActivations;
 
+    FloatBuffer hiddenBiases;
+
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -52,7 +54,8 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        int it
+        int it,
+        bool learnEnabled
     );
 
     void backward(
@@ -74,9 +77,10 @@ private:
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
-        int it
+        int it,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputCs, it);
+        sc->forward(pos, rng, inputCs, it, learnEnabled);
     }
 
     static void backwardKernel(
@@ -102,12 +106,14 @@ private:
 public:
     int explainIters; // Code solving iterations
     float alpha; // Weight learning rate
+    float beta; // Bias learning rate
 
     // Defaults
     SparseCoder()
     :
     explainIters(4),
-    alpha(0.2f)
+    alpha(0.2f),
+    beta(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
