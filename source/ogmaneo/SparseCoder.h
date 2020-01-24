@@ -42,8 +42,6 @@ private:
 
     FloatBuffer hiddenActivations;
 
-    FloatBuffer hiddenBiases;
-
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -106,14 +104,12 @@ private:
 public:
     int explainIters; // Code solving iterations
     float alpha; // Weight learning rate
-    float beta; // Bias learning rate
 
     // Defaults
     SparseCoder()
     :
-    explainIters(4),
-    alpha(0.2f),
-    beta(0.01f)
+    explainIters(3),
+    alpha(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization
