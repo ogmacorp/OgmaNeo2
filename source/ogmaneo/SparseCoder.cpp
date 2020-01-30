@@ -65,11 +65,22 @@ void SparseCoder::backward(
 
     int targetC = (*inputCs)[visibleColumnIndex];
 
-    int visibleIndex = address3(Int3(pos.x, pos.y, targetC), vld.size);
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
 
-    float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
+    for (int vc = 0; vc < vld.size.z; vc++) {
+        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
-    vl.inputErrors[visibleColumnIndex] = 1.0f - std::tanh(sum);
+        float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
+
+        if (sum > maxActivation) {
+            maxActivation = sum;
+
+            maxIndex = vc;
+        }
+    }
+
+    vl.inputErrors[visibleColumnIndex] = (maxIndex == targetC ? 0.0f : 1.0f);
 }
 
 void SparseCoder::learn(

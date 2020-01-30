@@ -30,15 +30,13 @@ public:
 
     // Visible layer
     struct VisibleLayer {
-        SparseMatrix valueWeights; // Value function weights
-        SparseMatrix actionWeights; // Action function weights
+        SparseMatrix weights; // Q weights
     };
 
     // History sample for delayed updates
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
         IntBuffer hiddenCsPrev;
-        FloatBuffer hiddenValues;
         
         float reward;
     };
@@ -51,7 +49,7 @@ private:
 
     IntBuffer hiddenCs; // Hidden states
 
-    FloatBuffer hiddenValues; // Hidden value function output buffer
+    FloatBuffer hiddenActivations; // Activations of actions
 
     std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
 
@@ -72,7 +70,6 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
     );
@@ -92,27 +89,21 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
     }
 
 public:
     float alpha; // Value learning rate
-    float beta; // Action learning rate
     float gamma; // Discount factor
-
-    int historyIters; // Sample iters
 
     // Defaults
     Actor()
     :
-    alpha(0.01f),
-    beta(0.01f),
-    gamma(0.99f),
-    historyIters(16)
+    alpha(0.1f),
+    gamma(0.99f)
     {}
 
     Actor(
@@ -181,18 +172,11 @@ public:
         return hiddenSize;
     }
 
-    // Get the value weights for a visible layer
-    const SparseMatrix &getValueWeights(
+    // Get the weights for a visible layer
+    const SparseMatrix &getWeights(
         int i // Index of layer
     ) {
-        return visibleLayers[i].valueWeights;
-    }
-
-    // Get the action weights for a visible layer
-    const SparseMatrix &getActionWeights(
-        int i // Index of layer
-    ) {
-        return visibleLayers[i].actionWeights;
+        return visibleLayers[i].weights;
     }
 };
 } // namespace ogmaneo
