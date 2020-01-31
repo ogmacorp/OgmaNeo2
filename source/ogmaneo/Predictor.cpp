@@ -10,7 +10,6 @@
 
 using namespace ogmaneo;
 
-// Kernels
 void Predictor::forward(
     const Int2 &pos,
     std::mt19937 &rng,

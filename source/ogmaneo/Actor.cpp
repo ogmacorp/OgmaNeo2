@@ -10,7 +10,6 @@
 
 using namespace ogmaneo;
 
-// Kernels
 void Actor::forward(
     const Int2 &pos,
     std::mt19937 &rng,
