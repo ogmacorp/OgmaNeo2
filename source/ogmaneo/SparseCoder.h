@@ -52,8 +52,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCs,
-        int it,
-        bool learnEnabled
+        int it
     );
 
     void backward(
@@ -75,10 +74,9 @@ private:
         std::mt19937 &rng,
         SparseCoder* sc,
         const std::vector<const IntBuffer*> &inputCs,
-        int it,
-        bool learnEnabled
+        int it
     ) {
-        sc->forward(pos, rng, inputCs, it, learnEnabled);
+        sc->forward(pos, rng, inputCs, it);
     }
 
     static void backwardKernel(

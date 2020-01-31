@@ -14,8 +14,7 @@ void SparseCoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCs,
-    int it,
-    bool learnEnabled
+    int it
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
@@ -65,22 +64,11 @@ void SparseCoder::backward(
 
     int targetC = (*inputCs)[visibleColumnIndex];
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
+    int visibleIndex = address3(Int3(pos.x, pos.y, targetC), vld.size);
 
-    for (int vc = 0; vc < vld.size.z; vc++) {
-        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
-
-        float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
-
-        if (sum > maxActivation) {
-            maxActivation = sum;
-
-            maxIndex = vc;
-        }
-    }
-
-    vl.inputErrors[visibleColumnIndex] = (maxIndex == targetC ? 0.0f : 1.0f);
+    float activation = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
+    
+    vl.inputErrors[visibleColumnIndex] = 1.0f - std::tanh(activation);
 }
 
 void SparseCoder::learn(
@@ -180,9 +168,9 @@ void SparseCoder::step(
 #ifdef KERNEL_NO_THREAD
         for (int x = 0; x < hiddenSize.x; x++)
             for (int y = 0; y < hiddenSize.y; y++)
-                forward(Int2(x, y), cs.rng, inputCs, it, learnEnabled);
+                forward(Int2(x, y), cs.rng, inputCs, it);
 #else
-        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, it, learnEnabled), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, it), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 #endif
 
         if (it < explainIters - 1) {
