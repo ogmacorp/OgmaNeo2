@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -8,101 +8,147 @@
 
 #pragma once
 
-#include "SparseMatrix.h"
+#include "ComputeSystem.h"
 
 namespace ogmaneo {
+// Sparse coder
 class ImageEncoder {
 public:
+    // Visible layer descriptor
     struct VisibleLayerDesc {
-        Int3 _size;
+        Int3 size; // Size of input
 
-        cl_int _radius;
+        int radius; // Radius onto input
 
+        // Defaults
         VisibleLayerDesc()
         :
-        _size(8, 8, 3),
-        _radius(2)
+        size(4, 4, 16),
+        radius(2)
         {}
     };
 
+    // Visible layer
     struct VisibleLayer {
-        SparseMatrix _weights;
+        SparseMatrix weights; // Weight matrix
+
+        FloatBuffer reconActs;
     };
 
 private:
-    Int3 _hiddenSize;
+    Int3 hiddenSize; // Size of hidden/output layer
 
-    cl::Buffer _hiddenCs;
+    IntBuffer hiddenCs; // Hidden states
 
-    cl::Buffer _hiddenActivations;
+    FloatBuffer hiddenResources; // Resources
 
-    cl::Buffer _hiddenResources;
-
-    std::vector<VisibleLayer> _visibleLayers;
-    std::vector<VisibleLayerDesc> _visibleLayerDescs;
-
-    cl::Kernel _forwardKernel;
-    cl::Kernel _inhibitKernel;
-    cl::Kernel _learnKernel;
-    cl::Kernel _depleteKernel;
-
-public:
-    cl_float _alpha;
-    cl_float _gamma;
-
-    ImageEncoder()
-    :
-    _alpha(0.1f),
-    _gamma(0.1f)
-    {}
-
-    void init(
-        ComputeSystem &cs,
-        ComputeProgram &prog,
-        Int3 hiddenSize, const
-        std::vector<VisibleLayerDesc> &visibleLayerDescs,
-        std::mt19937 &rng
-    );
-
-    void step(
-        ComputeSystem &cs,
-        const std::vector<cl::Buffer> &visibleActivations,
+    // Visible layers and associated descriptors
+    std::vector<VisibleLayer> visibleLayers;
+    std::vector<VisibleLayerDesc> visibleLayerDescs;
+    
+    // --- Kernels ---
+    
+    void forward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const FloatBuffer*> &inputActs,
         bool learnEnabled
     );
 
-    void writeToStream(
-        ComputeSystem &cs,
-        std::ostream &os
+    void backward(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        int vli
     );
 
+    static void forwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const std::vector<const FloatBuffer*> &inputActs,
+        bool learnEnabled
+    ) {
+        sc->forward(pos, rng, inputActs, learnEnabled);
+    }
+
+    static void backwardKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const IntBuffer* hiddenCs,
+        int vli
+    ) {
+        sc->backward(pos, rng, hiddenCs, vli);
+    }
+
+public:
+    float alpha; // Resource depletion rate
+    float gamma; // Gas falloff
+
+    // Defaults
+    ImageEncoder()
+    :
+    alpha(0.01f),
+    gamma(0.01f)
+    {}
+
+    // Create a sparse coding layer with random initialization
+    void initRandom(
+        ComputeSystem &cs, // Compute system
+        const Int3 &hiddenSize, // Hidden/output size
+        const std::vector<VisibleLayerDesc> &visibleLayerDescs // Descriptors for visible layers
+    );
+
+    // Activate the sparse coder (perform sparse coding)
+    void step(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const FloatBuffer*> &inputActs, // Input states
+        bool learnEnabled // Whether to learn
+    );
+
+    void reconstruct(
+        ComputeSystem &cs, // Compute system
+        const IntBuffer* hiddenCs
+    );
+
+    // Write to stream
+    void writeToStream(
+        std::ostream &os // Stream to write to
+    ) const;
+
+    // Read from stream
     void readFromStream(
-        ComputeSystem &cs,
-        ComputeProgram &prog,
-        std::istream &is
-    ); 
+        std::istream &is // Stream to read from
+    );
 
+    // Get the number of visible layers
     int getNumVisibleLayers() const {
-        return _visibleLayers.size();
+        return visibleLayers.size();
     }
 
+    // Get a visible layer
     const VisibleLayer &getVisibleLayer(
-        int index
+        int i // Index of visible layer
     ) const {
-        return _visibleLayers[index];
+        return visibleLayers[i];
     }
 
+    // Get a visible layer descriptor
     const VisibleLayerDesc &getVisibleLayerDesc(
-        int index
+        int i // Index of visible layer
     ) const {
-        return _visibleLayerDescs[index];
+        return visibleLayerDescs[i];
     }
 
-    const cl::Buffer &getHiddenCs() const {
-        return _hiddenCs;
+    // Get the hidden states
+    const IntBuffer &getHiddenCs() const {
+        return hiddenCs;
     }
 
-    Int3 getHiddenSize() const {
-        return _hiddenSize;
+    // Get the hidden size
+    const Int3 &getHiddenSize() const {
+        return hiddenSize;
     }
 };
 } // namespace ogmaneo
