@@ -284,13 +284,7 @@ void Actor::step(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     // Forward kernel
-#ifdef KERNEL_NO_THREAD
-    for (int x = 0; x < hiddenSize.x; x++)
-        for (int y = 0; y < hiddenSize.y; y++)
-            forward(Int2(x, y), cs.rng, inputCs);
-#else
-    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-#endif
+    runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 
     // Add sample
     if (historySize == historySamples.size()) {
@@ -317,29 +311,14 @@ void Actor::step(
             int numVisibleColumns = vld.size.x * vld.size.y;
 
             // Copy visible Cs
-#ifdef KERNEL_NO_THREAD
-            for (int x = 0; x < numVisibleColumns; x++)
-                copyInt(x, cs.rng, inputCs[vli], &s.inputCs[vli]);
-#else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s.inputCs[vli]), numVisibleColumns, cs.rng, cs.batchSize1);
-#endif
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &s.inputCs[vli]), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
         }
 
         // Copy hidden Cs
-#ifdef KERNEL_NO_THREAD
-        for (int x = 0; x < numHiddenColumns; x++)
-            copyInt(x, cs.rng, hiddenCsPrev, &s.hiddenCsPrev);
-#else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
-#endif
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
         // Copy hidden values
-#ifdef KERNEL_NO_THREAD
-        for (int x = 0; x < numHiddenColumns; x++)
-            copyFloat(x, cs.rng, &hiddenValues, &s.hiddenValues);
-#else
-        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenValues, &s.hiddenValues), numHiddenColumns, cs.rng, cs.batchSize1);
-#endif
+        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenValues, &s.hiddenValues), numHiddenColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
         s.reward = reward;
     }
@@ -365,13 +344,7 @@ void Actor::step(
             }
 
             // Learn kernel
-#ifdef KERNEL_NO_THREAD
-            for (int x = 0; x < hiddenSize.x; x++)
-                for (int y = 0; y < hiddenSize.y; y++)
-                    learn(Int2(x, y), cs.rng, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValues, q, g);
-#else
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValues, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-#endif
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValues, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 }

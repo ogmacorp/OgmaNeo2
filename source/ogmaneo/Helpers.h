@@ -91,7 +91,8 @@ void runKernel1(
     const std::function<void(int, std::mt19937 &rng)> &func, // Kernel function
     int size, // Execution extent size
     std::mt19937 &rng, // Generator
-    int batchSize // Batch size
+    int batchSize, // Batch size
+    bool usePool // Use thread pool
 );
 
 void runKernel2(
@@ -99,7 +100,8 @@ void runKernel2(
     const std::function<void(const Int2 &, std::mt19937 &rng)> &func, // Kernel function
     const Int2 &size, // Execution extent size
     std::mt19937 &rng, // Generator
-    const Int2 &batchSize // Batch size
+    const Int2 &batchSize, // Batch size
+    bool usePool // Use thread pool
 );
 
 // Run 3D kernel
@@ -108,7 +110,8 @@ void runKernel3(
     const std::function<void(const Int3 &, std::mt19937 &rng)> &func, // Kernel function
     const Int3 &size, // Execution extent size
     std::mt19937 &rng, // Generator
-    const Int3 &batchSize // Batch size
+    const Int3 &batchSize, // Batch size
+    bool usePool // Use thread pool
 );
 
 // --- Basic Kernels ---

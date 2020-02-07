@@ -121,13 +121,7 @@ void Predictor::activate(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     // Forward kernel
-#ifdef KERNEL_NO_THREAD
-    for (int x = 0; x < hiddenSize.x; x++)
-        for (int y = 0; y < hiddenSize.y; y++)
-            forward(Int2(x, y), cs.rng, inputCs);
-#else
-    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-#endif
+    runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 
     // Copy to prevs
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -136,12 +130,7 @@ void Predictor::activate(
 
         int numVisibleColumns = vld.size.x * vld.size.y;
 
-#ifdef KERNEL_NO_THREAD
-        for (int x = 0; x < numVisibleColumns; x++)
-            copyInt(x, cs.rng, inputCs[vli], &vl.inputCsPrev);
-#else
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1);
-#endif
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1, cs.pool.size() > 1);
     }
 }
 
@@ -150,13 +139,7 @@ void Predictor::learn(
     const IntBuffer* hiddenTargetCs
 ) {
     // Learn kernel
-#ifdef KERNEL_NO_THREAD
-    for (int x = 0; x < hiddenSize.x; x++)
-        for (int y = 0; y < hiddenSize.y; y++)
-            learn(Int2(x, y), cs.rng, hiddenTargetCs);
-#else
-    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-#endif
+    runKernel2(cs, std::bind(Predictor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenTargetCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 }
 
 void Predictor::writeToStream(

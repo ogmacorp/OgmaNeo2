@@ -69,14 +69,7 @@ void Hierarchy::initRandom(
 
                 int inSize = inputSizes[i].x * inputSizes[i].y;
 				
-				histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_NO_THREAD
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs.rng, histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, histories[l][v].get(), 0), inSize, cs.rng, cs.batchSize1);
-#endif
+				histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 historySizes[l][v] = inSize;
 			}
@@ -128,14 +121,7 @@ void Hierarchy::initRandom(
             int inSize = layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y;
 
 			for (int v = 0; v < histories[l].size(); v++) {
-                histories[l][v] = std::make_shared<IntBuffer>(inSize);
-
-#ifdef KERNEL_NO_THREAD
-                for (int x = 0; x < inSize; x++)
-                    fillInt(x, cs.rng, histories[l][v].get(), 0);
-#else
-                runKernel1(cs, std::bind(fillInt, std::placeholders::_1, std::placeholders::_2, histories[l][v].get(), 0), inSize, cs.rng, cs.batchSize1);
-#endif
+                histories[l][v] = std::make_shared<IntBuffer>(inSize, 0);
 
                 historySizes[l][v] = inSize;
             }
@@ -247,12 +233,7 @@ void Hierarchy::step(
             assert(inputSizes[i].x * inputSizes[i].y == inputCs[i]->size());
             
             // Copy
-#ifdef KERNEL_NO_THREAD
-            for (int x = 0; x < inputCs[i]->size(); x++)
-                copyInt(x, cs.rng, inputCs[i], lasts[i].get());
-#else
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i]->size(), cs.rng, cs.batchSize1);
-#endif
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i]->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
             histories.front()[0 + temporalHorizon * i] = lasts[i];
         }
@@ -287,12 +268,7 @@ void Hierarchy::step(
                     histories[lNext][t] = histories[lNext][t - 1];
 
                 // Copy
-#ifdef KERNEL_NO_THREAD
-                for (int x = 0; x < scLayers[l].getHiddenCs().size(); x++)
-                    copyInt(x, cs.rng, &scLayers[l].getHiddenCs(), last.get());
-#else
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), last.get()), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
-#endif
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), last.get()), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
 
                 histories[lNext].front() = last;
 

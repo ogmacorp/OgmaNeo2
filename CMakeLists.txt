@@ -18,11 +18,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if(DISABLE_THREADING)
-    message("Disabling threading")
-    add_compile_definitions(KERNEL_NO_THREAD)
-endif()
-
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include_directories("${PROJECT_SOURCE_DIR}/source")

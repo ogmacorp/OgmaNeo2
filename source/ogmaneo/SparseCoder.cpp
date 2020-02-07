@@ -165,26 +165,14 @@ void SparseCoder::step(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     for (int it = 0; it < explainIters; it++) {
-#ifdef KERNEL_NO_THREAD
-        for (int x = 0; x < hiddenSize.x; x++)
-            for (int y = 0; y < hiddenSize.y; y++)
-                forward(Int2(x, y), cs.rng, inputCs, it);
-#else
-        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, it), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-#endif
+        runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, it), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 
         if (it < explainIters - 1) {
             for (int vli = 0; vli < visibleLayers.size(); vli++) {
                 VisibleLayer &vl = visibleLayers[vli];
                 VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-#ifdef KERNEL_NO_THREAD
-                for (int x = 0; x < vld.size.x; x++)
-                    for (int y = 0; y < vld.size.y; y++)
-                        backward(Int2(x, y), cs.rng, inputCs[vli], vli);
-#else
-                runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
-#endif
+                runKernel2(cs, std::bind(SparseCoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
             }
         }
     }
@@ -194,13 +182,7 @@ void SparseCoder::step(
             VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-#ifdef KERNEL_NO_THREAD
-            for (int x = 0; x < vld.size.x; x++)
-                for (int y = 0; y < vld.size.y; y++)
-                    learn(Int2(x, y), cs.rng, inputCs[vli], vli);
-#else
-            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
-#endif
+            runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
         }
     }
 }

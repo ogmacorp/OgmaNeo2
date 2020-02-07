@@ -148,13 +148,7 @@ void ImageEncoder::step(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-#ifdef KERNEL_NO_THREAD
-    for (int x = 0; x < hiddenSize.x; x++)
-        for (int y = 0; y < hiddenSize.y; y++)
-            forward(Int2(x, y), cs.rng, inputActs, learnEnabled);
-#else
-    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs, learnEnabled), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-#endif
+    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs, learnEnabled), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
 }
 
 void ImageEncoder::reconstruct(
@@ -165,13 +159,7 @@ void ImageEncoder::reconstruct(
         VisibleLayer &vl = visibleLayers[vli];
         VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-#ifdef KERNEL_NO_THREAD
-        for (int x = 0; x < vld.size.x; x++)
-            for (int y = 0; y < vld.size.y; y++)
-                backward(Int2(x, y), cs.rng, hiddenCs, vli);
-#else
-        runKernel2(cs, std::bind(ImageEncoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCs, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
-#endif
+        runKernel2(cs, std::bind(ImageEncoder::backwardKernel, std::placeholders::_1, std::placeholders::_2, this, hiddenCs, vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2, cs.pool.size() > 1);
     }
 }
 
