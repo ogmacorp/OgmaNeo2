@@ -40,8 +40,6 @@ The `cmake` command can be passed a `CMAKE_INSTALL_PREFIX` to determine where to
 
 The `BUILD_SHARED_LIBS` boolean cmake option can be used to create dynamic/shared object library (default is to create a _static_ library). On Linux it's recommended to add `-DBUILD_SHARED_LIBS=ON` (especially if you plan to use the Python bindings in PyOgmaNeo2).
 
-Multithreading can be disabled by setting the `DISABLE_THREADING` boolean cmake option to `On`.
-
 `make install` can be run to install the library. `make uninstall` can be used to uninstall the library.
 
 On **Windows** systems it is recommended to use `cmake-gui` to define which generator to use and specify optional build parameters, such as `CMAKE_INSTALL_PREFIX`.
