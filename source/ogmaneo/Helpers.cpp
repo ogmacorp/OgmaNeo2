@@ -53,7 +53,7 @@ void ogmaneo::runKernel1(
 
             int pos = x * batchSize;
 
-            for (int x = 0; x < batchSize; x++)
+            for (int x = 0; x < itemBatchSize; x++)
                 func(pos + x, subRng);
         }
     }
@@ -106,8 +106,8 @@ void ogmaneo::runKernel2(
                 std::mt19937 subRng(seedDist(rng));
                 Int2 pos(x * batchSize.x, y * batchSize.y);
 
-                for (int x = 0; x < batchSize.x; x++)
-                    for (int y = 0; y < batchSize.y; y++) {
+                for (int x = 0; x < itemBatchSize.x; x++)
+                    for (int y = 0; y < itemBatchSize.y; y++) {
                         Int2 bPos;
                         bPos.x = pos.x + x;
                         bPos.y = pos.y + y;
@@ -170,9 +170,9 @@ void ogmaneo::runKernel3(
                     std::mt19937 subRng(seedDist(rng));
                     Int3 pos(x * batchSize.x, y * batchSize.y, z * batchSize.z);
 
-                    for (int x = 0; x < batchSize.x; x++)
-                        for (int y = 0; y < batchSize.y; y++)
-                            for (int z = 0; z < batchSize.z; z++) {
+                    for (int x = 0; x < itemBatchSize.x; x++)
+                        for (int y = 0; y < itemBatchSize.y; y++)
+                            for (int z = 0; z < itemBatchSize.z; z++) {
                                 Int3 bPos;
                                 bPos.x = pos.x + x;
                                 bPos.y = pos.y + y;
