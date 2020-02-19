@@ -40,7 +40,7 @@ void SparseCoder::forward(
         if (it == 0)
             hiddenActivations[hiddenIndex] = sum;
         else
-            hiddenActivations[hiddenIndex] += std::max(0.0f, sum);
+            hiddenActivations[hiddenIndex] += sum;
 
         if (hiddenActivations[hiddenIndex] > maxActivation) {
             maxActivation = hiddenActivations[hiddenIndex];
