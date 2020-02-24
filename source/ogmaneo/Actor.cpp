@@ -147,7 +147,7 @@ void Actor::learn(
 
         sum /= std::max(1, count);
 
-        float deltaAction = beta * tdErrorValue * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+        float deltaAction = beta * tdErrorAction * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
