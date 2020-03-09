@@ -68,7 +68,7 @@ void SparseCoder::backward(
 
     float activation = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
-    vl.inputErrors[visibleColumnIndex] = 1.0f - std::tanh(activation);
+    vl.inputErrors[visibleColumnIndex] = 1.0f - (std::tanh(activation) * 0.5f + 0.5f);
 }
 
 void SparseCoder::learn(
