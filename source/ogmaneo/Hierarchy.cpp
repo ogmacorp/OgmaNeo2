@@ -233,7 +233,7 @@ void Hierarchy::step(
             assert(inputSizes[i].x * inputSizes[i].y == inputCs[i]->size());
             
             // Copy
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i]->size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], lasts[i].get()), inputCs[i]->size(), cs.rng, cs.batchSize1);
 
             histories.front()[0 + temporalHorizon * i] = lasts[i];
         }
@@ -268,7 +268,7 @@ void Hierarchy::step(
                     histories[lNext][t] = histories[lNext][t - 1];
 
                 // Copy
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), last.get()), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1, cs.pool.size() > 1);
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), last.get()), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
 
                 histories[lNext].front() = last;
 

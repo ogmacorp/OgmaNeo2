@@ -45,7 +45,13 @@ set(HEADERS
 	"${SOURCE_PATH}/ogmaneo/SparseMatrix.h"
 )
 
+find_package(OpenMP REQUIRED)
+ 
+include_directories(${OpenMP_CXX_INCLUDE_DIRS})
+
 add_library(OgmaNeo ${SOURCES} ${HEADERS})
+
+target_link_libraries(OgmaNeo ${OpenMP_CXX_LIBRARIES})
 
 install(TARGETS OgmaNeo
         RUNTIME DESTINATION bin

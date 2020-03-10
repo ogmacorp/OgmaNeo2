@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "ThreadPool.h"
-
 #include "SparseMatrix.h"
 
 #include <random>
@@ -91,8 +89,7 @@ void runKernel1(
     const std::function<void(int, std::mt19937 &rng)> &func, // Kernel function
     int size, // Execution extent size
     std::mt19937 &rng, // Generator
-    int batchSize, // Batch size
-    bool usePool // Use thread pool
+    int batchSize // Batch size
 );
 
 void runKernel2(
@@ -100,8 +97,7 @@ void runKernel2(
     const std::function<void(const Int2 &, std::mt19937 &rng)> &func, // Kernel function
     const Int2 &size, // Execution extent size
     std::mt19937 &rng, // Generator
-    const Int2 &batchSize, // Batch size
-    bool usePool // Use thread pool
+    const Int2 &batchSize // Batch size
 );
 
 // Run 3D kernel
@@ -110,8 +106,7 @@ void runKernel3(
     const std::function<void(const Int3 &, std::mt19937 &rng)> &func, // Kernel function
     const Int3 &size, // Execution extent size
     std::mt19937 &rng, // Generator
-    const Int3 &batchSize, // Batch size
-    bool usePool // Use thread pool
+    const Int3 &batchSize // Batch size
 );
 
 // --- Basic Kernels ---

@@ -9,14 +9,13 @@
 #pragma once
 
 #include "Helpers.h"
+#include <omp.h>
 
 #include <random>
 
 namespace ogmaneo {
 class ComputeSystem {
 public:
-	ctpl::thread_pool pool;
-
 	// Default batch sizes for dimensions 1-3
 	int batchSize1;
 	Int2 batchSize2;
@@ -25,10 +24,15 @@ public:
 	// Default RNG
 	std::mt19937 rng;
 
-	ComputeSystem(
-		int numWorkers
-	)
-	: pool(numWorkers), batchSize1(1024), batchSize2(1, 1), batchSize3(1, 1, 1)
+	ComputeSystem()
+	:
+	batchSize1(1024),
+	batchSize2(2, 2),
+	batchSize3(2, 2, 2)
 	{}
+
+	static void setNumThreads(int numThreads) {
+		omp_set_num_threads(numThreads);
+	}
 };
 } // namespace ogmaneo
