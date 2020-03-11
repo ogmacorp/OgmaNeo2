@@ -38,7 +38,6 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
         IntBuffer hiddenCsPrev;
-        FloatBuffer hiddenValues;
         
         float reward;
     };
@@ -72,7 +71,6 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
     );
@@ -92,11 +90,10 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
-        const FloatBuffer* hiddenValuesPrev,
         float q,
         float g
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
     }
 
 public:
@@ -112,7 +109,7 @@ public:
     alpha(0.01f),
     beta(0.01f),
     gamma(0.99f),
-    historyIters(16)
+    historyIters(8)
     {}
 
     Actor(
