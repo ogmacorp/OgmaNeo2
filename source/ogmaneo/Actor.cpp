@@ -36,7 +36,7 @@ void Actor::forward(
 
     // --- Action ---
 
-    std::vector<float> activations(hiddenSize.z);
+    int maxIndex = 0;
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
@@ -52,39 +52,13 @@ void Actor::forward(
             sum += vl.actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
         }
 
-        sum /= std::max(1, count);
-
-        activations[hc] = sum;
-
-        maxActivation = std::max(maxActivation, sum);
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
-        
-        total += activations[hc];
-    }
-
-    std::uniform_real_distribution<float> cuspDist(0.0f, total);
-
-    float cusp = cuspDist(rng);
-
-    int selectIndex = 0;
-    float sumSoFar = 0.0f;
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        sumSoFar += activations[hc];
-
-        if (sumSoFar >= cusp) {
-            selectIndex = hc;
-
-            break;
+        if (sum > maxActivation) {
+            maxActivation = sum;
+            maxIndex = hc;
         }
     }
     
-    hiddenCs[hiddenColumnIndex] = selectIndex;
+    hiddenCs[hiddenColumnIndex] = maxIndex;
 }
 
 void Actor::learn(
