@@ -116,7 +116,7 @@ void Actor::learn(
 
     float tdErrorValue = newValue - value;
 
-    float deltaValue = alpha * std::tanh(tdErrorValue);
+    float deltaValue = alpha * tdErrorValue;
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -253,6 +253,7 @@ const Actor &Actor::operator=(
     alpha = other.alpha;
     beta = other.beta;
     gamma = other.gamma;
+    minSteps = other.minSteps;
     historyIters = other.historyIters;
 
     historySize = other.historySize;
@@ -317,8 +318,8 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > 1) {
-        std::uniform_int_distribution<int> historyDist(1, historySize - 1);
+    if (learnEnabled && historySize > minSteps) {
+        std::uniform_int_distribution<int> historyDist(1, historySize - minSteps);
 
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);
@@ -353,6 +354,7 @@ void Actor::writeToStream(
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
     os.write(reinterpret_cast<const char*>(&beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&minSteps), sizeof(int));
     os.write(reinterpret_cast<const char*>(&historyIters), sizeof(int));
 
     writeBufferToStream(os, &hiddenCs);
@@ -405,6 +407,7 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
+    is.read(reinterpret_cast<char*>(&minSteps), sizeof(int));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
     readBufferFromStream(is, &hiddenCs);

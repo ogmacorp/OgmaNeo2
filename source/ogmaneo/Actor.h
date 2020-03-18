@@ -101,6 +101,7 @@ public:
     float beta; // Action learning rate
     float gamma; // Discount factor
 
+    int minSteps; // Minimum value steps
     int historyIters; // Sample iters
 
     // Defaults
@@ -109,6 +110,7 @@ public:
     alpha(0.01f),
     beta(0.01f),
     gamma(0.99f),
+    minSteps(8),
     historyIters(16)
     {}
 
