@@ -1,6 +1,6 @@
 <!---
   OgmaNeo
-  Copyright(c) 2016-2018 Ogma Intelligent Systems Corp. All rights reserved.
+  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 
   This copy of OgmaNeo is licensed to you under the terms described
   in the OGMANEO_LICENSE.md file included in this distribution.
@@ -23,6 +23,10 @@ There is a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of this rep
 ### CMake
 
 Version 3.1+ of [CMake](https://cmake.org/) is required when building the library.
+
+### OpenMP
+
+This version of OgmaNeo uses [OpenMP](https://www.openmp.org/) for multiprocessing. It is required in order to build the library.
 
 ### Building
 
@@ -55,6 +59,3 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for information on making
 Contact Ogma via licenses@ogmacorp.com to discuss commercial use and licensing options.
 
 OgmaNeo Copyright (c) 2016-2020 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
-
-This library depends on the [CTPL library](https://github.com/vit-vit/CTPL) for thread pooling.
-See the repository or [its source](./source/ThreadPool.h) for license details with regards to that library.
