@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  OgmaNeo
-//  Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of OgmaNeo is licensed to you under the terms described
 //  in the OGMANEO_LICENSE.md file included in this distribution.
@@ -15,185 +15,180 @@
 #include <memory>
 
 namespace ogmaneo {
+// Type of hierarchy input layer
 enum InputType {
-    _none,
-    _prediction,
-    _action
+    none = 0,
+    prediction = 1,
+    action = 2
 };
 
+// A SPH
 class Hierarchy {
 public:
-    struct FirstLayerDesc {
-        Int3 _hiddenSize;
+    // Describes a layer for construction
+    struct LayerDesc {
+        Int3 hiddenSize; // Size of hidden layer
 
-        cl_int _ffRadius;
-        cl_int _pRadius;
-        cl_int _aRadius;
+        int ffRadius; // Feed forward radius
+        int pRadius; // Prediction radius
 
-        int _temporalHorizon;
+        int ticksPerUpdate; // Number of ticks a layer takes to update (relative to previous layer)
 
-        int _historyCapacity;
+        int temporalHorizon; // Temporal distance into a the past addressed by the layer. Should be greater than or equal to ticksPerUpdate
 
-        FirstLayerDesc()
+        // If there is an actor (only valid for first layer)
+        int aRadius;
+        int historyCapacity;
+
+        LayerDesc()
         :
-        _hiddenSize(4, 4, 16),
-        _ffRadius(2),
-        _pRadius(2),
-        _aRadius(2),
-        _temporalHorizon(2),
-        _historyCapacity(32)
-        {}
-    };
-
-    struct HigherLayerDesc {
-        Int3 _hiddenSize;
-
-        cl_int _ffRadius;
-        cl_int _pRadius;
-
-        int _ticksPerUpdate;
-
-        int _temporalHorizon;
-
-        HigherLayerDesc()
-        :
-        _hiddenSize(4, 4, 16),
-        _ffRadius(2),
-        _pRadius(2),
-        _ticksPerUpdate(2),
-        _temporalHorizon(2)
+        hiddenSize(4, 4, 16),
+        ffRadius(2),
+        pRadius(2),
+        ticksPerUpdate(2),
+        temporalHorizon(2),
+        aRadius(2),
+        historyCapacity(32)
         {}
     };
 private:
-    std::vector<SparseCoder> _scLayers;
-    std::vector<std::vector<Predictor>> _pLayers; // Prediction layers for all but bottom of hierarchy
-    std::vector<std::unique_ptr<Predictor>> _bpLayers; // Prediction layers at bottom of hierarchy
-    std::vector<std::unique_ptr<Actor>> _baLayers; // Action layers at bottom of hierarchy
+    // Layers
+    std::vector<SparseCoder> scLayers;
+    std::vector<std::vector<std::unique_ptr<Predictor>>> pLayers;
+    std::vector<std::unique_ptr<Actor>> aLayers;
 
-    std::vector<std::vector<cl::Buffer>> _histories;
-    std::vector<std::vector<int>> _historySizes;
+    // Histories
+    std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
+    std::vector<std::vector<int>> historySizes;
 
-    std::vector<unsigned char> _updates;
+    // Per-layer values
+    std::vector<char> updates;
 
-    std::vector<int> _ticks;
-    std::vector<int> _ticksPerUpdate;
+    std::vector<int> ticks;
+    std::vector<int> ticksPerUpdate;
 
-    std::vector<Int3> _inputSizes;
+    // Input dimensions
+    std::vector<Int3> inputSizes;
 
 public:
-    void init(
-        ComputeSystem &cs,
-        ComputeProgram &prog,
-        const std::vector<Int3> &inputSizes,
-        const std::vector<InputType> &inputTypes,
-        const FirstLayerDesc &firstLayerDesc,
-        const std::vector<HigherLayerDesc> &higherLayerDescs,
-        std::mt19937 &rng
+    // Default
+    Hierarchy() {}
+
+    // Copy
+    Hierarchy(
+        const Hierarchy &other // Hierarchy to copy from
+    ) {
+        *this = other;
+    }
+
+    // Assignment
+    const Hierarchy &operator=(
+        const Hierarchy &other // Hierarchy to assign from
+    );
+    
+    // Create a randomly initialized hierarchy
+    void initRandom(
+        ComputeSystem &cs, // Compute system
+        const std::vector<Int3> &inputSizes, // Sizes of input layers
+        const std::vector<InputType> &inputTypes, // Types of input layers (same size as inputSizes)
+        const std::vector<LayerDesc> &layerDescs // Descriptors for layers
     );
 
+    // Simulation step/tick
     void step(
-        ComputeSystem &cs,
-        const std::vector<cl::Buffer> &inputCs,
-        std::mt19937 &rng,
-        bool learnEnabled = true,
-        float reward = 0.0f
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        bool learnEnabled = true, // Whether learning is enabled
+        float reward = 0.0f // Optional reward for actor layers
     );
 
+    // Write to stream
     void writeToStream(
-        ComputeSystem &cs,
-        std::ostream &os
-    );
+        std::ostream &os // Stream to write to
+    ) const;
 
+    // Read from stream
     void readFromStream(
-        ComputeSystem &cs,
-        ComputeProgram &prog,
-        std::istream &is
+        std::istream &is // Stream to read from
     );
 
+    // Get the number of layers (scLayers)
     int getNumLayers() const {
-        return _scLayers.size();
+        return scLayers.size();
     }
 
-    const cl::Buffer &getPredictionCs(
-        int i
+    // Retrieve predictions
+    const IntBuffer &getPredictionCs(
+        int i // Index of input layer to get predictions for
     ) const {
-        assert(_bpLayers[i] != nullptr);
+        if (aLayers[i] != nullptr) // If is an action layer
+            return aLayers[i]->getHiddenCs();
 
-        return _bpLayers[i]->getHiddenCs();
+        return pLayers.front()[i]->getHiddenCs();
     }
 
-    const cl::Buffer &getActionCs(
-        int i
-    ) const {
-        assert(_baLayers[i] != nullptr);
-
-        return _baLayers[i]->getHiddenCs();
-    }
-
+    // Whether this layer received on update this timestep
     bool getUpdate(
-        int l
+        int l // Layer index
     ) const {
-        return _updates[l];
+        return updates[l];
     }
 
+    // Get current layer ticks, relative to previous layer
     int getTicks(
-        int l
+        int l // Layer Index
     ) const {
-        return _ticks[l];
+        return ticks[l];
     }
 
+    // Get layer ticks per update, relative to previous layer
     int getTicksPerUpdate(
-        int l
+        int l // Layer Index
     ) const {
-        return _ticksPerUpdate[l];
+        return ticksPerUpdate[l];
     }
 
+    // Get input sizes
     const std::vector<Int3> &getInputSizes() const {
-        return _inputSizes;
+        return inputSizes;
     }
 
+    // Retrieve a sparse coding layer
     SparseCoder &getSCLayer(
-        int l
+        int l // Layer index
     ) {
-        return _scLayers[l];
+        return scLayers[l];
     }
 
+    // Retrieve a sparse coding layer, const version
     const SparseCoder &getSCLayer(
-        int l
+        int l // Layer index
     ) const {
-        return _scLayers[l];
+        return scLayers[l];
     }
 
-    std::vector<Predictor> &getPLayers(
-        int l
+    // Retrieve predictor layer(s)
+    std::vector<std::unique_ptr<Predictor>> &getPLayers(
+        int l // Layer index
     ) {
-        int pl = l - 1;
-
-        return _pLayers[pl];
+        return pLayers[l];
     }
 
-    const std::vector<Predictor> &getPLayers(
-        int l
+    // Retrieve predictor layer(s), const version
+    const std::vector<std::unique_ptr<Predictor>> &getPLayers(
+        int l // Layer index
     ) const {
-        int pl = l - 1;
-
-        return _pLayers[pl];
+        return pLayers[l];
     }
 
-    std::vector<std::unique_ptr<Predictor>> &getBPLayers() {
-        return _bpLayers;
+    // Retrieve predictor layer(s)
+    std::vector<std::unique_ptr<Actor>> &getALayers() {
+        return aLayers;
     }
 
-    const std::vector<std::unique_ptr<Predictor>> &getBPLayers() const {
-        return _bpLayers;
-    }
-
-    std::vector<std::unique_ptr<Actor>> &getBALayers() {
-        return _baLayers;
-    }
-
-    const std::vector<std::unique_ptr<Actor>> &getBALayers() const {
-        return _baLayers;
+    // Retrieve predictor layer(s), const version
+    const std::vector<std::unique_ptr<Actor>> &getALayers() const {
+        return aLayers;
     }
 };
 } // namespace ogmaneo
