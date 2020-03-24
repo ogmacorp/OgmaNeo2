@@ -1,6 +1,6 @@
 # --------------------------------------------------------------------------
 # OgmaNeo
-# Copyright(c) 2016-2019 Ogma Intelligent Systems Corp. All rights reserved.
+# Copyright(c) 2016-2020 Ogma Intelligent Systems Corp. All rights reserved.
 #
 # This copy of OgmaNeo is licensed to you under the terms described
 # in the OGMANEO_LICENSE.md file included in this distribution.
@@ -19,6 +19,9 @@ IF(OGMANEO_INCLUDE_DIR)
 ENDIF(OGMANEO_INCLUDE_DIR)
 
 FIND_PATH(OGMANEO_INCLUDE_DIR ogmaneo/Hierarchy.h)
+if (NOT "${OGMANEO_INCLUDE_DIR}" STREQUAL "OGMANEO_INCLUDE_DIR-NOTFOUND")
+  SET(OGMANEO_INCLUDE_DIR "${OGMANEO_INCLUDE_DIR}/ogmaneo")
+ENDIF()
 
 SET(OGMANEO_NAMES ogmaneo OgmaNeo OGMANEO)
 FIND_LIBRARY(OGMANEO_LIBRARY NAMES ${OGMANEO_NAMES})
