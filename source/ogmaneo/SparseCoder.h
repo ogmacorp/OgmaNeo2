@@ -137,5 +137,7 @@ public:
     const Int3 &getHiddenSize() const {
         return hiddenSize;
     }
+
+    friend class Hierarchy;
 };
 } // namespace ogmaneo
