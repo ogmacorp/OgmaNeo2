@@ -443,3 +443,61 @@ void Hierarchy::readFromStream(
             aLayers[v] = nullptr;
     }
 }
+
+void Hierarchy::getState(
+    State &state
+) const {
+    int numLayers = scLayers.size();
+
+    state.hiddenCs.resize(numLayers);
+    state.histories.resize(numLayers);
+    state.predHiddenCs.resize(numLayers);
+    state.predInputCsPrev.resize(numLayers);
+
+    for (int l = 0; l < numLayers; l++) {
+        state.hiddenCs[l] = scLayers[l].getHiddenCs();
+
+        state.histories[l].resize(historySizes[l].size());
+
+        for (int i = 0; i < historySizes[l].size(); i++)
+            state.histories[l][i] = *histories[l][i];
+
+        state.predHiddenCs[l].resize(pLayers[l].size());
+        state.predInputCsPrev[l].resize(pLayers[l].size());
+
+        for (int j = 0; j < pLayers[l].size(); j++) {
+            state.predHiddenCs[l][j] = pLayers[l][j]->getHiddenCs();
+
+            state.predInputCsPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
+
+            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
+                state.predInputCsPrev[l][j][v] = pLayers[l][j]->getVisibleLayer(v).inputCsPrev;
+        }
+    }
+
+    state.ticks = ticks;
+    state.updates = updates;
+}
+
+void Hierarchy::setState(
+    const State &state
+) {
+    int numLayers = scLayers.size();
+
+    for (int l = 0; l < numLayers; l++) {
+        scLayers[l].hiddenCs = state.hiddenCs[l];
+
+        for (int i = 0; i < historySizes[l].size(); i++)
+            *histories[l][i] = state.histories[l][i];
+
+        for (int j = 0; j < pLayers[l].size(); j++) {
+            pLayers[l][j]->hiddenCs = state.predHiddenCs[l][j];
+
+            for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++)
+                pLayers[l][j]->visibleLayers[v].inputCsPrev = state.predInputCsPrev[l][j][v];
+        }
+    }
+
+    ticks = state.ticks;
+    updates = state.updates;
+}

@@ -149,5 +149,7 @@ public:
     ) {
         return visibleLayers[i].weights;
     }
+
+    friend class Hierarchy;
 };
 } // Namespace ogmaneo

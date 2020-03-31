@@ -22,6 +22,18 @@ enum InputType {
     action = 2
 };
 
+// State of hierarchy
+struct State {
+    std::vector<IntBuffer> hiddenCs;
+    std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
+    std::vector<std::vector<IntBuffer>> predHiddenCs;
+
+    std::vector<std::vector<IntBuffer>> histories;
+
+    std::vector<char> updates;
+    std::vector<int> ticks;
+};
+
 // A SPH
 class Hierarchy {
 public:
@@ -100,6 +112,16 @@ public:
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
         bool learnEnabled = true, // Whether learning is enabled
         float reward = 0.0f // Optional reward for actor layers
+    );
+
+    // State get
+    void getState(
+        State &state
+    ) const;
+
+    // State set
+    void setState(
+        const State &state
     );
 
     // Write to stream
