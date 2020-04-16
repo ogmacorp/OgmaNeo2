@@ -26,9 +26,9 @@ public:
 
 	ComputeSystem()
 	:
-	batchSize1(1024),
-	batchSize2(2, 2),
-	batchSize3(2, 2, 2)
+	batchSize1(512),
+	batchSize2(1, 1),
+	batchSize3(1, 1, 1)
 	{}
 
 	static void setNumThreads(int numThreads) {
