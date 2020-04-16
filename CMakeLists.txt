@@ -11,9 +11,7 @@ cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "-fopenmp") # Needed or else it won't use multiple threads
-endif()
+set(CMAKE_CXX_FLAGS "-fopenmp") # Needed or else it won't use multiple threads
 
 project(OgmaNeo)
 
