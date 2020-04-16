@@ -116,7 +116,7 @@ void Actor::learn(
 
     float tdErrorValue = newValue - value;
 
-    float deltaValue = alpha * std::tanh(tdErrorValue);
+    float deltaValue = alpha * tdErrorValue;
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
