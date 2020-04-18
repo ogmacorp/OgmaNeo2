@@ -91,6 +91,7 @@ void Actor::learn(
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCsPrev,
     const IntBuffer* hiddenCsPrev,
+    const FloatBuffer* hiddenValuesPrev,
     float q,
     float g
 ) {
@@ -115,7 +116,7 @@ void Actor::learn(
     value /= std::max(1, count);
 
     float tdErrorValue = newValue - value;
-
+    
     float deltaValue = alpha * tdErrorValue;
 
     // For each visible layer
@@ -161,10 +162,12 @@ void Actor::learn(
         total += activations[hc];
     }
 
+    float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
+
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float deltaAction = beta * std::tanh(tdErrorValue) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = beta * std::tanh(tdErrorAction) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -235,6 +238,8 @@ void Actor::initRandom(
         }
 
         historySamples[i]->hiddenCsPrev = IntBuffer(numHiddenColumns);
+
+        historySamples[i]->hiddenValuesPrev = FloatBuffer(numHiddenColumns);
     }
 }
 
@@ -314,6 +319,9 @@ void Actor::step(
         // Copy hidden Cs
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, hiddenCsPrev, &s.hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 
+        // Copy hidden values
+        runKernel1(cs, std::bind(copyFloat, std::placeholders::_1, std::placeholders::_2, &hiddenValues, &s.hiddenValuesPrev), numHiddenColumns, cs.rng, cs.batchSize1);
+
         s.reward = reward;
     }
 
@@ -338,7 +346,7 @@ void Actor::step(
             }
 
             // Learn kernel
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValuesPrev, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
 }
@@ -391,6 +399,8 @@ void Actor::writeToStream(
             writeBufferToStream(os, &s.inputCs[vli]);
 
         writeBufferToStream(os, &s.hiddenCsPrev);
+
+        writeBufferToStream(os, &s.hiddenValuesPrev);
 
         os.write(reinterpret_cast<const char*>(&s.reward), sizeof(float));
     }
@@ -453,6 +463,8 @@ void Actor::readFromStream(
             readBufferFromStream(is, &s.inputCs[vli]);
 
         readBufferFromStream(is, &s.hiddenCsPrev);
+
+        readBufferFromStream(is, &s.hiddenValuesPrev);
 
         is.read(reinterpret_cast<char*>(&s.reward), sizeof(float));
     }
