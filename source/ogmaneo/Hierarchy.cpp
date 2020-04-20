@@ -23,7 +23,7 @@ void Hierarchy::initRandom(
     scLayers.resize(layerDescs.size());
     pLayers.resize(layerDescs.size());
 
-    ticks.assign(layerDescs.size(), 0);
+    ticks.resize(layerDescs.size(), 0);
 
     histories.resize(layerDescs.size());
     historySizes.resize(layerDescs.size());
