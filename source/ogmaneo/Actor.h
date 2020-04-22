@@ -75,7 +75,8 @@ private:
         const IntBuffer* hiddenCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
-        float g
+        float g,
+        bool mimic
     );
 
     static void forwardKernel(
@@ -95,9 +96,10 @@ private:
         const IntBuffer* hiddenCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
-        float g
+        float g,
+        bool mimic
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g, mimic);
     }
 
 public:
@@ -142,7 +144,8 @@ public:
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         float reward,
-        bool learnEnabled
+        bool learnEnabled,
+        bool mimic
     );
 
     // Write to stream

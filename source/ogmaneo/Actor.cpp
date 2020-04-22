@@ -93,7 +93,8 @@ void Actor::learn(
     const IntBuffer* hiddenCsPrev,
     const FloatBuffer* hiddenValuesPrev,
     float q,
-    float g
+    float g,
+    bool mimic
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
@@ -167,7 +168,7 @@ void Actor::learn(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float deltaAction = beta * std::tanh(tdErrorAction) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = (mimic ? beta : beta * std::tanh(tdErrorAction)) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -280,7 +281,8 @@ void Actor::step(
     const std::vector<const IntBuffer*> &inputCs,
     const IntBuffer* hiddenCsPrev,
     float reward,
-    bool learnEnabled
+    bool learnEnabled,
+    bool mimic
 ) {
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
@@ -346,7 +348,7 @@ void Actor::step(
             }
 
             // Learn kernel
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValuesPrev, q, g), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenCsPrev, &sPrev.hiddenValuesPrev, q, g, mimic), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
 }

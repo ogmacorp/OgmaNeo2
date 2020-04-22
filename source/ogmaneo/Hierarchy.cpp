@@ -206,7 +206,8 @@ void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
     bool learnEnabled,
-    float reward
+    float reward,
+    bool mimic
 ) {
     assert(inputCs.size() == inputSizes.size());
 
@@ -305,7 +306,7 @@ void Hierarchy::step(
                 // Step actors
                 for (int p = 0; p < aLayers.size(); p++) {
                     if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled);
+                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled, mimic);
                 }
             }
         }

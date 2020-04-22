@@ -111,7 +111,8 @@ public:
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Input layer column states
         bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
+        float reward = 0.0f, // Optional reward for actor layers
+        bool mimic = false
     );
 
     // State get
