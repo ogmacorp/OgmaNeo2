@@ -23,6 +23,11 @@ void SparseCoder::forward(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
+        if (hiddenRefractories[hiddenIndex] > 0) {
+            hiddenRefractories[hiddenIndex]--;
+            continue;
+        }
+
         float sum = 0.0f;
 
         // For each visible layer
@@ -40,6 +45,8 @@ void SparseCoder::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
+
+    hiddenRefractories[address3(Int3(pos.x, pos.y, maxIndex), hiddenSize)] = refractoryTicks;
 }
 
 void SparseCoder::learn(
@@ -121,6 +128,8 @@ void SparseCoder::initRandom(
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
+
+    hiddenRefractories = IntBuffer(numHidden, 0);
 }
 
 void SparseCoder::step(
@@ -152,8 +161,10 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
+    os.write(reinterpret_cast<const char*>(&refractoryTicks), sizeof(int));
 
     writeBufferToStream(os, &hiddenCs);
+    writeBufferToStream(os, &hiddenRefractories);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -178,8 +189,10 @@ void SparseCoder::readFromStream(
     int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+    is.read(reinterpret_cast<char*>(&refractoryTicks), sizeof(int));
 
     readBufferFromStream(is, &hiddenCs);
+    readBufferFromStream(is, &hiddenRefractories);
 
     int numVisibleLayers;
     
