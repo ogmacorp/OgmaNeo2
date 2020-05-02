@@ -123,7 +123,7 @@ void Actor::learn(
 
         sum /= std::max(1, count);
 
-        float deltaAction = (mimic ? beta : beta * std::tanh(tdErrorAction)) * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+        float deltaAction = (mimic ? beta : (tdErrorAction > 0.0f ? beta : -beta)) * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
