@@ -26,13 +26,17 @@ public:
 
 	ComputeSystem()
 	:
-	batchSize1(1024),
+	batchSize1(512),
 	batchSize2(2, 2),
 	batchSize3(2, 2, 2)
 	{}
 
 	static void setNumThreads(int numThreads) {
 		omp_set_num_threads(numThreads);
+	}
+
+	static int getNumThreads() {
+		return omp_get_num_threads();
 	}
 };
 } // namespace ogmaneo

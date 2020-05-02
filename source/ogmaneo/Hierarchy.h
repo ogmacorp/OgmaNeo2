@@ -58,7 +58,7 @@ public:
         ffRadius(2),
         pRadius(2),
         ticksPerUpdate(2),
-        temporalHorizon(2),
+        temporalHorizon(4),
         aRadius(2),
         historyCapacity(32)
         {}
@@ -109,9 +109,31 @@ public:
     // Simulation step/tick
     void step(
         ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Input layer column states
+        const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
+        const std::vector<const IntBuffer*> &targetCs, // Inputs to predict
         bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f // Optional reward for actor layers
+        float reward = 0.0f, // Optional reward for actor layers
+        bool mimic = false
+    );
+
+    void step(
+        ComputeSystem &cs, // Compute system
+        const std::vector<const IntBuffer*> &inputCs, // Inputs
+        bool learnEnabled = true, // Whether learning is enabled
+        float reward = 0.0f, // Optional reward for actor layers
+        bool mimic = false
+    ) {
+        step(cs, inputCs, inputCs, learnEnabled, reward, mimic);
+    }
+
+    // State get
+    void getState(
+        State &state
+    ) const;
+
+    // State set
+    void setState(
+        const State &state
     );
 
     // State get

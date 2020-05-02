@@ -38,6 +38,8 @@ public:
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
         IntBuffer hiddenCsPrev;
+
+        FloatBuffer hiddenValuesPrev;
         
         float reward;
     };
@@ -71,8 +73,10 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
+        const FloatBuffer* hiddenValuesPrev,
         float q,
-        float g
+        float g,
+        bool mimic
     );
 
     static void forwardKernel(
@@ -90,10 +94,12 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const IntBuffer* hiddenCsPrev,
+        const FloatBuffer* hiddenValuesPrev,
         float q,
-        float g
+        float g,
+        bool mimic
     ) {
-        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, q, g);
+        a->learn(pos, rng, inputCsPrev, hiddenCsPrev, hiddenValuesPrev, q, g, mimic);
     }
 
 public:
@@ -138,7 +144,8 @@ public:
         const std::vector<const IntBuffer*> &inputCs,
         const IntBuffer* hiddenCsPrev,
         float reward,
-        bool learnEnabled
+        bool learnEnabled,
+        bool mimic
     );
 
     // Write to stream
