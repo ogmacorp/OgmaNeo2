@@ -136,16 +136,6 @@ public:
         const State &state
     );
 
-    // State get
-    void getState(
-        State &state
-    ) const;
-
-    // State set
-    void setState(
-        const State &state
-    );
-
     // Write to stream
     void writeToStream(
         std::ostream &os // Stream to write to
