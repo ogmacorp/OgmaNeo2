@@ -80,13 +80,13 @@ private:
 
 public:
     float alpha; // Weight learning rate
-    int refractoryTicks; // Number of ticks to refractory
+    int refractoryTicks; // Number of ticks to refractor
 
     // Defaults
     SparseCoder()
     :
     alpha(0.1f),
-    refractoryTicks(2)
+    refractoryTicks(1)
     {}
 
     // Create a sparse coding layer with random initialization
