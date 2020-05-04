@@ -85,7 +85,7 @@ public:
     // Defaults
     SparseCoder()
     :
-    alpha(0.1f),
+    alpha(0.2f),
     refractoryTicks(1)
     {}
 
