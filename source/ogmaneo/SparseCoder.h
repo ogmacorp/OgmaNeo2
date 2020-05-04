@@ -137,6 +137,10 @@ public:
         return hiddenCs;
     }
 
+    const IntBuffer &getHiddenRefractories() const {
+        return hiddenRefractories;
+    }
+
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
