@@ -86,7 +86,7 @@ public:
     SparseCoder()
     :
     alpha(0.2f),
-    refractoryTicks(1)
+    refractoryTicks(0) // Default to no refractory period
     {}
 
     // Create a sparse coding layer with random initialization
