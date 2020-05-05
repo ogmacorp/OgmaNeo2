@@ -453,14 +453,12 @@ void Hierarchy::getState(
     int numLayers = scLayers.size();
 
     state.hiddenCs.resize(numLayers);
-    state.hiddenRefractories.resize(numLayers);
     state.histories.resize(numLayers);
     state.predHiddenCs.resize(numLayers);
     state.predInputCsPrev.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         state.hiddenCs[l] = scLayers[l].getHiddenCs();
-        state.hiddenRefractories[l] = scLayers[l].getHiddenRefractories();
 
         state.histories[l].resize(historySizes[l].size());
 
@@ -491,7 +489,6 @@ void Hierarchy::setState(
 
     for (int l = 0; l < numLayers; l++) {
         scLayers[l].hiddenCs = state.hiddenCs[l];
-        scLayers[l].hiddenRefractories = state.hiddenRefractories[l];
 
         for (int i = 0; i < historySizes[l].size(); i++)
             *histories[l][i] = state.histories[l][i];
