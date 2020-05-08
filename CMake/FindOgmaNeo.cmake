@@ -13,21 +13,21 @@
 # OGMANEO_FOUND, if false, do not try to link to OgmaNeo
 # OGMANEO_INCLUDE_DIR, where to find OgmaNeo headers
 #
-IF(OGMANEO_INCLUDE_DIR)
-  # Already in cache, be silent
-  SET(OGMANEO_FIND_QUIETLY TRUE)
-ENDIF(OGMANEO_INCLUDE_DIR)
+if(OGMANEO_INCLUDE_DIR)
+    # Already in cache, be silent
+    set(OGMANEO_FIND_QUIETLY TRUE)
+endif(OGMANEO_INCLUDE_DIR)
 
-FIND_PATH(OGMANEO_INCLUDE_DIR ogmaneo/Hierarchy.h)
+find_path(OGMANEO_INCLUDE_DIR ogmaneo/Hierarchy.h)
 
-SET(OGMANEO_NAMES ogmaneo OgmaNeo OGMANEO)
-FIND_LIBRARY(OGMANEO_LIBRARY NAMES ${OGMANEO_NAMES})
+set(OGMANEO_NAMES ogmaneo OgmaNeo OGMANEO)
+find_library(OGMANEO_LIBRARY NAMES ${OGMANEO_NAMES})
 
 # Per-recommendation
-SET(OGMANEO_INCLUDE_DIRS "${OGMANEO_INCLUDE_DIR}")
-SET(OGMANEO_LIBRARIES    "${OGMANEO_LIBRARY}")
+set(OGMANEO_INCLUDE_DIRS "${OGMANEO_INCLUDE_DIR}")
+set(OGMANEO_LIBRARIES    "${OGMANEO_LIBRARY}")
 
 # handle the QUIETLY and REQUIRED arguments and set OGMANEO_FOUND to TRUE if
 # all listed variables are TRUE
-INCLUDE(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(OgmaNeo DEFAULT_MSG OGMANEO_LIBRARY OGMANEO_INCLUDE_DIR)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(OgmaNeo DEFAULT_MSG OGMANEO_LIBRARY OGMANEO_INCLUDE_DIR)
