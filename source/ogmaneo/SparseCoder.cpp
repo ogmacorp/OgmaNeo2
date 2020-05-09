@@ -55,31 +55,14 @@ void SparseCoder::learn(
 
     int targetC = (*inputCs)[visibleColumnIndex];
 
-    int maxIndex = 0;
-    float maxActivation = -999999.0f;
-    std::vector<float> activations(vld.size.z);
-
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
         float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
-        activations[vc] = sum;
+        float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - sum);
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
-            maxIndex = vc;
-        }
-    }
-
-    if (maxIndex != targetC) {
-        for (int vc = 0; vc < vld.size.z; vc++) {
-            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
-
-            float delta = alpha * ((vc == targetC ? 1.0f : -1.0f) - std::tanh(activations[vc]));
-
-            vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
-        }
+        vl.weights.deltaChangedOHVsT(hiddenCs, hiddenCsPrev, delta, visibleIndex, hiddenSize.z);
     }
 }
 
@@ -120,6 +103,7 @@ void SparseCoder::initRandom(
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
+    hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 }
 
 void SparseCoder::step(
@@ -140,6 +124,9 @@ void SparseCoder::step(
             runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
         }
     }
+
+    // Update prevs
+    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &hiddenCs, &hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 }
 
 void SparseCoder::writeToStream(
@@ -153,6 +140,7 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
+    writeBufferToStream(os, &hiddenCsPrev);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -179,6 +167,7 @@ void SparseCoder::readFromStream(
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
+    readBufferFromStream(is, &hiddenCsPrev);
 
     int numVisibleLayers;
     

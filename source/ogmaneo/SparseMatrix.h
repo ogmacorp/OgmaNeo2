@@ -167,6 +167,34 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	int countChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int row,
+		int oneHotSize
+	);
+
+	int countChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int column,
+		int oneHotSize
+	);
+
+	float multiplyChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int row,
+		int oneHotSize
+	);
+
+	float multiplyChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int column,
+		int oneHotSize
+	);
+
 	// --- Delta Rules ---
 
 	void deltas(
@@ -206,6 +234,22 @@ struct SparseMatrix {
 	void deltaOHVsT(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<float> &nonZeroScalars,
+		float delta,
+		int column,
+		int oneHotSize
+	);
+
+	void deltaChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		float delta,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
 		float delta,
 		int column,
 		int oneHotSize
