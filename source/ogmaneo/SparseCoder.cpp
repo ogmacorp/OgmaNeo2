@@ -79,7 +79,7 @@ void SparseCoder::learn(
 
             float clamped = std::min(1.0f, std::max(0.0f, activations[vc]));
 
-            float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - activations[vc]) * clamped * (1.0f - clamped);
+            float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - activations[vc]) * clamped;
 
             vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
         }
