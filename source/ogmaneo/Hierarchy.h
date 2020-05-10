@@ -25,7 +25,7 @@ enum InputType {
 // State of hierarchy
 struct State {
     std::vector<IntBuffer> hiddenCs;
-    std::vector<IntBuffer> hiddenRefractories;
+    std::vector<IntBuffer> hiddenCsPrev;
     std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
 
@@ -111,21 +111,10 @@ public:
     void step(
         ComputeSystem &cs, // Compute system
         const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
-        const std::vector<const IntBuffer*> &targetCs, // Inputs to predict
         bool learnEnabled = true, // Whether learning is enabled
         float reward = 0.0f, // Optional reward for actor layers
         bool mimic = false
     );
-
-    void step(
-        ComputeSystem &cs, // Compute system
-        const std::vector<const IntBuffer*> &inputCs, // Inputs
-        bool learnEnabled = true, // Whether learning is enabled
-        float reward = 0.0f, // Optional reward for actor layers
-        bool mimic = false
-    ) {
-        step(cs, inputCs, inputCs, learnEnabled, reward, mimic);
-    }
 
     // State get
     void getState(

@@ -205,13 +205,11 @@ const Hierarchy &Hierarchy::operator=(
 void Hierarchy::step(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs,
-    const std::vector<const IntBuffer*> &targetCs,
     bool learnEnabled,
     float reward,
     bool mimic
 ) {
     assert(inputCs.size() == inputSizes.size());
-    assert(targetCs.size() == inputSizes.size());
 
     // First tick is always 0
     ticks[0] = 0;
@@ -298,7 +296,7 @@ void Hierarchy::step(
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? targetCs[p] : histories[l][p].get());
+                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : histories[l][p].get());
 
                     pLayers[l][p]->activate(cs, feedBackCs);
                 }
@@ -308,7 +306,7 @@ void Hierarchy::step(
                 // Step actors
                 for (int p = 0; p < aLayers.size(); p++) {
                     if (aLayers[p] != nullptr)
-                        aLayers[p]->step(cs, feedBackCs, targetCs[p], reward, learnEnabled, mimic);
+                        aLayers[p]->step(cs, feedBackCs, inputCs[p], reward, learnEnabled, mimic);
                 }
             }
         }
@@ -453,14 +451,14 @@ void Hierarchy::getState(
     int numLayers = scLayers.size();
 
     state.hiddenCs.resize(numLayers);
-    state.hiddenRefractories.resize(numLayers);
+    state.hiddenCsPrev.resize(numLayers);
     state.histories.resize(numLayers);
     state.predHiddenCs.resize(numLayers);
     state.predInputCsPrev.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         state.hiddenCs[l] = scLayers[l].getHiddenCs();
-        state.hiddenRefractories[l] = scLayers[l].getHiddenRefractories();
+        state.hiddenCsPrev[l] = scLayers[l].getHiddenCsPrev();
 
         state.histories[l].resize(historySizes[l].size());
 
@@ -491,7 +489,7 @@ void Hierarchy::setState(
 
     for (int l = 0; l < numLayers; l++) {
         scLayers[l].hiddenCs = state.hiddenCs[l];
-        scLayers[l].hiddenRefractories = state.hiddenRefractories[l];
+        scLayers[l].hiddenCsPrev = state.hiddenCsPrev[l];
 
         for (int i = 0; i < historySizes[l].size(); i++)
             *histories[l][i] = state.histories[l][i];

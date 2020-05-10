@@ -37,8 +37,7 @@ private:
     Int3 hiddenSize; // Size of hidden/output layer
 
     IntBuffer hiddenCs; // Hidden states
-
-    IntBuffer hiddenRefractories;
+    IntBuffer hiddenCsPrev; // Previous hidden states
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -80,13 +79,11 @@ private:
 
 public:
     float alpha; // Weight learning rate
-    int refractoryTicks; // Number of ticks to refractor
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.1f),
-    refractoryTicks(1)
+    alpha(0.1f)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -137,8 +134,9 @@ public:
         return hiddenCs;
     }
 
-    const IntBuffer &getHiddenRefractories() const {
-        return hiddenRefractories;
+    // Get the previous hidden states
+    const IntBuffer &getHiddenCsPrev() const {
+        return hiddenCsPrev;
     }
 
     // Get the hidden size
