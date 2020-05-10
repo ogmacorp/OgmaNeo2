@@ -134,6 +134,11 @@ public:
         return hiddenCs;
     }
 
+    // Get the previous hidden states
+    const IntBuffer &getHiddenCsPrev() const {
+        return hiddenCsPrev;
+    }
+
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
