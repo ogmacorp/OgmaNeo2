@@ -153,7 +153,7 @@ void Actor::learn(
 
     sum /= std::max(1, count);
 
-    float deltaAction = beta * (tdErrorAction - sum);
+    float deltaAction = beta * tdErrorAction;//(tdErrorAction - sum);
 
     // For each visible layer
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
