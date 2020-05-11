@@ -7,7 +7,6 @@
 // ----------------------------------------------------------------------------
 
 #include "Actor.h"
-#include <iostream>
 
 using namespace ogmaneo;
 
@@ -36,7 +35,7 @@ void Actor::forward(
 
     // --- Action ---
 
-    int maxIndex = 0;
+    std::vector<float> activations(hiddenSize.z);
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
@@ -52,13 +51,39 @@ void Actor::forward(
             sum += vl.actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
         }
 
-        if (sum > maxActivation) {
-            maxActivation = sum;
-            maxIndex = hc;
+        sum /= std::max(1, count);
+
+        activations[hc] = sum;
+
+        maxActivation = std::max(maxActivation, sum);
+    }
+
+    float total = 0.0f;
+
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+        
+        total += activations[hc];
+    }
+
+    std::uniform_real_distribution<float> cuspDist(0.0f, total);
+
+    float cusp = cuspDist(rng);
+
+    int selectIndex = 0;
+    float sumSoFar = 0.0f;
+
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        sumSoFar += activations[hc];
+
+        if (sumSoFar >= cusp) {
+            selectIndex = hc;
+
+            break;
         }
     }
     
-    hiddenCs[hiddenColumnIndex] = maxIndex;
+    hiddenCs[hiddenColumnIndex] = selectIndex;
 }
 
 void Actor::learn(
@@ -106,32 +131,53 @@ void Actor::learn(
 
     // --- Action ---
 
-    float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
+    int targetC = (*hiddenTargetCsPrev)[address2(pos, Int2(hiddenSize.x, hiddenSize.y))];
 
-    int targetC = (*hiddenTargetCsPrev)[hiddenColumnIndex];
-    
-    int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
+    std::vector<float> activations(hiddenSize.z);
+    float maxActivation = -999999.0f;
 
-    float sum = 0.0f;
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+        float sum = 0.0f;
 
-        sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndexTarget, vld.size.z);
+        // For each visible layer
+        for (int vli = 0; vli < visibleLayers.size(); vli++) {
+            VisibleLayer &vl = visibleLayers[vli];
+            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+            sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
+        }
+
+        sum /= std::max(1, count);
+
+        activations[hc] = sum;
+
+        maxActivation = std::max(maxActivation, sum);
     }
 
-    sum /= std::max(1, count);
+    float total = 0.0f;
 
-    float deltaAction = beta * tdErrorAction;
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        activations[hc] = std::exp(activations[hc] - maxActivation);
+        
+        total += activations[hc];
+    }
 
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+    float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
 
-        vl.actionWeights.deltaChangedOHVs(*inputCsPrev[vli], *inputCsPrevPrev[vli], deltaAction, hiddenIndexTarget, vld.size.z);
+    for (int hc = 0; hc < hiddenSize.z; hc++) {
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+        float deltaAction = (mimic ? beta : beta * std::tanh(tdErrorAction)) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+
+        // For each visible layer
+        for (int vli = 0; vli < visibleLayers.size(); vli++) {
+            VisibleLayer &vl = visibleLayers[vli];
+            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+            vl.actionWeights.deltaChangedOHVs(*inputCsPrev[vli], *inputCsPrevPrev[vli], deltaAction, hiddenIndex, vld.size.z);
+        }
     }
 }
 
@@ -297,8 +343,7 @@ void Actor::step(
         }
 
         // Learn kernel
-        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this,
-            constGet(sPrev.inputCs), constGet(sPrevPrev.inputCs), &s.hiddenTargetCsPrev, &sPrev.hiddenValuesPrev, q, g, mimic), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+        runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), constGet(sPrevPrev.inputCs), &s.hiddenTargetCsPrev, &sPrev.hiddenValuesPrev, q, g, mimic), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
     }
 }
 
