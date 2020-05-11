@@ -111,18 +111,6 @@ void Actor::learn(
     
     int hiddenIndexTarget = address3(Int3(pos.x, pos.y, targetC), hiddenSize);
 
-    float sum = 0.0f;
-
-    // For each visible layer
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-        sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndexTarget, vld.size.z);
-    }
-
-    sum /= std::max(1, count);
-
     float deltaAction = beta * tdErrorAction;//(tdErrorAction - sum);
 
     // For each visible layer
