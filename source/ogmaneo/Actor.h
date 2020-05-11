@@ -37,7 +37,7 @@ public:
     // History sample for delayed updates
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
-        IntBuffer hiddenCsPrev;
+        IntBuffer hiddenTargetCsPrev;
 
         FloatBuffer hiddenValuesPrev;
         
@@ -73,7 +73,7 @@ private:
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrevPrev,
-        const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenTargetCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
         float g,
@@ -95,13 +95,13 @@ private:
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
         const std::vector<const IntBuffer*> &inputCsPrevPrev,
-        const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenTargetCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
         float g,
         bool mimic
     ) {
-        a->learn(pos, rng, inputCsPrev, inputCsPrevPrev, hiddenCsPrev, hiddenValuesPrev, q, g, mimic);
+        a->learn(pos, rng, inputCsPrev, inputCsPrevPrev, hiddenTargetCsPrev, hiddenValuesPrev, q, g, mimic);
     }
 
 public:
@@ -112,7 +112,7 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.02f),
+    alpha(0.1f),
     beta(0.1f),
     gamma(0.99f)
     {}
@@ -139,7 +139,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenTargetCsPrev,
         float reward,
         bool learnEnabled,
         bool mimic
@@ -182,20 +182,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
-    }
-
-    // Get the value weights for a visible layer
-    const SparseMatrix &getValueWeights(
-        int i // Index of layer
-    ) {
-        return visibleLayers[i].valueWeights;
-    }
-
-    // Get the action weights for a visible layer
-    const SparseMatrix &getActionWeights(
-        int i // Index of layer
-    ) {
-        return visibleLayers[i].actionWeights;
     }
 };
 } // namespace ogmaneo

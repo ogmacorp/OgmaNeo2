@@ -144,13 +144,6 @@ public:
         return hiddenSize;
     }
 
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return visibleLayers[i].weights;
-    }
-
     friend class Hierarchy;
 };
 } // Namespace ogmaneo
