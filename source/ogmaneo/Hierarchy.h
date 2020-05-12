@@ -27,6 +27,7 @@ struct State {
     std::vector<IntBuffer> hiddenCs;
     std::vector<IntBuffer> hiddenCsPrev;
     std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
+    std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrevPrev;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
 
     std::vector<std::vector<IntBuffer>> histories;

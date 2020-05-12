@@ -33,6 +33,7 @@ public:
         SparseMatrix weights; // Weight matrix
 
         IntBuffer inputCsPrev; // Previous timestep (prev) input states
+        IntBuffer inputCsPrevPrev; // Previous, previous timestep (x2) (prev) input states
     };
 
 private:
