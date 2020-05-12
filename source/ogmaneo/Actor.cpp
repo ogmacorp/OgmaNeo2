@@ -90,7 +90,6 @@ void Actor::learn(
     const Int2 &pos,
     std::mt19937 &rng,
     const std::vector<const IntBuffer*> &inputCsPrev,
-    const std::vector<const IntBuffer*> &inputCsPrevPrev,
     const IntBuffer* hiddenTargetCsPrev,
     const FloatBuffer* hiddenValuesPrev,
     float q,
@@ -126,12 +125,12 @@ void Actor::learn(
         VisibleLayer &vl = visibleLayers[vli];
         const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-        vl.valueWeights.deltaChangedOHVs(*inputCsPrev[vli], *inputCsPrevPrev[vli], deltaValue, hiddenColumnIndex, vld.size.z);
+        vl.valueWeights.deltaOHVs(*inputCsPrev[vli], deltaValue, hiddenColumnIndex, vld.size.z);
     }
 
     // --- Action ---
 
-    int targetC = (*hiddenTargetCsPrev)[address2(pos, Int2(hiddenSize.x, hiddenSize.y))];
+    int targetC = (*hiddenTargetCsPrev)[hiddenColumnIndex];
 
     std::vector<float> activations(hiddenSize.z);
     float maxActivation = -999999.0f;
@@ -169,14 +168,14 @@ void Actor::learn(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float deltaAction = (mimic ? beta : beta * std::tanh(tdErrorAction)) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = (mimic ? beta : (tdErrorAction > 0.0f ? beta : -beta)) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            vl.actionWeights.deltaChangedOHVs(*inputCsPrev[vli], *inputCsPrevPrev[vli], deltaAction, hiddenIndex, vld.size.z);
+            vl.actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld.size.z);
         }
     }
 }
@@ -329,13 +328,12 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > minSteps + 1) {
-        std::uniform_int_distribution<int> historyDist(2, historySize - minSteps);
+    if (learnEnabled && historySize > minSteps) {
+        std::uniform_int_distribution<int> historyDist(1, historySize - minSteps);
 
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);
 
-            const HistorySample &sPrevPrev = *historySamples[historyIndex - 2];
             const HistorySample &sPrev = *historySamples[historyIndex - 1];
             const HistorySample &s = *historySamples[historyIndex];
 
@@ -350,7 +348,7 @@ void Actor::step(
             }
 
             // Learn kernel
-            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), constGet(sPrevPrev.inputCs), &s.hiddenTargetCsPrev, &sPrev.hiddenValuesPrev, q, g, mimic), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+            runKernel2(cs, std::bind(Actor::learnKernel, std::placeholders::_1, std::placeholders::_2, this, constGet(sPrev.inputCs), &s.hiddenTargetCsPrev, &sPrev.hiddenValuesPrev, q, g, mimic), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
         }
     }
 }

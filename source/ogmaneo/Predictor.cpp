@@ -71,7 +71,7 @@ void Predictor::learn(
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            vl.weights.deltaChangedOHVs(vl.inputCsPrev, vl.inputCsPrevPrev, delta, hiddenIndex, vld.size.z);
+            vl.weights.deltaOHVs(vl.inputCsPrev, delta, hiddenIndex, vld.size.z);
         }
     }
 }
@@ -107,7 +107,6 @@ void Predictor::initRandom(
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
 
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
-        vl.inputCsPrevPrev = IntBuffer(numVisibleColumns, 0);
     }
 
     // Hidden Cs
@@ -131,7 +130,6 @@ void Predictor::activate(
 
         int numVisibleColumns = vld.size.x * vld.size.y;
 
-        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &vl.inputCsPrev, &vl.inputCsPrevPrev), numVisibleColumns, cs.rng, cs.batchSize1);
         runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[vli], &vl.inputCsPrev), numVisibleColumns, cs.rng, cs.batchSize1);
     }
 }
@@ -169,7 +167,6 @@ void Predictor::writeToStream(
         writeSMToStream(os, vl.weights);
 
         writeBufferToStream(os, &vl.inputCsPrev);
-        writeBufferToStream(os, &vl.inputCsPrevPrev);
     }
 }
 
@@ -201,6 +198,5 @@ void Predictor::readFromStream(
         readSMFromStream(is, vl.weights);
 
         readBufferFromStream(is, &vl.inputCsPrev);
-        readBufferFromStream(is, &vl.inputCsPrevPrev);
     }
 }

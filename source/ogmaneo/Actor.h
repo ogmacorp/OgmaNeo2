@@ -72,7 +72,6 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrevPrev,
         const IntBuffer* hiddenTargetCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
@@ -94,14 +93,13 @@ private:
         std::mt19937 &rng,
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrevPrev,
         const IntBuffer* hiddenTargetCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
         float g,
         bool mimic
     ) {
-        a->learn(pos, rng, inputCsPrev, inputCsPrevPrev, hiddenTargetCsPrev, hiddenValuesPrev, q, g, mimic);
+        a->learn(pos, rng, inputCsPrev, hiddenTargetCsPrev, hiddenValuesPrev, q, g, mimic);
     }
 
 public:
@@ -114,8 +112,8 @@ public:
     // Defaults
     Actor()
     :
-    alpha(0.02f),
-    beta(0.02f),
+    alpha(0.05f),
+    beta(0.05f),
     gamma(0.99f),
     minSteps(8),
     historyIters(8)
