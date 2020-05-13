@@ -195,6 +195,18 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	float multiplyExpOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize
+	);
+
+	float multiplyExpOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize
+	);
+
 	// --- Delta Rules ---
 
 	void deltas(
@@ -253,6 +265,34 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void setTraceChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int row,
+		int oneHotSize
+	);
+
+	void setTraceChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int column,
+		int oneHotSize
+	);
+
+	void deltaTracedOHVs(
+		SparseMatrix &traces,
+		float delta,
+		int row,
+		float traceDecay
+	);
+
+	void deltaTracedOHVsT(
+		SparseMatrix &traces,
+		float delta,
+		int column,
+		float traceDecay
 	);
 
 	// --- Hebb Rules ---

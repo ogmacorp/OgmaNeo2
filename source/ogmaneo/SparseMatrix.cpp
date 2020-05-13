@@ -467,6 +467,42 @@ float SparseMatrix::multiplyChangedOHVsT(
 	return sum;
 }
 
+float SparseMatrix::multiplyExpOHVs(
+	const std::vector<int> &nonZeroIndices,
+	int row,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = row + 1;
+	
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
+
+		sum += std::exp(nonZeroValues[j]);
+	}
+
+	return sum;
+}
+
+float SparseMatrix::multiplyExpOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	int column,
+	int oneHotSize
+) {
+	float sum = 0.0f;
+
+	int nextIndex = column + 1;
+	
+	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
+		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
+
+		sum += std::exp(nonZeroValues[nonZeroValueIndices[j]]);
+	}
+
+	return sum;
+}
+
 void SparseMatrix::deltas(
 	const std::vector<float> &in,
 	float delta,
@@ -590,6 +626,72 @@ void SparseMatrix::deltaChangedOHVsT(
 
 			nonZeroValues[nonZeroValueIndices[j]] += delta;
 		}
+	}
+}
+
+void SparseMatrix::setTraceChangedOHVs(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<int> &nonZeroIndicesPrev,
+	int row,
+	int oneHotSize
+) {
+	int nextIndex = row + 1;
+
+	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
+		int i = columnIndices[jj] / oneHotSize;
+
+		if (nonZeroIndices[i] != nonZeroIndicesPrev[i]) {
+			int j = jj + nonZeroIndices[i];
+
+			nonZeroValues[j] = 1.0f;
+		}
+	}
+}
+
+void SparseMatrix::setTraceChangedOHVsT(
+	const std::vector<int> &nonZeroIndices,
+	const std::vector<int> &nonZeroIndicesPrev,
+	int column,
+	int oneHotSize
+) {
+	int nextIndex = column + 1;
+
+	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
+		int i = rowIndices[jj] / oneHotSize;
+
+		if (nonZeroIndices[i] != nonZeroIndicesPrev[i]) {
+			int j = jj + nonZeroIndices[i];
+
+			nonZeroValues[nonZeroValueIndices[j]] = 1.0f;
+		}
+	}
+}
+
+void SparseMatrix::deltaTracedOHVs(
+	SparseMatrix &traces,
+	float delta,
+	int row,
+	float traceDecay
+) {
+	int nextIndex = row + 1;
+
+	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++) {
+		nonZeroValues[j] += delta * traces.nonZeroValues[j];
+		traces.nonZeroValues[j] *= traceDecay;
+	}
+}
+
+void SparseMatrix::deltaTracedOHVsT(
+	SparseMatrix &traces,
+	float delta,
+	int column,
+	float traceDecay
+) {
+	int nextIndex = column + 1;
+
+	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++) {
+		nonZeroValues[nonZeroValueIndices[j]] += delta * traces.nonZeroValues[nonZeroValueIndices[j]];
+		traces.nonZeroValues[nonZeroValueIndices[j]] *= traceDecay;
 	}
 }
 

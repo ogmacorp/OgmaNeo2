@@ -455,7 +455,6 @@ void Hierarchy::getState(
     state.histories.resize(numLayers);
     state.predHiddenCs.resize(numLayers);
     state.predInputCsPrev.resize(numLayers);
-    state.predInputCsPrevPrev.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         state.hiddenCs[l] = scLayers[l].getHiddenCs();
@@ -468,17 +467,14 @@ void Hierarchy::getState(
 
         state.predHiddenCs[l].resize(pLayers[l].size());
         state.predInputCsPrev[l].resize(pLayers[l].size());
-        state.predInputCsPrevPrev[l].resize(pLayers[l].size());
 
         for (int j = 0; j < pLayers[l].size(); j++) {
             state.predHiddenCs[l][j] = pLayers[l][j]->getHiddenCs();
 
             state.predInputCsPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
-            state.predInputCsPrevPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
 
             for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++) {
                 state.predInputCsPrev[l][j][v] = pLayers[l][j]->getVisibleLayer(v).inputCsPrev;
-                state.predInputCsPrevPrev[l][j][v] = pLayers[l][j]->getVisibleLayer(v).inputCsPrevPrev;
             }
         }
     }
@@ -504,7 +500,6 @@ void Hierarchy::setState(
 
             for (int v = 0; v < pLayers[l][j]->getNumVisibleLayers(); v++) {
                 pLayers[l][j]->visibleLayers[v].inputCsPrev = state.predInputCsPrev[l][j][v];
-                pLayers[l][j]->visibleLayers[v].inputCsPrevPrev = state.predInputCsPrevPrev[l][j][v];
             }
         }
     }

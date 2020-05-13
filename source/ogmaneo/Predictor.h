@@ -33,7 +33,6 @@ public:
         SparseMatrix weights; // Weight matrix
 
         IntBuffer inputCsPrev; // Previous timestep (prev) input states
-        IntBuffer inputCsPrevPrev; // Previous, previous timestep (x2) (prev) input states
     };
 
 private:
@@ -142,13 +141,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
-    }
-
-    // Get the weights for a visible layer
-    const SparseMatrix &getWeights(
-        int i // Index of visible layer
-    ) {
-        return visibleLayers[i].weights;
     }
 
     friend class Hierarchy;

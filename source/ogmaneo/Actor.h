@@ -37,7 +37,7 @@ public:
     // History sample for delayed updates
     struct HistorySample {
         std::vector<IntBuffer> inputCs;
-        IntBuffer hiddenCsPrev;
+        IntBuffer hiddenTargetCsPrev;
 
         FloatBuffer hiddenValuesPrev;
         
@@ -72,8 +72,7 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrevPrev,
-        const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenTargetCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
         float g,
@@ -94,27 +93,30 @@ private:
         std::mt19937 &rng,
         Actor* a,
         const std::vector<const IntBuffer*> &inputCsPrev,
-        const std::vector<const IntBuffer*> &inputCsPrevPrev,
-        const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenTargetCsPrev,
         const FloatBuffer* hiddenValuesPrev,
         float q,
         float g,
         bool mimic
     ) {
-        a->learn(pos, rng, inputCsPrev, inputCsPrevPrev, hiddenCsPrev, hiddenValuesPrev, q, g, mimic);
+        a->learn(pos, rng, inputCsPrev, hiddenTargetCsPrev, hiddenValuesPrev, q, g, mimic);
     }
 
 public:
     float alpha; // Value learning rate
     float beta; // Action learning rate
     float gamma; // Discount factor
+    int minSteps;
+    int historyIters;
 
     // Defaults
     Actor()
     :
-    alpha(0.1f),
-    beta(0.1f),
-    gamma(0.99f)
+    alpha(0.02f),
+    beta(0.02f),
+    gamma(0.99f),
+    minSteps(8),
+    historyIters(8)
     {}
 
     Actor(
@@ -139,7 +141,7 @@ public:
     void step(
         ComputeSystem &cs,
         const std::vector<const IntBuffer*> &inputCs,
-        const IntBuffer* hiddenCsPrev,
+        const IntBuffer* hiddenTargetCsPrev,
         float reward,
         bool learnEnabled,
         bool mimic
@@ -182,20 +184,6 @@ public:
     // Get the hidden size
     const Int3 &getHiddenSize() const {
         return hiddenSize;
-    }
-
-    // Get the value weights for a visible layer
-    const SparseMatrix &getValueWeights(
-        int i // Index of layer
-    ) {
-        return visibleLayers[i].valueWeights;
-    }
-
-    // Get the action weights for a visible layer
-    const SparseMatrix &getActionWeights(
-        int i // Index of layer
-    ) {
-        return visibleLayers[i].actionWeights;
     }
 };
 } // namespace ogmaneo
