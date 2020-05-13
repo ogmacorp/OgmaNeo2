@@ -467,42 +467,6 @@ float SparseMatrix::multiplyChangedOHVsT(
 	return sum;
 }
 
-float SparseMatrix::multiplyExpOHVs(
-	const std::vector<int> &nonZeroIndices,
-	int row,
-	int oneHotSize
-) {
-	float sum = 0.0f;
-
-	int nextIndex = row + 1;
-	
-	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
-		int j = jj + nonZeroIndices[columnIndices[jj] / oneHotSize];
-
-		sum += std::exp(nonZeroValues[j]);
-	}
-
-	return sum;
-}
-
-float SparseMatrix::multiplyExpOHVsT(
-	const std::vector<int> &nonZeroIndices,
-	int column,
-	int oneHotSize
-) {
-	float sum = 0.0f;
-
-	int nextIndex = column + 1;
-	
-	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
-		int j = jj + nonZeroIndices[rowIndices[jj] / oneHotSize];
-
-		sum += std::exp(nonZeroValues[nonZeroValueIndices[j]]);
-	}
-
-	return sum;
-}
-
 void SparseMatrix::deltas(
 	const std::vector<float> &in,
 	float delta,
