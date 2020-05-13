@@ -25,7 +25,6 @@ enum InputType {
 // State of hierarchy
 struct State {
     std::vector<IntBuffer> hiddenCs;
-    std::vector<IntBuffer> hiddenCsPrev;
     std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
 

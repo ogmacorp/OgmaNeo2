@@ -79,7 +79,7 @@ void SparseCoder::learn(
 
             float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - std::exp(activations[vc]));
 
-            vl.weights.deltaChangedOHVsT(hiddenCs, hiddenCsPrev, delta, visibleIndex, hiddenSize.z);
+            vl.weights.deltaOHVsT(hiddenCs, delta, visibleIndex, hiddenSize.z);
         }
     }
 }
@@ -121,7 +121,6 @@ void SparseCoder::initRandom(
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
-    hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 }
 
 void SparseCoder::step(
@@ -142,9 +141,6 @@ void SparseCoder::step(
             runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
         }
     }
-
-    // Update prevs
-    runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &hiddenCs, &hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 }
 
 void SparseCoder::writeToStream(
@@ -158,7 +154,6 @@ void SparseCoder::writeToStream(
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
-    writeBufferToStream(os, &hiddenCsPrev);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -185,7 +180,6 @@ void SparseCoder::readFromStream(
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
-    readBufferFromStream(is, &hiddenCsPrev);
 
     int numVisibleLayers;
     
