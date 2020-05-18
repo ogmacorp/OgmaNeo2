@@ -381,46 +381,6 @@ float SparseMatrix::distance2OHVsT(
 	return dist;
 }
 
-int SparseMatrix::countChangedOHVs(
-	const std::vector<int> &nonZeroIndices,
-	const std::vector<int> &nonZeroIndicesPrev,
-	int row,
-	int oneHotSize
-) {
-	int count = 0;
-
-	int nextIndex = row + 1;
-	
-	for (int jj = rowRanges[row]; jj < rowRanges[nextIndex]; jj += oneHotSize) {
-		int i = columnIndices[jj] / oneHotSize;
-
-		if (nonZeroIndices[i] != nonZeroIndicesPrev[i])
-			count++;
-	}
-
-	return count;
-}
-
-int SparseMatrix::countChangedOHVsT(
-	const std::vector<int> &nonZeroIndices,
-	const std::vector<int> &nonZeroIndicesPrev,
-	int column,
-	int oneHotSize
-) {
-	int count = 0;
-
-	int nextIndex = column + 1;
-	
-	for (int jj = columnRanges[column]; jj < columnRanges[nextIndex]; jj += oneHotSize) {
-		int i = rowIndices[jj] / oneHotSize;
-		
-		if (nonZeroIndices[i] != nonZeroIndicesPrev[i])
-			count++;
-	}
-
-	return count;
-}
-
 float SparseMatrix::multiplyChangedOHVs(
 	const std::vector<int> &nonZeroIndices,
 	const std::vector<int> &nonZeroIndicesPrev,
