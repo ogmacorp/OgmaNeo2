@@ -30,7 +30,7 @@ void SparseCoder::forward(
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z) / std::max(1, vl.weights.count(hiddenIndex) / vld.size.z);
         }
 
         if (sum > maxActivation) {
