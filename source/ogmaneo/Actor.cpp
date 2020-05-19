@@ -130,6 +130,8 @@ void Actor::learn(
 
     // --- Action ---
 
+    float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
+
     int targetC = (*hiddenTargetCsPrev)[hiddenColumnIndex];
 
     std::vector<float> activations(hiddenSize.z);
@@ -162,9 +164,7 @@ void Actor::learn(
         
         total += activations[hc];
     }
-
-    float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
-
+    
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
