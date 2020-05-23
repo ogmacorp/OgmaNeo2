@@ -77,7 +77,7 @@ void SparseCoder::learn(
         for (int vc = 0; vc < vld.size.z; vc++) {
             int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
-            float delta = alpha * ((vc == targetC ? 1.0f : -1.0f) - std::tanh(activations[vc]));
+            float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - std::exp(activations[vc]));
 
             vl.weights.deltaChangedOHVsT(hiddenCs, hiddenCsPrev, delta, visibleIndex, hiddenSize.z);
         }
