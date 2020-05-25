@@ -38,12 +38,17 @@ void SparseCoder::forward(
             maxActivation = sum;
             maxIndex = hc;
         }
-
-        if (learnEnabled)
-            hiddenBiases[hiddenIndex] -= beta * sum;
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
+
+    if (learnEnabled) {
+        for (int hc = 0; hc < hiddenSize.z; hc++) {
+            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+            hiddenBiases[hiddenIndex] += beta * (1.0f / hiddenSize.z - (hc == maxIndex ? 1.0f : 0.0f));
+        }
+    }
 }
 
 void SparseCoder::learn(
@@ -78,11 +83,13 @@ void SparseCoder::learn(
     }
 
     if (maxIndex != targetC) {
-        int visibleIndexTarget = address3(Int3(pos.x, pos.y, targetC), vld.size);
-        int visibleIndexMax = address3(Int3(pos.x, pos.y, maxIndex), vld.size);
+        for (int vc = 0; vc < vld.size.z; vc++) {
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
-        vl.weights.deltaChangedOHVsT(hiddenCs, hiddenCsPrev, alpha, visibleIndexTarget, hiddenSize.z);
-        vl.weights.deltaChangedOHVsT(hiddenCs, hiddenCsPrev, -alpha, visibleIndexMax, hiddenSize.z);
+            float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - std::exp(activations[vc]));
+
+            vl.weights.deltaChangedOHVsT(hiddenCs, hiddenCsPrev, delta, visibleIndex, hiddenSize.z);
+        }
     }
 }
 
