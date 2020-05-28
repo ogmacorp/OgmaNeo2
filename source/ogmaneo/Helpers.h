@@ -308,7 +308,7 @@ inline float sigmoid(
 
 // --- Serialization ---
 
-template <class T>
+template <typename T>
 void writeBufferToStream(
     std::ostream &os, // Stream
     const std::vector<T>* buf // Buffer to write
@@ -321,7 +321,7 @@ void writeBufferToStream(
         os.write(reinterpret_cast<const char*>(buf->data()), size * sizeof(T));
 }
 
-template <class T>
+template <typename T>
 void readBufferFromStream(
     std::istream &is, // Stream
     std::vector<T>* buf // Buffer to write
