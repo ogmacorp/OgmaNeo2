@@ -26,7 +26,6 @@ void Hierarchy::initRandom(
     ticks.resize(layerDescs.size(), 0);
 
     histories.resize(layerDescs.size());
-    historySizes.resize(layerDescs.size());
     
     ticksPerUpdate.resize(layerDescs.size());
 
@@ -45,8 +44,6 @@ void Hierarchy::initRandom(
         // Histories for all input layers or just the one sparse coder (if not the first layer)
         histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l].temporalHorizon : layerDescs[l].temporalHorizon);
 
-        historySizes[l].resize(histories[l].size());
-		
         // Create sparse coder visible layer descriptors
         std::vector<SparseCoder::VisibleLayerDesc> scVisibleLayerDescs;
 
@@ -70,8 +67,6 @@ void Hierarchy::initRandom(
                 int inSize = inputSizes[i].x * inputSizes[i].y;
 				
 				histories[l][v] = IntBuffer(inSize, 0);
-
-                historySizes[l][v] = inSize;
 			}
 
             // Predictors
@@ -120,11 +115,8 @@ void Hierarchy::initRandom(
 
             int inSize = layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y;
 
-			for (int v = 0; v < histories[l].size(); v++) {
+			for (int v = 0; v < histories[l].size(); v++)
                 histories[l][v] = IntBuffer(inSize, 0);
-
-                historySizes[l][v] = inSize;
-            }
 
             pLayers[l].resize(layerDescs[l].ticksPerUpdate);
 
@@ -156,7 +148,6 @@ const Hierarchy &Hierarchy::operator=(
     // Layers
     scLayers = other.scLayers;
 
-    historySizes = other.historySizes;
     updates = other.updates;
     ticks = other.ticks;
     ticksPerUpdate = other.ticksPerUpdate;
@@ -306,11 +297,9 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(ticksPerUpdate.data()), ticksPerUpdate.size() * sizeof(int));
 
     for (int l = 0; l < numLayers; l++) {
-        int numHistorySizes = historySizes[l].size();
+        int numHistories = histories[l].size();
 
-        os.write(reinterpret_cast<const char*>(&numHistorySizes), sizeof(int));
-
-        os.write(reinterpret_cast<const char*>(historySizes[l].data()), numHistorySizes * sizeof(int));
+        os.write(reinterpret_cast<const char*>(&numHistories), sizeof(int));
 
         int historyStart = histories[l].start;
 
@@ -363,7 +352,6 @@ void Hierarchy::readFromStream(
     ticks.resize(numLayers);
 
     histories.resize(numLayers);
-    historySizes.resize(numLayers);
     
     ticksPerUpdate.resize(numLayers);
 
@@ -374,15 +362,11 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(ticksPerUpdate.data()), ticksPerUpdate.size() * sizeof(int));
     
     for (int l = 0; l < numLayers; l++) {
-        int numHistorySizes;
+        int numHistories;
         
-        is.read(reinterpret_cast<char*>(&numHistorySizes), sizeof(int));
+        is.read(reinterpret_cast<char*>(&numHistories), sizeof(int));
 
-        historySizes[l].resize(numHistorySizes);
-
-        is.read(reinterpret_cast<char*>(historySizes[l].data()), numHistorySizes * sizeof(int));
-
-        histories[l].resize(numHistorySizes);
+        histories[l].resize(numHistories);
 
         int historyStart;
         
@@ -390,7 +374,7 @@ void Hierarchy::readFromStream(
 
         histories[l].start = historyStart;
 
-        for (int i = 0; i < historySizes[l].size(); i++)
+        for (int i = 0; i < histories[l].size(); i++)
             readBufferFromStream(is, &histories[l][i]);
 
         scLayers[l].readFromStream(is);
@@ -444,9 +428,9 @@ void Hierarchy::getState(
         state.hiddenCs[l] = scLayers[l].getHiddenCs();
         state.hiddenCsPrev[l] = scLayers[l].getHiddenCsPrev();
 
-        state.histories[l].resize(historySizes[l].size());
+        state.histories[l].resize(histories[l].size());
 
-        for (int i = 0; i < historySizes[l].size(); i++)
+        for (int i = 0; i < histories[l].size(); i++)
             state.histories[l][i] = histories[l][i];
 
         state.predHiddenCs[l].resize(pLayers[l].size());
@@ -476,7 +460,7 @@ void Hierarchy::setState(
         scLayers[l].hiddenCs = state.hiddenCs[l];
         scLayers[l].hiddenCsPrev = state.hiddenCsPrev[l];
 
-        for (int i = 0; i < historySizes[l].size(); i++)
+        for (int i = 0; i < histories[l].size(); i++)
             histories[l][i] = state.histories[l][i];
 
         for (int j = 0; j < pLayers[l].size(); j++) {

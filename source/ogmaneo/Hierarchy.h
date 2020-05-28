@@ -72,7 +72,6 @@ private:
 
     // Histories
     std::vector<CircleBuffer<IntBuffer>> histories;
-    std::vector<std::vector<int>> historySizes;
 
     // Per-layer values
     std::vector<char> updates;

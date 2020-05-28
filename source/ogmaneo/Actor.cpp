@@ -291,8 +291,8 @@ void Actor::step(
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);
 
-            const HistorySample &sPrev = historySamples[historyIndex - 1];
-            const HistorySample &s = historySamples[historyIndex];
+            const HistorySample &sPrev = historySamples[historySize - 1 - (historyIndex - 1)]; // Flip index since it's a queue
+            const HistorySample &s = historySamples[historySize - 1 - historyIndex];
 
             // Compute (partial) values, rest is completed in the kernel
             float q = 0.0f;
