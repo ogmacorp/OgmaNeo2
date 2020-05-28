@@ -39,6 +39,8 @@ private:
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsPrev; // Previous hidden states
 
+    FloatBuffer hiddenUsages;
+
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
     std::vector<VisibleLayerDesc> visibleLayerDescs;
@@ -48,7 +50,8 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     );
 
     void learn(
@@ -62,9 +65,10 @@ private:
         const Int2 &pos,
         std::mt19937 &rng,
         SparseCoder* sc,
-        const std::vector<const IntBuffer*> &inputCs
+        const std::vector<const IntBuffer*> &inputCs,
+        bool learnEnabled
     ) {
-        sc->forward(pos, rng, inputCs);
+        sc->forward(pos, rng, inputCs, learnEnabled);
     }
 
     static void learnKernel(
@@ -78,12 +82,12 @@ private:
     }
 
 public:
-    float alpha; // Weight learning rate
+    float alpha; // Learning rate decay
 
     // Defaults
     SparseCoder()
     :
-    alpha(0.1f)
+    alpha(0.01f)
     {}
 
     // Create a sparse coding layer with random initialization
@@ -132,11 +136,6 @@ public:
     // Get the hidden states
     const IntBuffer &getHiddenCs() const {
         return hiddenCs;
-    }
-
-    // Get the previous hidden states
-    const IntBuffer &getHiddenCsPrev() const {
-        return hiddenCsPrev;
     }
 
     // Get the hidden size
