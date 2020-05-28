@@ -121,11 +121,15 @@ struct CircleBuffer {
         return data[(start + data.size() - 1) % data.size()];
     }
 
-    T &operator[](int index) {
+    T &operator[](
+        int index
+    ) {
         return data[(start + index) % data.size()];
     }
 
-    const T &operator[](int index) const {
+    const T &operator[](
+        int index
+    ) const {
         return data[(start + index) % data.size()];
     }
 
