@@ -11,9 +11,7 @@
 #include "SparseMatrix.h"
 
 #include <random>
-#include <future>
 #include <vector>
-#include <array>
 #include <functional>
 #include <ostream>
 #include <istream>
@@ -257,22 +255,6 @@ inline int address4(
 }
 
 // --- Getters ---
-
-std::vector<IntBuffer*> get(
-    std::vector<std::shared_ptr<IntBuffer>> &v
-);
-
-std::vector<FloatBuffer*> get(
-    std::vector<std::shared_ptr<FloatBuffer>> &v
-);
-
-std::vector<const IntBuffer*> constGet(
-    const std::vector<std::shared_ptr<IntBuffer>> &v
-);
-
-std::vector<const FloatBuffer*> constGet(
-    const std::vector<std::shared_ptr<FloatBuffer>> &v
-);
 
 std::vector<IntBuffer*> get(
     std::vector<IntBuffer> &v

@@ -146,50 +146,6 @@ void ogmaneo::copyFloat(
 }
 
 std::vector<IntBuffer*> ogmaneo::get(
-    std::vector<std::shared_ptr<IntBuffer>> &v
-) {
-    std::vector<IntBuffer*> vp(v.size());
-
-    for (int i = 0; i < v.size(); i++)
-        vp[i] = v[i].get();
-
-    return vp;
-}
-
-std::vector<FloatBuffer*> ogmaneo::get(
-    std::vector<std::shared_ptr<FloatBuffer>> &v
-) {
-    std::vector<FloatBuffer*> vp(v.size());
-
-    for (int i = 0; i < v.size(); i++)
-        vp[i] = v[i].get();
-
-    return vp;
-}
-
-std::vector<const IntBuffer*> ogmaneo::constGet(
-    const std::vector<std::shared_ptr<IntBuffer>> &v
-) {
-    std::vector<const IntBuffer*> vp(v.size());
-
-    for (int i = 0; i < v.size(); i++)
-        vp[i] = v[i].get();
-
-    return vp;
-}
-
-std::vector<const FloatBuffer*> ogmaneo::constGet(
-    const std::vector<std::shared_ptr<FloatBuffer>> &v
-) {
-    std::vector<const FloatBuffer*> vp(v.size());
-
-    for (int i = 0; i < v.size(); i++)
-        vp[i] = v[i].get();
-
-    return vp;
-}
-
-std::vector<IntBuffer*> ogmaneo::get(
     std::vector<IntBuffer> &v
 ) {
     std::vector<IntBuffer*> vp(v.size());
