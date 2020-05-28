@@ -167,6 +167,20 @@ struct SparseMatrix {
 		int oneHotSize
 	);
 
+	int countChangedOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int row,
+		int oneHotSize
+	);
+
+	int countChangedOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		int column,
+		int oneHotSize
+	);
+
 	float multiplyChangedOHVs(
 		const std::vector<int> &nonZeroIndices,
 		const std::vector<int> &nonZeroIndicesPrev,
@@ -239,6 +253,52 @@ struct SparseMatrix {
 		float delta,
 		int column,
 		int oneHotSize
+	);
+
+	void deltaUsageOHVs(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		const std::vector<float> &usages,
+		float delta,
+		int row,
+		int oneHotSize
+	);
+
+	void deltaUsageOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		const std::vector<int> &nonZeroIndicesPrev,
+		const std::vector<float> &usages,
+		float delta,
+		int column,
+		int oneHotSize
+	);
+
+	void fillOHVs(
+		const std::vector<int> &nonZeroIndices,
+		int row,
+		int oneHotSize,
+		float value
+	);
+
+	void fillOHVsT(
+		const std::vector<int> &nonZeroIndices,
+		int column,
+		int oneHotSize,
+		float value
+	);
+
+	void deltaTracedOHVs(
+		SparseMatrix &traces,
+		float delta,
+		int row,
+		float traceDecay
+	);
+
+	void deltaTracedOHVsT(
+		SparseMatrix &traces,
+		float delta,
+		int column,
+		float traceDecay
 	);
 
 	// --- Hebb Rules ---
