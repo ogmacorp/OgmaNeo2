@@ -71,7 +71,7 @@ private:
     std::vector<std::unique_ptr<Actor>> aLayers;
 
     // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
+    std::vector<CircleBuffer<IntBuffer>> histories;
     std::vector<std::vector<int>> historySizes;
 
     // Per-layer values

@@ -233,6 +233,50 @@ std::vector<const FloatBuffer*> ogmaneo::constGet(
     return vp;
 }
 
+std::vector<IntBuffer*> ogmaneo::get(
+    CircleBuffer<IntBuffer> &v
+) {
+    std::vector<IntBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
+std::vector<FloatBuffer*> ogmaneo::get(
+    CircleBuffer<FloatBuffer> &v
+) {
+    std::vector<FloatBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
+std::vector<const IntBuffer*> ogmaneo::constGet(
+    const CircleBuffer<IntBuffer> &v
+) {
+    std::vector<const IntBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
+std::vector<const FloatBuffer*> ogmaneo::constGet(
+    const CircleBuffer<FloatBuffer> &v
+) {
+    std::vector<const FloatBuffer*> vp(v.size());
+
+    for (int i = 0; i < v.size(); i++)
+        vp[i] = &v[i];
+
+    return vp;
+}
+
 void ogmaneo::initSMLocalRF(
     const Int3 &inSize,
     const Int3 &outSize,

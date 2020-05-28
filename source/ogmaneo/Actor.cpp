@@ -226,54 +226,20 @@ void Actor::initRandom(
     historySamples.resize(historyCapacity);
 
     for (int i = 0; i < historySamples.size(); i++) {
-        historySamples[i] = std::make_shared<HistorySample>();
-
-        historySamples[i]->inputCs.resize(visibleLayers.size());
+        historySamples[i].inputCs.resize(visibleLayers.size());
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayerDesc &vld = this->visibleLayerDescs[vli];
 
             int numVisibleColumns = vld.size.x * vld.size.y;
 
-            historySamples[i]->inputCs[vli] = IntBuffer(numVisibleColumns);
+            historySamples[i].inputCs[vli] = IntBuffer(numVisibleColumns);
         }
 
-        historySamples[i]->hiddenTargetCsPrev = IntBuffer(numHiddenColumns);
+        historySamples[i].hiddenTargetCsPrev = IntBuffer(numHiddenColumns);
 
-        historySamples[i]->hiddenValuesPrev = FloatBuffer(numHiddenColumns);
+        historySamples[i].hiddenValuesPrev = FloatBuffer(numHiddenColumns);
     }
-}
-
-const Actor &Actor::operator=(
-    const Actor &other
-) {
-    hiddenSize = other.hiddenSize;
-
-    hiddenCs = other.hiddenCs;
-
-    hiddenValues = other.hiddenValues;
-
-    visibleLayerDescs = other.visibleLayerDescs;
-    visibleLayers = other.visibleLayers;
-
-    alpha = other.alpha;
-    beta = other.beta;
-    gamma = other.gamma;
-    minSteps = other.minSteps;
-    historyIters = other.historyIters;
-
-    historySize = other.historySize;
-
-    historySamples.resize(other.historySamples.size());
-
-    for (int t = 0; t < historySamples.size(); t++) {
-        if (historySamples[t] == nullptr)
-            historySamples[t] = std::make_shared<HistorySample>();
-
-        (*historySamples[t]) = (*other.historySamples[t]);
-    }
-
-    return *this;
 }
 
 void Actor::step(
@@ -290,16 +256,7 @@ void Actor::step(
     // Forward kernel
     runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 
-    // Add sample
-    if (historySize == historySamples.size()) {
-        // Circular buffer swap
-        std::shared_ptr<HistorySample> temp = historySamples.front();
-
-        for (int i = 0; i < historySamples.size() - 1; i++)
-            historySamples[i] = historySamples[i + 1];
-
-        historySamples.back() = temp;
-    }
+    historySamples.pushFront();
 
     // If not at cap, increment
     if (historySize < historySamples.size())
@@ -307,7 +264,7 @@ void Actor::step(
     
     // Add new sample
     {
-        HistorySample &s = *historySamples[historySize - 1];
+        HistorySample &s = historySamples[historySize - 1];
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
@@ -334,15 +291,15 @@ void Actor::step(
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);
 
-            const HistorySample &sPrev = *historySamples[historyIndex - 1];
-            const HistorySample &s = *historySamples[historyIndex];
+            const HistorySample &sPrev = historySamples[historyIndex - 1];
+            const HistorySample &s = historySamples[historyIndex];
 
             // Compute (partial) values, rest is completed in the kernel
             float q = 0.0f;
             float g = 1.0f;
 
             for (int t = historyIndex; t < historySize; t++) {
-                q += historySamples[t]->reward * g;
+                q += historySamples[t].reward * g;
 
                 g *= gamma;
             }
@@ -394,8 +351,12 @@ void Actor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&numHistorySamples), sizeof(int));
 
+    int historyStart = historySamples.start;
+
+    os.write(reinterpret_cast<const char*>(&historyStart), sizeof(int));
+
     for (int t = 0; t < historySamples.size(); t++) {
-        const HistorySample &s = *historySamples[t];
+        const HistorySample &s = historySamples[t];
 
         for (int vli = 0; vli < visibleLayers.size(); vli++)
             writeBufferToStream(os, &s.inputCs[vli]);
@@ -452,12 +413,15 @@ void Actor::readFromStream(
 
     is.read(reinterpret_cast<char*>(&numHistorySamples), sizeof(int));
 
+    int historyStart;
+
+    is.read(reinterpret_cast<char*>(&historyStart), sizeof(int));
+
     historySamples.resize(numHistorySamples);
+    historySamples.start = historyStart;
 
     for (int t = 0; t < historySamples.size(); t++) {
-        historySamples[t] = std::make_shared<HistorySample>();
-
-        HistorySample &s = *historySamples[t];
+        HistorySample &s = historySamples[t];
 
         s.inputCs.resize(visibleLayers.size());
 

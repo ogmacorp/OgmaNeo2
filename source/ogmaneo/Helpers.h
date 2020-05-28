@@ -82,6 +82,60 @@ typedef Vec4<float> Float4;
 typedef std::vector<int> IntBuffer;
 typedef std::vector<float> FloatBuffer;
 
+// --- Circular Buffer ---
+
+template <typename T> 
+struct CircleBuffer {
+    std::vector<T> data;
+    int start;
+
+    CircleBuffer()
+    :
+    start(0)
+    {}
+
+    void resize(
+        int size
+    ) {
+        data.resize(size);
+    }
+
+    void pushFront() {
+        start--;
+
+        if (start < 0)
+            start += data.size();
+    }
+
+    T &front() {
+        return data[start];
+    }
+
+    const T &front() const {
+        return data[start];
+    }
+
+    T &back() {
+        return data[(start + data.size() - 1) % data.size()];
+    }
+
+    const T &back() const {
+        return data[(start + data.size() - 1) % data.size()];
+    }
+
+    T &operator[](int index) {
+        return data[(start + index) % data.size()];
+    }
+
+    const T &operator[](int index) const {
+        return data[(start + index) % data.size()];
+    }
+
+    int size() const {
+        return data.size();
+    }
+};
+
 // --- Kernel Executors ---
 
 void runKernel1(
@@ -234,6 +288,22 @@ std::vector<const IntBuffer*> constGet(
 
 std::vector<const FloatBuffer*> constGet(
     const std::vector<FloatBuffer> &v
+);
+
+std::vector<IntBuffer*> get(
+    CircleBuffer<IntBuffer> &v
+);
+
+std::vector<FloatBuffer*> get(
+    CircleBuffer<FloatBuffer> &v
+);
+
+std::vector<const IntBuffer*> constGet(
+    const CircleBuffer<IntBuffer> &v
+);
+
+std::vector<const FloatBuffer*> constGet(
+    const CircleBuffer<FloatBuffer> &v
 );
 
 // --- Noninearities ---

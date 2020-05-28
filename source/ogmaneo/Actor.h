@@ -54,7 +54,7 @@ private:
 
     FloatBuffer hiddenValues; // Hidden value function output buffer
 
-    std::vector<std::shared_ptr<HistorySample>> historySamples; // History buffer, fixed length
+    CircleBuffer<HistorySample> historySamples; // History buffer, fixed length
 
     // Visible layers and descriptors
     std::vector<VisibleLayer> visibleLayers;
@@ -118,16 +118,6 @@ public:
     minSteps(8),
     historyIters(8)
     {}
-
-    Actor(
-        const Actor &other
-    ) {
-        *this = other;
-    }
-
-    const Actor &operator=(
-        const Actor &other
-    );
 
     // Initialized randomly
     void initRandom(
