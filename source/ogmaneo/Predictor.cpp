@@ -116,8 +116,6 @@ void Predictor::activate(
     ComputeSystem &cs,
     const std::vector<const IntBuffer*> &inputCs
 ) {
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-
     // Forward kernel
     runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 

@@ -130,7 +130,6 @@ void SparseCoder::step(
 
     if (learnEnabled) {
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
             runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
@@ -143,8 +142,6 @@ void SparseCoder::step(
 void SparseCoder::writeToStream(
     std::ostream &os
 ) const {
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
@@ -172,8 +169,6 @@ void SparseCoder::readFromStream(
     std::istream &is
 ) {
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
-
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 

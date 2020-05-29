@@ -39,7 +39,7 @@ private:
     IntBuffer hiddenCs; // Hidden states
     IntBuffer hiddenCsPrev; // Previous hidden states
 
-    FloatBuffer hiddenUsages;
+    FloatBuffer hiddenUsages; // Usage of hidden units decays over time
 
     // Visible layers and associated descriptors
     std::vector<VisibleLayer> visibleLayers;
