@@ -189,9 +189,6 @@ void ImageEncoder::step(
     const std::vector<const FloatBuffer*> &inputActs,
     bool learnEnabled
 ) {
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
-
     runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 
     if (learnEnabled) {
@@ -221,9 +218,6 @@ void ImageEncoder::reconstruct(
 void ImageEncoder::writeToStream(
     std::ostream &os
 ) const {
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
-
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
@@ -252,9 +246,6 @@ void ImageEncoder::readFromStream(
     std::istream &is
 ) {
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
-
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&beta), sizeof(float));

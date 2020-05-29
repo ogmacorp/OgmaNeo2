@@ -144,7 +144,6 @@ void SparseCoder::writeToStream(
     std::ostream &os
 ) const {
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
@@ -175,7 +174,6 @@ void SparseCoder::readFromStream(
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 

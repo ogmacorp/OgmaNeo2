@@ -232,8 +232,6 @@ void Hierarchy::step(
             if (l < scLayers.size() - 1) {
                 int lNext = l + 1;
 
-                int temporalHorizon = histories[lNext].size();
-
                 histories[lNext].pushFront();
 
                 // Copy

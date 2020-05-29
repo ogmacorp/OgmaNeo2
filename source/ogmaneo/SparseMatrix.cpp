@@ -162,8 +162,6 @@ void SparseMatrix::fill(
 	int row,
     float value
 ) {
-	float sum = 0.0f;
-
 	int nextIndex = row + 1;
 	
 	for (int j = rowRanges[row]; j < rowRanges[nextIndex]; j++)
@@ -240,8 +238,6 @@ void SparseMatrix::fillT(
 	int column,
     float value
 ) {
-	float sum = 0.0f;
-
 	int nextIndex = column + 1;
 	
 	for (int j = columnRanges[column]; j < columnRanges[nextIndex]; j++)

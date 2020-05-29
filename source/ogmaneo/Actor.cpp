@@ -194,7 +194,6 @@ void Actor::initRandom(
 
     // Pre-compute dimensions
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
 
@@ -251,7 +250,6 @@ void Actor::step(
     bool mimic
 ) {
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     // Forward kernel
     runKernel2(cs, std::bind(Actor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
@@ -313,9 +311,6 @@ void Actor::step(
 void Actor::writeToStream(
     std::ostream &os
 ) const {
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
-
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
@@ -373,9 +368,6 @@ void Actor::readFromStream(
     std::istream &is
 ) {
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
-
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&beta), sizeof(float));

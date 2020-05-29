@@ -89,7 +89,6 @@ void Predictor::initRandom(
 
     // Pre-compute dimensions
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
@@ -118,7 +117,6 @@ void Predictor::activate(
     const std::vector<const IntBuffer*> &inputCs
 ) {
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     // Forward kernel
     runKernel2(cs, std::bind(Predictor::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
@@ -145,9 +143,6 @@ void Predictor::learn(
 void Predictor::writeToStream(
     std::ostream &os
 ) const {
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
-
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
@@ -174,9 +169,6 @@ void Predictor::readFromStream(
     std::istream &is
 ) {
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
-
-    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
-    int numHidden = numHiddenColumns * hiddenSize.z;
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
 
