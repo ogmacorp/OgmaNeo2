@@ -116,7 +116,7 @@ public:
     beta(0.02f),
     gamma(0.99f),
     minSteps(8),
-    historyIters(16)
+    historyIters(8)
     {}
 
     // Initialized randomly
