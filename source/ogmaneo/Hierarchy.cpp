@@ -41,14 +41,13 @@ void Hierarchy::initRandom(
 
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
-        // Histories for all input layers or just the one sparse coder (if not the first layer)
-        histories[l].resize(l == 0 ? inputSizes.size() : 1);
-
         // Create sparse coder visible layer descriptors
         std::vector<SparseCoder::VisibleLayerDesc> scVisibleLayerDescs;
 
         // If first layer
         if (l == 0) {
+            histories[l].resize(inputSizes.size());
+
             scVisibleLayerDescs.resize(inputSizes.size() * layerDescs[l].temporalHorizon);
 
             for (int i = 0; i < inputSizes.size(); i++) {
@@ -107,6 +106,8 @@ void Hierarchy::initRandom(
             }
         }
         else {
+            histories[l].resize(1);
+
             scVisibleLayerDescs.resize(layerDescs[l].temporalHorizon);
 
             for (int t = 0; t < layerDescs[l].temporalHorizon; t++) {
@@ -116,6 +117,8 @@ void Hierarchy::initRandom(
 
             int inSize = layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y;
 
+            histories[l].front().resize(layerDescs[l].temporalHorizon);
+            
 			for (int t = 0; t < layerDescs[l].temporalHorizon; t++)
                 histories[l].front()[t] = IntBuffer(inSize, 0);
 
