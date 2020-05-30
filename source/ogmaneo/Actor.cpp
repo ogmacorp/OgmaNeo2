@@ -293,7 +293,7 @@ void Actor::step(
             float q = 0.0f;
             float g = 1.0f;
 
-            for (int t = historyIndex - 1; t >= 0; t--) {
+            for (int t = historyIndex; t >= 0; t--) {
                 q += historySamples[t].reward * g;
 
                 g *= gamma;
