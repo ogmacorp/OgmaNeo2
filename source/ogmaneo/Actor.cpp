@@ -280,20 +280,20 @@ void Actor::step(
     }
 
     // Learn (if have sufficient samples)
-    if (learnEnabled && historySize > minSteps) {
-        std::uniform_int_distribution<int> historyDist(1, historySize - minSteps);
+    if (learnEnabled && historySize > minSteps + 1) {
+        std::uniform_int_distribution<int> historyDist(minSteps, historySize - 1);
 
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);
 
-            const HistorySample &sPrev = historySamples[historySize - 1 - (historyIndex - 1)]; // Flip index since it's a queue
-            const HistorySample &s = historySamples[historySize - 1 - historyIndex];
+            const HistorySample &sPrev = historySamples[historyIndex + 1];
+            const HistorySample &s = historySamples[historyIndex];
 
             // Compute (partial) values, rest is completed in the kernel
             float q = 0.0f;
             float g = 1.0f;
 
-            for (int t = historyIndex; t < historySize; t++) {
+            for (int t = historyIndex - 1; t >= 0; t--) {
                 q += historySamples[t].reward * g;
 
                 g *= gamma;
