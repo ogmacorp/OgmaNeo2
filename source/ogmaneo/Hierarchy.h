@@ -29,7 +29,7 @@ struct State {
     std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
 
-    std::vector<std::vector<IntBuffer>> histories;
+    std::vector<std::vector<CircleBuffer<IntBuffer>>> histories;
 
     std::vector<char> updates;
     std::vector<int> ticks;
@@ -71,7 +71,7 @@ private:
     std::vector<std::unique_ptr<Actor>> aLayers;
 
     // Histories
-    std::vector<CircleBuffer<IntBuffer>> histories;
+    std::vector<std::vector<CircleBuffer<IntBuffer>>> histories;
 
     // Per-layer values
     std::vector<char> updates;

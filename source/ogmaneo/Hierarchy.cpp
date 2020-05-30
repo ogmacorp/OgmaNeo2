@@ -42,7 +42,7 @@ void Hierarchy::initRandom(
     // Iterate through layers
     for (int l = 0; l < layerDescs.size(); l++) {
         // Histories for all input layers or just the one sparse coder (if not the first layer)
-        histories[l].resize(l == 0 ? inputSizes.size() * layerDescs[l].temporalHorizon : layerDescs[l].temporalHorizon);
+        histories[l].resize(l == 0 ? inputSizes.size() : 1);
 
         // Create sparse coder visible layer descriptors
         std::vector<SparseCoder::VisibleLayerDesc> scVisibleLayerDescs;
@@ -59,14 +59,15 @@ void Hierarchy::initRandom(
                     scVisibleLayerDescs[index].radius = layerDescs[l].ffRadius;
                 }
             }
-            
-            // Initialize history buffers
-			for (int v = 0; v < histories[l].size(); v++) {
-				int i = v / layerDescs[l].temporalHorizon;
 
+            // Initialize history buffers
+			for (int i = 0; i < inputSizes.size(); i++) {
                 int inSize = inputSizes[i].x * inputSizes[i].y;
+
+                histories[l][i].resize(layerDescs[l].temporalHorizon);
 				
-				histories[l][v] = IntBuffer(inSize, 0);
+                for (int t = 0; t < layerDescs[l].temporalHorizon; t++)
+				    histories[l][i][t] = IntBuffer(inSize, 0);
 			}
 
             // Predictors
@@ -115,8 +116,8 @@ void Hierarchy::initRandom(
 
             int inSize = layerDescs[l - 1].hiddenSize.x * layerDescs[l - 1].hiddenSize.y;
 
-			for (int v = 0; v < histories[l].size(); v++)
-                histories[l][v] = IntBuffer(inSize, 0);
+			for (int t = 0; t < layerDescs[l].temporalHorizon; t++)
+                histories[l].front()[t] = IntBuffer(inSize, 0);
 
             pLayers[l].resize(layerDescs[l].ticksPerUpdate);
 
@@ -198,17 +199,13 @@ void Hierarchy::step(
     ticks[0] = 0;
 
     // Add input to first layer history   
-    {
-        int temporalHorizon = histories.front().size() / inputSizes.size();
+    for (int i = 0; i < inputSizes.size(); i++) {
+        assert(inputSizes[i].x * inputSizes[i].y == inputCs[i]->size());
+        
+        histories.front()[i].pushFront();
 
-        histories.front().pushFront();
-
-        for (int i = 0; i < inputSizes.size(); i++) {
-            assert(inputSizes[i].x * inputSizes[i].y == inputCs[i]->size());
-            
-            // Copy
-            runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], &histories.front()[0 + temporalHorizon * i]), inputCs[i]->size(), cs.rng, cs.batchSize1);
-        }
+        // Copy
+        runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, inputCs[i], &histories.front()[i].front()), inputCs[i]->size(), cs.rng, cs.batchSize1);
     }
 
     // Set all updates to no update, will be set to true if an update occurred later
@@ -225,17 +222,24 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
+            std::vector<const IntBuffer*> layerInputCs;
+
+            for (int i = 0; i < histories[l].size(); i++) {
+                for (int t = 0; t < histories[l][i].size(); t++)
+                    layerInputCs.push_back(&histories[l][i][t]); // t is consecutive dimension
+            }
+
             // Activate sparse coder
-            scLayers[l].step(cs, constGet(histories[l]), learnEnabled);
+            scLayers[l].step(cs, layerInputCs, learnEnabled);
 
             // Add to next layer's history
             if (l < scLayers.size() - 1) {
                 int lNext = l + 1;
 
-                histories[lNext].pushFront();
+                histories[lNext].front().pushFront();
 
                 // Copy
-                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &histories[lNext].front()), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
+                runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &scLayers[l].getHiddenCs(), &histories[lNext].front().front()), scLayers[l].getHiddenCs().size(), cs.rng, cs.batchSize1);
 
                 ticks[lNext]++;
             }
@@ -260,7 +264,7 @@ void Hierarchy::step(
             for (int p = 0; p < pLayers[l].size(); p++) {
                 if (pLayers[l][p] != nullptr) {
                     if (learnEnabled)
-                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : &histories[l][p]);
+                        pLayers[l][p]->learn(cs, l == 0 ? inputCs[p] : &histories[l].front()[p]);
 
                     pLayers[l][p]->activate(cs, feedBackCs);
                 }
@@ -295,16 +299,22 @@ void Hierarchy::writeToStream(
     os.write(reinterpret_cast<const char*>(ticksPerUpdate.data()), ticksPerUpdate.size() * sizeof(int));
 
     for (int l = 0; l < numLayers; l++) {
-        int numHistories = histories[l].size();
+        int numInputs = histories[l].size();
 
-        os.write(reinterpret_cast<const char*>(&numHistories), sizeof(int));
+        os.write(reinterpret_cast<const char*>(&numInputs), sizeof(int));
 
-        int historyStart = histories[l].start;
+        for (int i = 0; i < histories[l].size(); i++) {
+            int historySize = histories[l][i].size();
 
-        os.write(reinterpret_cast<const char*>(&historyStart), sizeof(int));
+            os.write(reinterpret_cast<const char*>(&historySize), sizeof(int));
 
-        for (int i = 0; i < histories[l].size(); i++)
-            writeBufferToStream(os, &histories[l][i]);
+            int historyStart = histories[l][i].start;
+
+            os.write(reinterpret_cast<const char*>(&historyStart), sizeof(int));
+
+            for (int t = 0; t < histories[l][i].size(); t++)
+                writeBufferToStream(os, &histories[l][i][t]);
+        }
 
         scLayers[l].writeToStream(os);
 
@@ -360,20 +370,26 @@ void Hierarchy::readFromStream(
     is.read(reinterpret_cast<char*>(ticksPerUpdate.data()), ticksPerUpdate.size() * sizeof(int));
     
     for (int l = 0; l < numLayers; l++) {
-        int numHistories;
+        int numInputs;
         
-        is.read(reinterpret_cast<char*>(&numHistories), sizeof(int));
+        is.read(reinterpret_cast<char*>(&numInputs), sizeof(int));
 
-        histories[l].resize(numHistories);
+        histories[l].resize(numInputs);
 
-        int historyStart;
-        
-        is.read(reinterpret_cast<char*>(&historyStart), sizeof(int));
+        for (int i = 0; i < histories[l].size(); i++) {
+            int historySize;
 
-        histories[l].start = historyStart;
+            is.read(reinterpret_cast<char*>(&historySize), sizeof(int));
 
-        for (int i = 0; i < histories[l].size(); i++)
-            readBufferFromStream(is, &histories[l][i]);
+            int historyStart;
+            
+            is.read(reinterpret_cast<char*>(&historyStart), sizeof(int));
+
+            histories[l][i].start = historyStart;
+
+            for (int t = 0; t < histories[l][i].size(); t++)
+                readBufferFromStream(is, &histories[l][i][t]);
+        }
 
         scLayers[l].readFromStream(is);
         
@@ -418,18 +434,12 @@ void Hierarchy::getState(
 
     state.hiddenCs.resize(numLayers);
     state.hiddenCsPrev.resize(numLayers);
-    state.histories.resize(numLayers);
     state.predHiddenCs.resize(numLayers);
     state.predInputCsPrev.resize(numLayers);
 
     for (int l = 0; l < numLayers; l++) {
         state.hiddenCs[l] = scLayers[l].getHiddenCs();
         state.hiddenCsPrev[l] = scLayers[l].getHiddenCsPrev();
-
-        state.histories[l].resize(histories[l].size());
-
-        for (int i = 0; i < histories[l].size(); i++)
-            state.histories[l][i] = histories[l][i];
 
         state.predHiddenCs[l].resize(pLayers[l].size());
         state.predInputCsPrev[l].resize(pLayers[l].size());
@@ -445,6 +455,7 @@ void Hierarchy::getState(
         }
     }
 
+    state.histories = histories;
     state.ticks = ticks;
     state.updates = updates;
 }
@@ -470,6 +481,7 @@ void Hierarchy::setState(
         }
     }
 
+    histories = state.histories;
     ticks = state.ticks;
     updates = state.updates;
 }
