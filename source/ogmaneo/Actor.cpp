@@ -195,7 +195,7 @@ void Actor::initRandom(
     // Pre-compute dimensions
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
 
-    std::uniform_real_distribution<float> weightDist(-0.001f, 0.001f);
+    std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
