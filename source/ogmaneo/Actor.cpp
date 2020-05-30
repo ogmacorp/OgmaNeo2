@@ -259,7 +259,7 @@ void Actor::step(
     
     // Add new sample
     {
-        HistorySample &s = historySamples[historySize - 1];
+        HistorySample &s = historySamples.front();
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
