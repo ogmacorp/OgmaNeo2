@@ -32,6 +32,7 @@ public:
     struct VisibleLayer {
         SparseMatrix weights; // Weight matrix
 
+        FloatBuffer reconErrors;
         FloatBuffer reconActs;
     };
 
@@ -39,6 +40,8 @@ private:
     Int3 hiddenSize; // Size of hidden/output layer
 
     IntBuffer hiddenCs; // Hidden states
+
+    FloatBuffer hiddenActivations;
 
     FloatBuffer hiddenResources; // Resources
 
@@ -51,8 +54,7 @@ private:
     void forward(
         const Int2 &pos,
         std::mt19937 &rng,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActs
     );
 
     void backward(
@@ -62,14 +64,27 @@ private:
         int vli
     );
 
+    void backwardErrors(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const IntBuffer* hiddenCs,
+        const FloatBuffer* inputActs,
+        int vli
+    );
+
+    void learn(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        const std::vector<const FloatBuffer*> &inputActs
+    );
+
     static void forwardKernel(
         const Int2 &pos,
         std::mt19937 &rng,
         ImageEncoder* sc,
-        const std::vector<const FloatBuffer*> &inputActs,
-        bool learnEnabled
+        const std::vector<const FloatBuffer*> &inputActs
     ) {
-        sc->forward(pos, rng, inputActs, learnEnabled);
+        sc->forward(pos, rng, inputActs);
     }
 
     static void backwardKernel(
@@ -82,14 +97,36 @@ private:
         sc->backward(pos, rng, hiddenCs, vli);
     }
 
+    static void backwardErrorsKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const IntBuffer* hiddenCs,
+        const FloatBuffer* inputActs,
+        int vli
+    ) {
+        sc->backwardErrors(pos, rng, hiddenCs, inputActs, vli);
+    }
+
+    static void learnKernel(
+        const Int2 &pos,
+        std::mt19937 &rng,
+        ImageEncoder* sc,
+        const std::vector<const FloatBuffer*> &inputActs
+    ) {
+        sc->learn(pos, rng, inputActs);
+    }
+
 public:
     float alpha; // Resource depletion rate
+    float beta; // Error reduction
     float gamma; // Gas falloff
 
     // Defaults
     ImageEncoder()
     :
     alpha(0.01f),
+    beta(0.5f),
     gamma(0.01f)
     {}
 

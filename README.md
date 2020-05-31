@@ -8,13 +8,14 @@
 
 # OgmaNeo, V2
 
-[![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby) [![Build Status](https://travis-ci.org/ogmacorp/OgmaNeo.svg?branch=master)](https://travis-ci.org/ogmacorp/OgmaNeo)
+[![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby)
 
 ## Introduction 
 
 Welcome to the [Ogma](https://ogmacorp.com) OgmaNeo2 library, C++ library that contains an implementation of Sparse Predictive Hierarchies.
 
 For an introduction to how the algorithm works, see [the presentation](./SPH_Presentation.pdf).
+For a more in-depth look, check out [the whitepaper](./OgmaNeo2_Whitepaper_DRAFT.pdf).
 
 There is a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of this repository that contains an outdated implementation of SPH. Please use this version of OgmaNeo (OgmaNeo2, this repository) if possible.
 
@@ -22,11 +23,11 @@ There is a [deprecated version](https://github.com/ogmacorp/OgmaNeo) of this rep
 
 ### CMake
 
-Version 3.1+ of [CMake](https://cmake.org/) is required when building the library.
+Version 3.13+ of [CMake](https://cmake.org/) is required when building the library.
 
 ### OpenMP
 
-This version of OgmaNeo uses [OpenMP](https://www.openmp.org/) for multiprocessing. It is required in order to build the library.
+This version of OgmaNeo uses [OpenMP](https://www.openmp.org/) for multiprocessing. It is required in order to build the library. This will typically already be installed on your system.
 
 ### Building
 
@@ -50,7 +51,7 @@ On **Windows** systems it is recommended to use `cmake-gui` to define which gene
 
 ## Contributions
 
-Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for information on making contributions to OgmaNeo.
+Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for information on making contributions to OgmaNeo2.
 
 ## License and Copyright
 

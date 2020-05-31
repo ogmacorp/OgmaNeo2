@@ -29,7 +29,7 @@ struct State {
     std::vector<std::vector<std::vector<IntBuffer>>> predInputCsPrev;
     std::vector<std::vector<IntBuffer>> predHiddenCs;
 
-    std::vector<std::vector<IntBuffer>> histories;
+    std::vector<std::vector<CircleBuffer<IntBuffer>>> histories;
 
     std::vector<char> updates;
     std::vector<int> ticks;
@@ -71,8 +71,7 @@ private:
     std::vector<std::unique_ptr<Actor>> aLayers;
 
     // Histories
-    std::vector<std::vector<std::shared_ptr<IntBuffer>>> histories;
-    std::vector<std::vector<int>> historySizes;
+    std::vector<std::vector<CircleBuffer<IntBuffer>>> histories;
 
     // Per-layer values
     std::vector<char> updates;
@@ -113,7 +112,7 @@ public:
         const std::vector<const IntBuffer*> &inputCs, // Inputs to remember
         bool learnEnabled = true, // Whether learning is enabled
         float reward = 0.0f, // Optional reward for actor layers
-        bool mimic = false
+        bool mimic = false // Use to train action inputs to act as predictors (mimic learning)
     );
 
     // State get
