@@ -106,8 +106,8 @@ public:
     float alpha; // Value learning rate
     float beta; // Action learning rate
     float gamma; // Discount factor
-    int minSteps;
-    int historyIters;
+    int minSteps; // Minimum steps back in time
+    int historyIters; // Number of iterations to update
 
     // Defaults
     Actor()
