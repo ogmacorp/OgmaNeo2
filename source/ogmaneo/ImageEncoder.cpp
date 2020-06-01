@@ -41,7 +41,9 @@ void ImageEncoder::forward(
             count += vl.weights.count(hiddenIndex);
         }
 
-        sum /= std::max(1, count);
+        assert(count > 0);
+
+        sum /= count;
 
         hiddenActivations[hiddenIndex] = sum;
 
@@ -115,7 +117,7 @@ void ImageEncoder::learn(
     for (int i = 0; i < hiddenSize.z; i++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, activations[i].second), hiddenSize);
 
-        float strength = std::exp(-i * i * gamma / std::max(0.001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
+        float strength = std::exp(-i * i * gamma / std::max(0.0001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
 
         hiddenResources[hiddenIndex] -= alpha * strength;
 
