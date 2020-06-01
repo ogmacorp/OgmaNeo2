@@ -36,7 +36,7 @@ void SparseCoder::forward(
             count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
-        sum /= std::max(1, count);
+        sum /= count;
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -116,7 +116,7 @@ void SparseCoder::initRandom(
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 
-    hiddenUsages = FloatBuffer(numHidden, 1.0f);
+    hiddenUsages = FloatBuffer(numHidden, 0.5f);
 }
 
 void SparseCoder::step(

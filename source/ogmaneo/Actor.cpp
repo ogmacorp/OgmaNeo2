@@ -31,7 +31,7 @@ void Actor::forward(
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
 
-    hiddenValues[hiddenColumnIndex] = value / std::max(1, count);
+    hiddenValues[hiddenColumnIndex] = value / count;
 
     // --- Action ---
 
@@ -51,7 +51,7 @@ void Actor::forward(
             sum += vl.actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
         }
 
-        sum /= std::max(1, count);
+        sum /= count;
 
         activations[hc] = sum;
 
@@ -114,7 +114,7 @@ void Actor::learn(
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
 
-    value /= std::max(1, count);
+    value /= count;
 
     float tdErrorValue = newValue - value;
     
@@ -150,7 +150,7 @@ void Actor::learn(
             sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
         }
 
-        sum /= std::max(1, count);
+        sum /= count;
 
         activations[hc] = sum;
 
