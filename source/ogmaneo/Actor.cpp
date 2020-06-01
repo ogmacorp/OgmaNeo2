@@ -132,50 +132,52 @@ void Actor::learn(
 
     float tdErrorAction = newValue - (*hiddenValuesPrev)[hiddenColumnIndex];
 
-    int targetC = (*hiddenTargetCsPrev)[hiddenColumnIndex];
+    if (mimic || tdErrorAction > 0.0f) {
+        int targetC = (*hiddenTargetCsPrev)[hiddenColumnIndex];
 
-    std::vector<float> activations(hiddenSize.z);
-    float maxActivation = -999999.0f;
+        std::vector<float> activations(hiddenSize.z);
+        float maxActivation = -999999.0f;
 
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+        for (int hc = 0; hc < hiddenSize.z; hc++) {
+            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = 0.0f;
+            float sum = 0.0f;
 
-        // For each visible layer
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
-            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+            // For each visible layer
+            for (int vli = 0; vli < visibleLayers.size(); vli++) {
+                VisibleLayer &vl = visibleLayers[vli];
+                const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
+                sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
+            }
+
+            sum /= count;
+
+            activations[hc] = sum;
+
+            maxActivation = std::max(maxActivation, sum);
         }
 
-        sum /= count;
+        float total = 0.0f;
 
-        activations[hc] = sum;
-
-        maxActivation = std::max(maxActivation, sum);
-    }
-
-    float total = 0.0f;
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
+        for (int hc = 0; hc < hiddenSize.z; hc++) {
+            activations[hc] = std::exp(activations[hc] - maxActivation);
+            
+            total += activations[hc];
+        }
         
-        total += activations[hc];
-    }
-    
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+        for (int hc = 0; hc < hiddenSize.z; hc++) {
+            int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float deltaAction = (mimic ? beta : (tdErrorAction > 0.0f ? beta : -beta)) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+            float deltaAction = beta * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
 
-        // For each visible layer
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
-            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+            // For each visible layer
+            for (int vli = 0; vli < visibleLayers.size(); vli++) {
+                VisibleLayer &vl = visibleLayers[vli];
+                const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            vl.actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld.size.z);
+                vl.actionWeights.deltaOHVs(*inputCsPrev[vli], deltaAction, hiddenIndex, vld.size.z);
+            }
         }
     }
 }
@@ -207,7 +209,7 @@ void Actor::initRandom(
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.actionWeights);
 
         for (int i = 0; i < vl.valueWeights.nonZeroValues.size(); i++)
-            vl.valueWeights.nonZeroValues[i] = 0.0f;
+            vl.valueWeights.nonZeroValues[i] = weightDist(cs.rng);
 
         for (int i = 0; i < vl.actionWeights.nonZeroValues.size(); i++)
             vl.actionWeights.nonZeroValues[i] = weightDist(cs.rng);
