@@ -209,7 +209,7 @@ void Actor::initRandom(
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.actionWeights);
 
         for (int i = 0; i < vl.valueWeights.nonZeroValues.size(); i++)
-            vl.valueWeights.nonZeroValues[i] = weightDist(cs.rng);
+            vl.valueWeights.nonZeroValues[i] = 0.0f;
 
         for (int i = 0; i < vl.actionWeights.nonZeroValues.size(); i++)
             vl.actionWeights.nonZeroValues[i] = weightDist(cs.rng);
