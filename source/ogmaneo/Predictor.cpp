@@ -63,7 +63,7 @@ void Predictor::learn(
             count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
 
-        sum /= std::max(1, count);
+        sum /= count;
 
         float delta = alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
 

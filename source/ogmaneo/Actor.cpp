@@ -31,7 +31,9 @@ void Actor::forward(
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
 
-    hiddenValues[hiddenColumnIndex] = value / std::max(1, count);
+    assert(count > 0);
+
+    hiddenValues[hiddenColumnIndex] = value / count;
 
     // --- Action ---
 
@@ -51,7 +53,7 @@ void Actor::forward(
             sum += vl.actionWeights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
         }
 
-        sum /= std::max(1, count);
+        sum /= count;
 
         activations[hc] = sum;
 
@@ -114,7 +116,9 @@ void Actor::learn(
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
 
-    value /= std::max(1, count);
+    assert(count > 0);
+
+    value /= count;
 
     float tdErrorValue = newValue - value;
     
@@ -150,7 +154,7 @@ void Actor::learn(
             sum += vl.actionWeights.multiplyOHVs(*inputCsPrev[vli], hiddenIndex, vld.size.z);
         }
 
-        sum /= std::max(1, count);
+        sum /= count;
 
         activations[hc] = sum;
 
@@ -281,7 +285,7 @@ void Actor::step(
 
     // Learn (if have sufficient samples)
     if (learnEnabled && historySize > minSteps + 1) {
-        std::uniform_int_distribution<int> historyDist(minSteps, historySize - 1);
+        std::uniform_int_distribution<int> historyDist(minSteps, historySize - 2);
 
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);

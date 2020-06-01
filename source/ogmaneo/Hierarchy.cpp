@@ -225,11 +225,11 @@ void Hierarchy::step(
             // Updated
             updates[l] = true;
 
-            std::vector<const IntBuffer*> layerInputCs;
+            std::vector<const IntBuffer*> layerInputCs(histories[l].size() * histories[l][0].size());
 
             for (int i = 0; i < histories[l].size(); i++) {
                 for (int t = 0; t < histories[l][i].size(); t++)
-                    layerInputCs.push_back(&histories[l][i][t]); // t is consecutive dimension
+                    layerInputCs[t + histories[l][i].size() * i] = &histories[l][i][t]; // t is consecutive dimension
             }
 
             // Activate sparse coder
