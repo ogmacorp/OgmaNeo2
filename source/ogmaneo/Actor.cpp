@@ -117,7 +117,7 @@ void Actor::learn(
     }
 
     assert(count > 0);
-    
+
     value /= count;
 
     float tdErrorValue = newValue - value;
@@ -285,7 +285,7 @@ void Actor::step(
 
     // Learn (if have sufficient samples)
     if (learnEnabled && historySize > minSteps + 1) {
-        std::uniform_int_distribution<int> historyDist(minSteps, historySize - 1);
+        std::uniform_int_distribution<int> historyDist(minSteps, historySize - 2);
 
         for (int it = 0; it < historyIters; it++) {
             int historyIndex = historyDist(cs.rng);
