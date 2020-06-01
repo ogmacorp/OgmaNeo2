@@ -116,7 +116,7 @@ void SparseCoder::initRandom(
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
 
-    hiddenUsages = FloatBuffer(numHidden, 0.5f);
+    hiddenUsages = FloatBuffer(numHidden, 1.0f);
 }
 
 void SparseCoder::step(
