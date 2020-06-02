@@ -448,7 +448,7 @@ void Hierarchy::getState(
         state.predInputCsPrev[l].resize(pLayers[l].size());
 
         for (int j = 0; j < pLayers[l].size(); j++) {
-            if (pLayers[l] != nullptr) {
+            if (pLayers[l][j] != nullptr) {
                 state.predHiddenCs[l][j] = pLayers[l][j]->getHiddenCs();
 
                 state.predInputCsPrev[l][j].resize(pLayers[l][j]->getNumVisibleLayers());
