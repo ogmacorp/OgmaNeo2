@@ -31,8 +31,6 @@ void Actor::forward(
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
 
-    assert(count > 0);
-
     hiddenValues[hiddenColumnIndex] = value / count;
 
     // --- Action ---
@@ -115,8 +113,6 @@ void Actor::learn(
         value += vl.valueWeights.multiplyOHVs(*inputCsPrev[vli], hiddenColumnIndex, vld.size.z);
         count += vl.valueWeights.count(hiddenColumnIndex) / vld.size.z;
     }
-
-    assert(count > 0);
 
     value /= count;
 

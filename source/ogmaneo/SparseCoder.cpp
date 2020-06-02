@@ -13,8 +13,7 @@ using namespace ogmaneo;
 void SparseCoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const IntBuffer*> &inputCs,
-    bool learnEnabled
+    const std::vector<const IntBuffer*> &inputCs
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
@@ -25,14 +24,13 @@ void SparseCoder::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = 0.0f;
-        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
-            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z) / (vl.weights.count(hiddenIndex) / vld.size.z);
+            sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
         }
 
         if (sum > maxActivation) {
@@ -42,12 +40,6 @@ void SparseCoder::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
-
-    if (learnEnabled) {
-        int hiddenIndexMax = address3(Int3(pos.x, pos.y, maxIndex), hiddenSize);
-
-        hiddenUsages[hiddenIndexMax] -= alpha * hiddenUsages[hiddenIndexMax];
-    }
 }
 
 void SparseCoder::learn(
@@ -63,14 +55,32 @@ void SparseCoder::learn(
 
     int targetC = (*inputCs)[visibleColumnIndex];
 
+    int maxIndex = 0;
+    float maxActivation = -999999.0f;
+    std::vector<float> activations(vld.size.z);
+
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
         float sum = vl.weights.multiplyOHVsT(hiddenCs, visibleIndex, hiddenSize.z) / (vl.weights.countT(visibleIndex) / hiddenSize.z);
 
-        float delta = ((vc == targetC ? 1.0f : 0.0f) - sum);
+        activations[vc] = sum;
 
-        vl.weights.deltaUsageOHVsT(hiddenCs, hiddenCsPrev, hiddenUsages, delta, visibleIndex, hiddenSize.z);
+        if (sum > maxActivation) {
+            maxActivation = sum;
+
+            maxIndex = vc;
+        }
+    }
+
+    if (maxIndex != targetC) {
+        for (int vc = 0; vc < vld.size.z; vc++) {
+            int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
+
+            float delta = alpha * ((vc == targetC ? 1.0f : 0.0f) - std::exp(activations[vc]));
+
+            vl.weights.deltaChangedOHVsT(hiddenCs, hiddenCsPrev, delta, visibleIndex, hiddenSize.z);
+        }
     }
 }
 
@@ -89,7 +99,7 @@ void SparseCoder::initRandom(
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
 
-    std::uniform_real_distribution<float> weightDist(0.0f, 1.0f);
+    std::uniform_real_distribution<float> weightDist(-1.0f, 0.0f);
 
     // Create layers
     for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -102,18 +112,16 @@ void SparseCoder::initRandom(
         // Create weight matrix for this visible layer and initialize randomly
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.weights);
 
-        // Generate transpose (needed for reconstruction)
-        vl.weights.initT();
-
         for (int i = 0; i < vl.weights.nonZeroValues.size(); i++)
             vl.weights.nonZeroValues[i] = weightDist(cs.rng);
+
+        // Generate transpose (needed for reconstruction)
+        vl.weights.initT();
     }
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
     hiddenCsPrev = IntBuffer(numHiddenColumns, 0);
-
-    hiddenUsages = FloatBuffer(numHidden, 1.0f);
 }
 
 void SparseCoder::step(
@@ -123,16 +131,18 @@ void SparseCoder::step(
 ) {
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
 
-    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs, learnEnabled), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+    runKernel2(cs, std::bind(SparseCoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 
     if (learnEnabled) {
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
+            VisibleLayer &vl = visibleLayers[vli];
             VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
             runKernel2(cs, std::bind(SparseCoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputCs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
         }
     }
 
+    // Update prevs
     runKernel1(cs, std::bind(copyInt, std::placeholders::_1, std::placeholders::_2, &hiddenCs, &hiddenCsPrev), numHiddenColumns, cs.rng, cs.batchSize1);
 }
 
@@ -145,8 +155,6 @@ void SparseCoder::writeToStream(
 
     writeBufferToStream(os, &hiddenCs);
     writeBufferToStream(os, &hiddenCsPrev);
-
-    writeBufferToStream(os, &hiddenUsages);
 
     int numVisibleLayers = visibleLayers.size();
 
@@ -172,8 +180,6 @@ void SparseCoder::readFromStream(
     readBufferFromStream(is, &hiddenCs);
     readBufferFromStream(is, &hiddenCsPrev);
 
-    readBufferFromStream(is, &hiddenUsages);
-
     int numVisibleLayers;
     
     is.read(reinterpret_cast<char*>(&numVisibleLayers), sizeof(int));
@@ -186,9 +192,6 @@ void SparseCoder::readFromStream(
         VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
         is.read(reinterpret_cast<char*>(&vld), sizeof(VisibleLayerDesc));
-
-        int numVisibleColumns = vld.size.x * vld.size.y;
-        int numVisible = numVisibleColumns * vld.size.z;
 
         readSMFromStream(is, vl.weights);
     }
