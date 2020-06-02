@@ -19,12 +19,15 @@ bool pairfiCompare(const std::pair<float, int> &lhs, const std::pair<float, int>
 void ImageEncoder::forward(
     const Int2 &pos,
     std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputActs
+    const std::vector<const FloatBuffer*> &inputActs,
+    bool learnEnabled
 ) {
     int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
 
     int maxIndex = 0;
     float maxActivation = -999999.0f;
+
+    std::vector<std::pair<float, int>> activations(hiddenSize.z);
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
@@ -43,7 +46,7 @@ void ImageEncoder::forward(
 
         sum /= count;
 
-        hiddenActivations[hiddenIndex] = sum;
+        activations[hc] = std::make_pair(sum, hc);
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -52,6 +55,26 @@ void ImageEncoder::forward(
     }
 
     hiddenCs[hiddenColumnIndex] = maxIndex;
+
+    if (learnEnabled) {
+        std::sort(activations.begin(), activations.end(), pairfiCompare);
+
+        for (int i = 0; i < hiddenSize.z; i++) {
+            int hiddenIndex = address3(Int3(pos.x, pos.y, activations[i].second), hiddenSize);
+
+            float strength = std::exp(-i * i * gamma / std::max(0.001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
+
+            hiddenResources[hiddenIndex] -= alpha * strength;
+
+            // For each visible layer
+            for (int vli = 0; vli < visibleLayers.size(); vli++) {
+                VisibleLayer &vl = visibleLayers[vli];
+                const VisibleLayerDesc &vld = visibleLayerDescs[vli];
+
+                vl.weights.hebb(*inputActs[vli], hiddenIndex, strength);
+            }
+        }
+    }
 }
 
 void ImageEncoder::backward(
@@ -68,73 +91,9 @@ void ImageEncoder::backward(
     for (int vc = 0; vc < vld.size.z; vc++) {
         int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
 
-        float sum = vl.weights.multiplyOHVsT(*hiddenCs, visibleIndex, hiddenSize.z) / (vl.weights.countT(visibleIndex) / hiddenSize.z);
+        float sum = vl.weights.multiplyOHVsT(*hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
         vl.reconActs[visibleIndex] = sum;
-    }
-}
-
-void ImageEncoder::backwardErrors(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const IntBuffer* hiddenCs,
-    const FloatBuffer* inputActs,
-    int vli
-) {
-    VisibleLayer &vl = visibleLayers[vli];
-    VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-    int visibleColumnIndex = address2(pos, Int2(vld.size.x, vld.size.y));
-
-    for (int vc = 0; vc < vld.size.z; vc++) {
-        int visibleIndex = address3(Int3(pos.x, pos.y, vc), vld.size);
-
-        float sum = vl.weights.multiplyOHVsT(*hiddenCs, visibleIndex, hiddenSize.z) / (vl.weights.countT(visibleIndex) / hiddenSize.z);
-
-        vl.reconErrors[visibleIndex] = (*inputActs)[visibleIndex] - sum;
-    }
-}
-
-void ImageEncoder::learn(
-    const Int2 &pos,
-    std::mt19937 &rng,
-    const std::vector<const FloatBuffer*> &inputActs
-) {
-    int hiddenColumnIndex = address2(pos, Int2(hiddenSize.x, hiddenSize.y));
-
-    std::vector<std::pair<float, int>> activations(hiddenSize.z);
-
-    for (int hc = 0; hc < hiddenSize.z; hc++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
-
-        activations[hc] = std::make_pair(hiddenActivations[hiddenIndex], hc);
-    }
-
-    std::sort(activations.begin(), activations.end(), pairfiCompare);
-
-    for (int i = 0; i < hiddenSize.z; i++) {
-        int hiddenIndex = address3(Int3(pos.x, pos.y, activations[i].second), hiddenSize);
-
-        float strength = std::exp(-i * i * gamma / std::max(0.0001f, hiddenResources[hiddenIndex])) * hiddenResources[hiddenIndex];
-
-        hiddenResources[hiddenIndex] -= alpha * strength;
-
-        // For each visible layer
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
-            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-            vl.weights.hebb(*inputActs[vli], hiddenIndex, strength);
-        }
-    }
-
-    int hiddenIndexMax = address3(Int3(pos.x, pos.y, hiddenCs[hiddenColumnIndex]), hiddenSize);
-
-    for (int vli = 0; vli < visibleLayers.size(); vli++) {
-        VisibleLayer &vl = visibleLayers[vli];
-        const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-        vl.weights.deltas(vl.reconErrors, beta * hiddenResources[hiddenIndexMax], hiddenIndexMax);
     }
 }
 
@@ -172,14 +131,11 @@ void ImageEncoder::initRandom(
         // Generate transpose (needed for reconstruction)
         vl.weights.initT();
 
-        vl.reconErrors = FloatBuffer(numVisible, 0.0f);
         vl.reconActs = FloatBuffer(numVisible, 0.0f);
     }
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
-
-    hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
     hiddenResources = FloatBuffer(numHidden, 1.0f);
 }
@@ -189,18 +145,10 @@ void ImageEncoder::step(
     const std::vector<const FloatBuffer*> &inputActs,
     bool learnEnabled
 ) {
-    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
+    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
+    int numHidden = numHiddenColumns * hiddenSize.z;
 
-    if (learnEnabled) {
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
-            VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-            runKernel2(cs, std::bind(ImageEncoder::backwardErrorsKernel, std::placeholders::_1, std::placeholders::_2, this, &hiddenCs, inputActs[vli], vli), Int2(vld.size.x, vld.size.y), cs.rng, cs.batchSize2);
-        }
-
-        runKernel2(cs, std::bind(ImageEncoder::learnKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
-    }
+    runKernel2(cs, std::bind(ImageEncoder::forwardKernel, std::placeholders::_1, std::placeholders::_2, this, inputActs, learnEnabled), Int2(hiddenSize.x, hiddenSize.y), cs.rng, cs.batchSize2);
 }
 
 void ImageEncoder::reconstruct(
@@ -218,14 +166,15 @@ void ImageEncoder::reconstruct(
 void ImageEncoder::writeToStream(
     std::ostream &os
 ) const {
+    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
+    int numHidden = numHiddenColumns * hiddenSize.z;
+
     os.write(reinterpret_cast<const char*>(&hiddenSize), sizeof(Int3));
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
-    os.write(reinterpret_cast<const char*>(&beta), sizeof(float));
     os.write(reinterpret_cast<const char*>(&gamma), sizeof(float));
 
     writeBufferToStream(os, &hiddenCs);
-    writeBufferToStream(os, &hiddenActivations);
     writeBufferToStream(os, &hiddenResources);
 
     int numVisibleLayers = visibleLayers.size();
@@ -247,12 +196,13 @@ void ImageEncoder::readFromStream(
 ) {
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
+    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
+    int numHidden = numHiddenColumns * hiddenSize.z;
+
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
-    is.read(reinterpret_cast<char*>(&beta), sizeof(float));
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
 
     readBufferFromStream(is, &hiddenCs);
-    readBufferFromStream(is, &hiddenActivations);
     readBufferFromStream(is, &hiddenResources);
 
     int numVisibleLayers;
@@ -273,7 +223,6 @@ void ImageEncoder::readFromStream(
 
         readSMFromStream(is, vl.weights);
 
-        vl.reconErrors = FloatBuffer(numVisible, 0.0f);
         vl.reconActs = FloatBuffer(numVisible, 0.0f);
     }
 }
