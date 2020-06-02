@@ -68,7 +68,6 @@ void SparseCoder::learn(
 
         if (sum > maxActivation) {
             maxActivation = sum;
-
             maxIndex = vc;
         }
     }
