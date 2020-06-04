@@ -388,6 +388,7 @@ void Hierarchy::readFromStream(
             
             is.read(reinterpret_cast<char*>(&historyStart), sizeof(int));
 
+            histories[l][i].resize(historySize);
             histories[l][i].start = historyStart;
 
             for (int t = 0; t < histories[l][i].size(); t++)
