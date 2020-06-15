@@ -50,6 +50,8 @@ private:
     // Current history size - fixed after initialization. Determines length of wait before updating
     int historySize;
 
+    FloatBuffer hiddenActivations;
+    
     IntBuffer hiddenCs; // Hidden states
 
     FloatBuffer hiddenValues; // Hidden value function output buffer

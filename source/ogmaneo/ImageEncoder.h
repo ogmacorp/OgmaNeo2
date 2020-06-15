@@ -32,7 +32,7 @@ public:
     struct VisibleLayer {
         SparseMatrix weights; // Weight matrix
 
-        FloatBuffer reconActs;
+        FloatBuffer reconstructions;
     };
 
 private:

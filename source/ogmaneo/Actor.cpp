@@ -35,7 +35,6 @@ void Actor::forward(
 
     // --- Action ---
 
-    std::vector<float> activations(hiddenSize.z);
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
@@ -53,7 +52,7 @@ void Actor::forward(
 
         sum /= count;
 
-        activations[hc] = sum;
+        hiddenActivations[hiddenIndex] = sum;
 
         maxActivation = std::max(maxActivation, sum);
     }
@@ -61,9 +60,11 @@ void Actor::forward(
     float total = 0.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+        hiddenActivations[hiddenIndex] = std::exp(hiddenActivations[hiddenIndex] - maxActivation);
         
-        total += activations[hc];
+        total += hiddenActivations[hiddenIndex];
     }
 
     std::uniform_real_distribution<float> cuspDist(0.0f, total);
@@ -74,7 +75,9 @@ void Actor::forward(
     float sumSoFar = 0.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
-        sumSoFar += activations[hc];
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+        sumSoFar += hiddenActivations[hiddenIndex];
 
         if (sumSoFar >= cusp) {
             selectIndex = hc;
@@ -134,7 +137,6 @@ void Actor::learn(
 
     int targetC = (*hiddenTargetCsPrev)[hiddenColumnIndex];
 
-    std::vector<float> activations(hiddenSize.z);
     float maxActivation = -999999.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
@@ -152,7 +154,7 @@ void Actor::learn(
 
         sum /= count;
 
-        activations[hc] = sum;
+        hiddenActivations[hiddenIndex] = sum;
 
         maxActivation = std::max(maxActivation, sum);
     }
@@ -160,15 +162,17 @@ void Actor::learn(
     float total = 0.0f;
 
     for (int hc = 0; hc < hiddenSize.z; hc++) {
-        activations[hc] = std::exp(activations[hc] - maxActivation);
+        int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
+
+        hiddenActivations[hiddenIndex] = std::exp(hiddenActivations[hiddenIndex] - maxActivation);
         
-        total += activations[hc];
+        total += hiddenActivations[hiddenIndex];
     }
     
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float deltaAction = (mimic ? beta : (tdErrorAction > 0.0f ? beta : -beta)) * ((hc == targetC ? 1.0f : 0.0f) - activations[hc] / std::max(0.0001f, total));
+        float deltaAction = (mimic ? beta : (tdErrorAction > 0.0f ? beta : -beta)) * ((hc == targetC ? 1.0f : 0.0f) - hiddenActivations[hiddenIndex] / std::max(0.0001f, total));
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -194,6 +198,7 @@ void Actor::initRandom(
 
     // Pre-compute dimensions
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
+    int numHidden = numHiddenColumns * hiddenSize.z;
 
     std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
@@ -207,11 +212,13 @@ void Actor::initRandom(
         initSMLocalRF(vld.size, hiddenSize, vld.radius, vl.actionWeights);
 
         for (int i = 0; i < vl.valueWeights.nonZeroValues.size(); i++)
-            vl.valueWeights.nonZeroValues[i] = 0.0f;
+            vl.valueWeights.nonZeroValues[i] = weightDist(cs.rng);
 
         for (int i = 0; i < vl.actionWeights.nonZeroValues.size(); i++)
             vl.actionWeights.nonZeroValues[i] = weightDist(cs.rng);
     }
+
+    hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
     hiddenCs = IntBuffer(numHiddenColumns, 0);
 
@@ -364,6 +371,9 @@ void Actor::writeToStream(
 void Actor::readFromStream(
     std::istream &is
 ) {
+    int numHiddenColumns = hiddenSize.x * hiddenSize.y;
+    int numHidden = numHiddenColumns * hiddenSize.z;
+
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
@@ -371,6 +381,8 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&gamma), sizeof(float));
     is.read(reinterpret_cast<char*>(&minSteps), sizeof(int));
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
+
+    hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
     readBufferFromStream(is, &hiddenCs);
 
