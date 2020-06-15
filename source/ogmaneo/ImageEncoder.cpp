@@ -184,6 +184,8 @@ void ImageEncoder::writeToStream(
         os.write(reinterpret_cast<const char*>(&vld), sizeof(VisibleLayerDesc));
 
         writeSMToStream(os, vl.weights);
+
+        writeBufferToStream(os, &vl.reconstructions);
     }
 }
 
@@ -219,6 +221,6 @@ void ImageEncoder::readFromStream(
 
         readSMFromStream(is, vl.weights);
 
-        vl.reconstructions = FloatBuffer(numVisible, 0.0f);
+        readBufferFromStream(is, &vl.reconstructions);
     }
 }
