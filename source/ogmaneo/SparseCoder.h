@@ -31,6 +31,8 @@ public:
     // Visible layer
     struct VisibleLayer {
         SparseMatrix weights; // Weight matrix
+
+        FloatBuffer reconstructions;
     };
 
 private:

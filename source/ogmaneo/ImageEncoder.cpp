@@ -33,7 +33,6 @@ void ImageEncoder::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = 0.0f;
-        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -41,10 +40,7 @@ void ImageEncoder::forward(
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
             sum -= vl.weights.distance2(*inputActs[vli], hiddenIndex);
-            count += vl.weights.count(hiddenIndex);
         }
-
-        sum /= count;
 
         activations[hc] = std::make_pair(sum, hc);
 
@@ -93,7 +89,7 @@ void ImageEncoder::backward(
 
         float sum = vl.weights.multiplyOHVsT(*hiddenCs, visibleIndex, hiddenSize.z) / std::max(1, vl.weights.countT(visibleIndex) / hiddenSize.z);
 
-        vl.reconActs[visibleIndex] = sum;
+        vl.reconstructions[visibleIndex] = sum;
     }
 }
 
@@ -131,7 +127,7 @@ void ImageEncoder::initRandom(
         // Generate transpose (needed for reconstruction)
         vl.weights.initT();
 
-        vl.reconActs = FloatBuffer(numVisible, 0.0f);
+        vl.reconstructions = FloatBuffer(numVisible, 0.0f);
     }
 
     // Hidden Cs
@@ -223,6 +219,6 @@ void ImageEncoder::readFromStream(
 
         readSMFromStream(is, vl.weights);
 
-        vl.reconActs = FloatBuffer(numVisible, 0.0f);
+        vl.reconstructions = FloatBuffer(numVisible, 0.0f);
     }
 }

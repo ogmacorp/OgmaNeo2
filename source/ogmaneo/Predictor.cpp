@@ -22,6 +22,7 @@ void Predictor::forward(
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
         float sum = 0.0f;
+        int count = 0;
 
         // For each visible layer
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
@@ -29,7 +30,12 @@ void Predictor::forward(
             const VisibleLayerDesc &vld = visibleLayerDescs[vli];
 
             sum += vl.weights.multiplyOHVs(*inputCs[vli], hiddenIndex, vld.size.z);
+            count += vl.weights.count(hiddenIndex) / vld.size.z;
         }
+
+        sum /= count;
+
+        hiddenActivations[hiddenIndex] = sum;
 
         if (sum > maxActivation) {
             maxActivation = sum;
@@ -52,20 +58,7 @@ void Predictor::learn(
     for (int hc = 0; hc < hiddenSize.z; hc++) {
         int hiddenIndex = address3(Int3(pos.x, pos.y, hc), hiddenSize);
 
-        float sum = 0.0f;
-        int count = 0;
-
-        for (int vli = 0; vli < visibleLayers.size(); vli++) {
-            VisibleLayer &vl = visibleLayers[vli];
-            const VisibleLayerDesc &vld = visibleLayerDescs[vli];
-
-            sum += vl.weights.multiplyOHVs(vl.inputCsPrev, hiddenIndex, vld.size.z);
-            count += vl.weights.count(hiddenIndex) / vld.size.z;
-        }
-
-        sum /= count;
-
-        float delta = alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(sum));
+        float delta = alpha * ((hc == targetC ? 1.0f : -1.0f) - std::tanh(hiddenActivations[hiddenIndex]));
 
         for (int vli = 0; vli < visibleLayers.size(); vli++) {
             VisibleLayer &vl = visibleLayers[vli];
@@ -89,6 +82,7 @@ void Predictor::initRandom(
 
     // Pre-compute dimensions
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
+    int numHidden = numHiddenColumns * hiddenSize.z;
 
     std::uniform_real_distribution<float> weightDist(-0.01f, 0.01f);
 
@@ -107,6 +101,8 @@ void Predictor::initRandom(
 
         vl.inputCsPrev = IntBuffer(numVisibleColumns, 0);
     }
+
+    hiddenActivations = FloatBuffer(numHidden, 0.0f);
 
     // Hidden Cs
     hiddenCs = IntBuffer(numHiddenColumns, 0);
@@ -145,6 +141,8 @@ void Predictor::writeToStream(
 
     os.write(reinterpret_cast<const char*>(&alpha), sizeof(float));
 
+    writeBufferToStream(os, &hiddenActivations);
+
     writeBufferToStream(os, &hiddenCs);
 
     int numVisibleLayers = visibleLayers.size();
@@ -169,6 +167,8 @@ void Predictor::readFromStream(
     is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
+
+    readBufferFromStream(is, &hiddenActivations);
 
     readBufferFromStream(is, &hiddenCs);
 
