@@ -371,10 +371,10 @@ void Actor::writeToStream(
 void Actor::readFromStream(
     std::istream &is
 ) {
+    is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
+
     int numHiddenColumns = hiddenSize.x * hiddenSize.y;
     int numHidden = numHiddenColumns * hiddenSize.z;
-
-    is.read(reinterpret_cast<char*>(&hiddenSize), sizeof(Int3));
 
     is.read(reinterpret_cast<char*>(&alpha), sizeof(float));
     is.read(reinterpret_cast<char*>(&beta), sizeof(float));
@@ -383,7 +383,7 @@ void Actor::readFromStream(
     is.read(reinterpret_cast<char*>(&historyIters), sizeof(int));
 
     hiddenActivations = FloatBuffer(numHidden, 0.0f);
-
+    
     readBufferFromStream(is, &hiddenCs);
 
     readBufferFromStream(is, &hiddenValues);
